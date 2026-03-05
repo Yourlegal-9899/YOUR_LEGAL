@@ -1,5 +1,5 @@
 import { AdminFlow } from "@/components/admin/admin-flow";
 
-export default function AdminBlogsPage() {
+export default function AdminContentPage() {
   return <AdminFlow activeView="blogs" />;
 }

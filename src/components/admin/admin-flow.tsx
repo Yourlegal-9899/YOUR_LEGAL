@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowUpRight,
+  BarChart3,
   Briefcase,
   Building2,
   CalendarDays,
@@ -16,7 +16,9 @@ import {
   Newspaper,
   RefreshCw,
   Search,
+  Settings,
   ShieldCheck,
+  TrendingUp,
   Users,
 } from "lucide-react";
 
@@ -31,18 +33,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-type AdminView = "overview" | "users" | "pages" | "blogs" | "services" | "documents" | "quickbooks" | "compliance";
+type AdminView = "overview" | "users" | "blogs" | "documents" | "quickbooks" | "compliance";
 type DocumentStatus = "pending" | "verified" | "rejected" | "missing";
 type DocumentSource = "client_uploads" | "legal_docs";
-type PageStage = "draft" | "review" | "published" | "archived";
 type ComplianceHealth = "overdue" | "due_7d" | "due_21d" | "on_track";
 
 const viewMeta: Record<AdminView, { title: string; subtitle: string }> = {
-  overview: { title: "Overview", subtitle: "High-level operations, risk alerts, and QuickBooks health." },
+  overview: { title: "Overview", subtitle: "High-level operations, risk alerts, and system health." },
   users: { title: "User Management", subtitle: "Client status, plans, and account activation controls." },
-  pages: { title: "Pages", subtitle: "Manage key static pages and publishing workflow." },
-  blogs: { title: "Blog Management", subtitle: "Editorial workflow for blog publishing." },
-  services: { title: "Service Page Management", subtitle: "Control service landing content and publishing states." },
+  blogs: { title: "Content Management", subtitle: "Blog posts and service pages editorial workflow." },
   documents: { title: "Documents", subtitle: "Track document intake, verification, and collection gaps." },
   quickbooks: { title: "QuickBooks Operations", subtitle: "Connection health and action queue for accounting sync." },
   compliance: { title: "Compliance Control", subtitle: "Deadline monitoring, risk levels, and escalation ownership." },
@@ -50,10 +49,8 @@ const viewMeta: Record<AdminView, { title: string; subtitle: string }> = {
 
 const navItems: Array<{ key: AdminView; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
-  { key: "users", label: "User Management", icon: Users },
-  { key: "pages", label: "Pages", icon: ClipboardList },
-  { key: "blogs", label: "Blogs", icon: Newspaper },
-  { key: "services", label: "Services", icon: Briefcase },
+  { key: "users", label: "Users", icon: Users },
+  { key: "blogs", label: "Content", icon: Newspaper },
   { key: "documents", label: "Documents", icon: FileCheck2 },
   { key: "quickbooks", label: "QuickBooks", icon: Link2 },
   { key: "compliance", label: "Compliance", icon: ShieldCheck },
@@ -62,9 +59,7 @@ const navItems: Array<{ key: AdminView; label: string; icon: React.ComponentType
 const viewHref: Record<AdminView, string> = {
   overview: "/admin",
   users: "/admin/users",
-  pages: "/admin/pages",
   blogs: "/admin/blogs",
-  services: "/admin/services",
   documents: "/admin/documents",
   quickbooks: "/admin/quickbooks",
   compliance: "/admin/compliance",
@@ -93,13 +88,6 @@ const contentClass: Record<ContentStage, string> = {
   approved: "bg-emerald-100 text-emerald-700 border-emerald-200",
   scheduled: "bg-cyan-100 text-cyan-700 border-cyan-200",
   published: "bg-green-100 text-green-700 border-green-200",
-  archived: "bg-zinc-100 text-zinc-600 border-zinc-200",
-};
-
-const pageStageClass: Record<PageStage, string> = {
-  draft: "bg-slate-100 text-slate-700 border-slate-200",
-  review: "bg-amber-100 text-amber-700 border-amber-200",
-  published: "bg-emerald-100 text-emerald-700 border-emerald-200",
   archived: "bg-zinc-100 text-zinc-600 border-zinc-200",
 };
 
@@ -139,15 +127,6 @@ const initialDocumentQueue: Array<{
   { id: "doc_005", client: "Rohan Mehta", company: "JetLedger Technologies Pvt Ltd", document: "Director KYC Passport Copy", category: "KYC", source: "client_uploads", status: "rejected", updatedAt: "2026-03-02T07:20:00Z" },
 ];
 
-const pageQueue: Array<{ id: string; title: string; path: string; section: "Landing" | "Country" | "Support" | "Product"; stage: PageStage; owner: string; updatedAt: string }> = [
-  { id: "pg_001", title: "Home", path: "/", section: "Landing", stage: "published", owner: "Content Team", updatedAt: "2026-03-02T10:20:00Z" },
-  { id: "pg_002", title: "Products", path: "/products", section: "Product", stage: "review", owner: "Growth Team", updatedAt: "2026-03-02T16:00:00Z" },
-  { id: "pg_003", title: "USA Market Page", path: "/usa", section: "Country", stage: "published", owner: "Regional Team", updatedAt: "2026-03-01T08:45:00Z" },
-  { id: "pg_004", title: "UK Market Page", path: "/uk", section: "Country", stage: "published", owner: "Regional Team", updatedAt: "2026-03-01T09:05:00Z" },
-  { id: "pg_005", title: "Australia Market Page", path: "/australia", section: "Country", stage: "review", owner: "Regional Team", updatedAt: "2026-03-03T05:30:00Z" },
-  { id: "pg_006", title: "Contact Sales", path: "/support/contact-sales", section: "Support", stage: "published", owner: "Support Team", updatedAt: "2026-02-27T15:15:00Z" },
-];
-
 const quickBooksModules = [
   { id: "qb_mod_001", label: "Bills API", endpoints: 4, status: "active", lastVerifiedAt: "2026-03-02T18:00:00Z" },
   { id: "qb_mod_002", label: "Customers API", endpoints: 4, status: "active", lastVerifiedAt: "2026-03-02T18:05:00Z" },
@@ -168,16 +147,34 @@ const isDueSoon = (iso: string, days: number) => {
   return diffDays >= 0 && diffDays <= days;
 };
 
-function StatCard({ label, value, icon: Icon, tone }: { label: string; value: string | number; icon: React.ComponentType<{ className?: string }>; tone: string }) {
+function StatCard({ label, value, icon: Icon, tone, trend }: { 
+  label: string; 
+  value: string | number; 
+  icon: React.ComponentType<{ className?: string }>; 
+  tone: string;
+  trend?: { value: number; isPositive: boolean };
+}) {
   return (
-    <Card>
-      <CardContent className="p-5">
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="text-2xl font-semibold">{value}</p>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-muted-foreground">{label}</p>
+            <p className="text-3xl font-bold tracking-tight">{value}</p>
+            {trend && (
+              <div className={cn("flex items-center text-xs font-medium", 
+                trend.isPositive ? "text-emerald-600" : "text-red-600"
+              )}>
+                <TrendingUp className={cn("h-3 w-3 mr-1", 
+                  !trend.isPositive && "rotate-180"
+                )} />
+                {Math.abs(trend.value)}% from last month
+              </div>
+            )}
           </div>
-          <Icon className={cn("h-5 w-5", tone)} />
+          <div className={cn("p-3 rounded-xl", tone.replace("text-", "bg-").replace("-600", "-100"))}>
+            <Icon className={cn("h-6 w-6", tone)} />
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -192,9 +189,6 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
   const [region, setRegion] = useState<"all" | UserRegion>("all");
   const [selectedId, setSelectedId] = useState(adminUsers[0]?.id ?? "");
   const [userActionMessage, setUserActionMessage] = useState("");
-
-  const [pageQ, setPageQ] = useState("");
-  const [pageStage, setPageStage] = useState<"all" | PageStage>("all");
 
   const [contentQ, setContentQ] = useState("");
   const [contentStage, setContentStage] = useState<"all" | ContentStage>("all");
@@ -245,38 +239,6 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
   );
 
   const selected = users.find((u) => u.id === selectedId) ?? users[0];
-
-  const filteredPages = useMemo(
-    () =>
-      pageQueue.filter((p) => {
-        const matchesQ = [p.title, p.path, p.section].join(" ").toLowerCase().includes(pageQ.toLowerCase());
-        const matchesStage = pageStage === "all" || p.stage === pageStage;
-        return matchesQ && matchesStage;
-      }),
-    [pageQ, pageStage]
-  );
-
-  const filteredBlogs = useMemo(
-    () =>
-      contentQueue.filter((c) => {
-        if (c.type !== "blog") return false;
-        const matchesQ = [c.title, c.slug].join(" ").toLowerCase().includes(contentQ.toLowerCase());
-        const matchesS = contentStage === "all" || c.stage === contentStage;
-        return matchesQ && matchesS;
-      }),
-    [contentQ, contentStage]
-  );
-
-  const filteredServices = useMemo(
-    () =>
-      contentQueue.filter((c) => {
-        if (c.type !== "service") return false;
-        const matchesQ = [c.title, c.slug].join(" ").toLowerCase().includes(contentQ.toLowerCase());
-        const matchesS = contentStage === "all" || c.stage === contentStage;
-        return matchesQ && matchesS;
-      }),
-    [contentQ, contentStage]
-  );
 
   const filteredDocuments = useMemo(
     () =>
@@ -397,20 +359,20 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex min-h-screen">
-        <aside className="hidden w-72 flex-col border-r border-gray-200 bg-white lg:flex">
+        <aside className="hidden w-80 flex-col border-r border-gray-200 bg-white lg:flex">
           <div className="border-b border-gray-100 p-6">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-600 p-2 text-white">
-                <Building2 className="h-5 w-5" />
+              <div className="rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 p-3 text-white shadow-lg">
+                <Building2 className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs font-medium text-muted-foreground">YourLegal</p>
-                <p className="text-sm font-semibold text-gray-900">Admin Panel</p>
+                <p className="text-lg font-bold text-gray-900">YourLegal</p>
+                <p className="text-sm text-muted-foreground">Admin Dashboard</p>
               </div>
             </div>
           </div>
 
-          <nav className="space-y-1 p-3">
+          <nav className="space-y-2 p-4">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeView === item.key;
@@ -419,40 +381,47 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
                   key={item.key}
                   href={viewHref[item.key]}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
-                    isActive ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"
+                    "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200",
+                    isActive 
+                      ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg" 
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-5 w-5" />
                   {item.label}
                 </Link>
               );
             })}
           </nav>
 
-          <div className="mt-auto border-t border-gray-100 p-4 text-xs text-muted-foreground">Admin workspace v2</div>
+          <div className="mt-auto border-t border-gray-100 p-4">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Settings className="h-4 w-4" />
+              <span>Admin v2.1.0</span>
+            </div>
+          </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 backdrop-blur">
-            <div className="flex flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
-              <div>
-                <h1 className="text-2xl font-semibold text-gray-900">{viewMeta[activeView].title}</h1>
-                <p className="text-sm text-muted-foreground">{viewMeta[activeView].subtitle}</p>
+          <header className="sticky top-0 z-20 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+            <div className="flex flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <h1 className="text-3xl font-bold tracking-tight text-gray-900">{viewMeta[activeView].title}</h1>
+                <p className="text-base text-muted-foreground">{viewMeta[activeView].subtitle}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="gap-2">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-600">
                   <CalendarDays className="h-4 w-4" />
                   {d(new Date().toISOString())}
-                </Button>
-                <Button size="sm" className="gap-2">
-                  <ArrowUpRight className="h-4 w-4" />
-                  Export
+                </div>
+                <Button size="sm" className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800">
+                  <BarChart3 className="h-4 w-4" />
+                  Export Data
                 </Button>
               </div>
             </div>
 
-            <div className="flex gap-2 overflow-x-auto px-4 pb-3 lg:hidden">
+            <div className="flex gap-2 overflow-x-auto px-6 pb-4 lg:hidden">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeView === item.key;
@@ -461,8 +430,10 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
                     key={item.key}
                     href={viewHref[item.key]}
                     className={cn(
-                      "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium whitespace-nowrap",
-                      isActive ? "border-blue-600 bg-blue-600 text-white" : "border-gray-200 bg-white text-gray-700"
+                      "inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-all",
+                      isActive 
+                        ? "border-blue-600 bg-blue-600 text-white shadow-lg" 
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -473,108 +444,154 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
             </div>
           </header>
 
-          <main className="space-y-4 p-4 md:p-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
-              <StatCard label="Active Clients" value={metrics.active} icon={Users} tone="text-blue-600" />
-              <StatCard label="QB Connected" value={`${metrics.qb}%`} icon={Link2} tone="text-emerald-600" />
-              <StatCard label="QB Issues" value={metrics.qbIssues} icon={RefreshCw} tone="text-red-600" />
-              <StatCard label="Compliance Due (21d)" value={metrics.complianceSoon} icon={CalendarDays} tone="text-amber-600" />
-              <StatCard label="Docs Backlog" value={metrics.docsBacklog} icon={FileCheck2} tone="text-indigo-600" />
-              <StatCard label="Content Pending" value={metrics.pending} icon={FileText} tone="text-violet-600" />
+          <main className="space-y-6 p-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              <StatCard 
+                label="Active Clients" 
+                value={metrics.active} 
+                icon={Users} 
+                tone="text-blue-600" 
+                trend={{ value: 12, isPositive: true }}
+              />
+              <StatCard 
+                label="QB Connected" 
+                value={`${metrics.qb}%`} 
+                icon={Link2} 
+                tone="text-emerald-600" 
+                trend={{ value: 8, isPositive: true }}
+              />
+              <StatCard 
+                label="Compliance Due" 
+                value={metrics.complianceSoon} 
+                icon={CalendarDays} 
+                tone="text-amber-600" 
+                trend={{ value: 3, isPositive: false }}
+              />
             </div>
 
             {activeView === "overview" ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  <Card>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  <Card className="shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg">Client Pipeline</CardTitle>
-                      <CardDescription>Lifecycle and workload visibility</CardDescription>
+                      <CardTitle className="text-xl font-semibold">Client Pipeline</CardTitle>
+                      <CardDescription>Lifecycle and workload visibility across all stages</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-3">
+                    <CardContent className="space-y-4">
                       {pipelineStages.map((s) => (
-                        <div key={s.key} className="flex items-center justify-between rounded-lg border px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <span className={cn("rounded px-2 py-1 text-xs font-semibold", s.colorClass)}>{s.count}</span>
-                            <span className="text-sm font-medium">{s.label}</span>
+                        <div key={s.key} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/50 px-5 py-4 transition-colors hover:bg-gray-50">
+                          <div className="flex items-center gap-4">
+                            <span className={cn("rounded-lg px-3 py-1.5 text-sm font-bold", s.colorClass)}>{s.count}</span>
+                            <span className="font-medium text-gray-900">{s.label}</span>
                           </div>
-                          <Button variant="ghost" size="sm">View</Button>
+                          <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                            View Details
+                          </Button>
                         </div>
                       ))}
                     </CardContent>
                   </Card>
 
-                  <Card>
+                  <Card className="shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-lg">QuickBooks Health</CardTitle>
-                      <CardDescription>Connection quality across active users</CardDescription>
+                      <CardTitle className="text-xl font-semibold">QuickBooks Health</CardTitle>
+                      <CardDescription>Connection quality and sync status overview</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">Connected ratio</span>
-                          <span>{metrics.qb}%</span>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium text-gray-700">Connected ratio</span>
+                          <span className="font-semibold">{metrics.qb}%</span>
                         </div>
-                        <Progress value={metrics.qb} />
+                        <Progress value={metrics.qb} className="h-3" />
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div className="rounded-md border p-2"><p className="text-muted-foreground">Connected</p><p className="font-semibold text-emerald-700">{qbBreakdown.connected}</p></div>
-                        <div className="rounded-md border p-2"><p className="text-muted-foreground">Token Expired</p><p className="font-semibold text-amber-700">{qbBreakdown.token_expired}</p></div>
-                        <div className="rounded-md border p-2"><p className="text-muted-foreground">Sync Error</p><p className="font-semibold text-red-700">{qbBreakdown.sync_error}</p></div>
-                        <div className="rounded-md border p-2"><p className="text-muted-foreground">Disconnected</p><p className="font-semibold text-slate-700">{qbBreakdown.disconnected}</p></div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
+                          <p className="text-xs font-medium text-emerald-700">Connected</p>
+                          <p className="text-2xl font-bold text-emerald-800">{qbBreakdown.connected}</p>
+                        </div>
+                        <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-4">
+                          <p className="text-xs font-medium text-amber-700">Token Expired</p>
+                          <p className="text-2xl font-bold text-amber-800">{qbBreakdown.token_expired}</p>
+                        </div>
+                        <div className="rounded-xl border border-red-100 bg-red-50/50 p-4">
+                          <p className="text-xs font-medium text-red-700">Sync Error</p>
+                          <p className="text-2xl font-bold text-red-800">{qbBreakdown.sync_error}</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4">
+                          <p className="text-xs font-medium text-slate-700">Disconnected</p>
+                          <p className="text-2xl font-bold text-slate-800">{qbBreakdown.disconnected}</p>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                  <Card>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                  <Card className="shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-base">Operational Alerts</CardTitle>
-                      <CardDescription>Priority items requiring admin attention</CardDescription>
+                      <CardTitle className="text-lg font-semibold">Priority Alerts</CardTitle>
+                      <CardDescription>Items requiring immediate admin attention</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between rounded border border-red-100 bg-red-50 px-3 py-2">
-                        <span className="flex items-center gap-2 text-red-700"><AlertTriangle className="h-4 w-4" />QB connection issues</span>
-                        <span className="font-semibold">{metrics.qbIssues}</span>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center justify-between rounded-xl border border-red-100 bg-red-50/50 px-4 py-3">
+                        <span className="flex items-center gap-3 font-medium text-red-700">
+                          <AlertTriangle className="h-5 w-5" />
+                          QB Issues
+                        </span>
+                        <span className="text-xl font-bold text-red-800">{metrics.qbIssues}</span>
                       </div>
-                      <div className="flex items-center justify-between rounded border border-amber-100 bg-amber-50 px-3 py-2">
-                        <span className="flex items-center gap-2 text-amber-700"><CalendarDays className="h-4 w-4" />Overdue compliance</span>
-                        <span className="font-semibold">{metrics.overdueCompliance}</span>
+                      <div className="flex items-center justify-between rounded-xl border border-amber-100 bg-amber-50/50 px-4 py-3">
+                        <span className="flex items-center gap-3 font-medium text-amber-700">
+                          <CalendarDays className="h-5 w-5" />
+                          Overdue Compliance
+                        </span>
+                        <span className="text-xl font-bold text-amber-800">{metrics.overdueCompliance}</span>
                       </div>
-                      <div className="flex items-center justify-between rounded border border-indigo-100 bg-indigo-50 px-3 py-2">
-                        <span className="flex items-center gap-2 text-indigo-700"><FileCheck2 className="h-4 w-4" />Document backlog</span>
-                        <span className="font-semibold">{metrics.docsBacklog}</span>
+                      <div className="flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50/50 px-4 py-3">
+                        <span className="flex items-center gap-3 font-medium text-indigo-700">
+                          <FileCheck2 className="h-5 w-5" />
+                          Doc Backlog
+                        </span>
+                        <span className="text-xl font-bold text-indigo-800">{metrics.docsBacklog}</span>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="lg:col-span-2">
+                  <Card className="lg:col-span-2 shadow-sm">
                     <CardHeader>
-                      <CardTitle className="text-base">Recent Content Activity</CardTitle>
-                      <CardDescription>Latest updates across blog and service content</CardDescription>
+                      <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
+                      <CardDescription>Latest content updates and publishing activity</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Stage</TableHead>
-                            <TableHead>Updated</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {recentContent.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell><Badge variant="outline" className="capitalize">{item.type}</Badge></TableCell>
-                              <TableCell className="font-medium">{item.title}</TableCell>
-                              <TableCell><Badge className={cn("border capitalize", contentClass[item.stage])}>{item.stage.replace("_", " ")}</Badge></TableCell>
-                              <TableCell className="text-sm text-muted-foreground">{dt(item.updatedAt)}</TableCell>
+                      <div className="overflow-hidden rounded-lg border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50/50">
+                              <TableHead className="font-semibold">Type</TableHead>
+                              <TableHead className="font-semibold">Title</TableHead>
+                              <TableHead className="font-semibold">Stage</TableHead>
+                              <TableHead className="font-semibold">Updated</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {recentContent.map((item) => (
+                              <TableRow key={item.id} className="hover:bg-gray-50/50">
+                                <TableCell>
+                                  <Badge variant="outline" className="capitalize font-medium">{item.type}</Badge>
+                                </TableCell>
+                                <TableCell className="font-medium">{item.title}</TableCell>
+                                <TableCell>
+                                  <Badge className={cn("border capitalize font-medium", contentClass[item.stage])}>
+                                    {item.stage.replace("_", " ")}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-sm text-muted-foreground">{dt(item.updatedAt)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -582,20 +599,25 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
             ) : null}
 
             {activeView === "users" ? (
-              <Card>
+              <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">User Management</CardTitle>
-                  <CardDescription>Browse users and control account activation status</CardDescription>
+                  <CardTitle className="text-xl font-semibold">User Management</CardTitle>
+                  <CardDescription>Manage client accounts and activation status</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
                     <div className="relative lg:col-span-6">
                       <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                      <Input className="pl-9" placeholder="Search client/company/email" value={q} onChange={(e) => setQ(e.target.value)} />
+                      <Input 
+                        className="pl-10 h-11" 
+                        placeholder="Search client, company, or email" 
+                        value={q} 
+                        onChange={(e) => setQ(e.target.value)} 
+                      />
                     </div>
                     <div className="lg:col-span-3">
                       <Select value={status} onValueChange={(v: "all" | ClientStatus) => setStatus(v)}>
-                        <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                        <SelectTrigger className="h-11"><SelectValue placeholder="Status" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All statuses</SelectItem>
                           <SelectItem value="lead">Lead</SelectItem>
@@ -609,7 +631,7 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
                     </div>
                     <div className="lg:col-span-3">
                       <Select value={region} onValueChange={(v: "all" | UserRegion) => setRegion(v)}>
-                        <SelectTrigger><SelectValue placeholder="Region" /></SelectTrigger>
+                        <SelectTrigger className="h-11"><SelectValue placeholder="Region" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All regions</SelectItem>
                           <SelectItem value="USA">USA</SelectItem>
@@ -624,56 +646,108 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
                     <div className="xl:col-span-2">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Client</TableHead>
-                            <TableHead>Region</TableHead>
-                            <TableHead>QuickBooks</TableHead>
-                            <TableHead>Plan</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {users.map((u) => (
-                            <TableRow key={u.id} onClick={() => setSelectedId(u.id)} className="cursor-pointer" data-state={selected?.id === u.id ? "selected" : undefined}>
-                              <TableCell><p className="font-medium">{u.name}</p><p className="text-xs text-muted-foreground">{u.companyName}</p></TableCell>
-                              <TableCell>{u.region}</TableCell>
-                              <TableCell><Badge className={cn("border capitalize", qbClass[u.quickBooksStatus])}>{u.quickBooksStatus.replace("_", " ")}</Badge></TableCell>
-                              <TableCell>{u.servicePlan}</TableCell>
-                              <TableCell><Badge className={cn("border capitalize", clientStatusClass[u.status])}>{u.status.replace("_", " ")}</Badge></TableCell>
+                      <div className="overflow-hidden rounded-lg border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-gray-50/50">
+                              <TableHead className="font-semibold">Client</TableHead>
+                              <TableHead className="font-semibold">Region</TableHead>
+                              <TableHead className="font-semibold">QuickBooks</TableHead>
+                              <TableHead className="font-semibold">Plan</TableHead>
+                              <TableHead className="font-semibold">Status</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {users.map((u) => (
+                              <TableRow 
+                                key={u.id} 
+                                onClick={() => setSelectedId(u.id)} 
+                                className={cn(
+                                  "cursor-pointer transition-colors hover:bg-gray-50/50",
+                                  selected?.id === u.id && "bg-blue-50/50 border-l-4 border-l-blue-600"
+                                )}
+                              >
+                                <TableCell>
+                                  <div>
+                                    <p className="font-semibold text-gray-900">{u.name}</p>
+                                    <p className="text-sm text-muted-foreground">{u.companyName}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-medium">{u.region}</TableCell>
+                                <TableCell>
+                                  <Badge className={cn("border capitalize font-medium", qbClass[u.quickBooksStatus])}>
+                                    {u.quickBooksStatus.replace("_", " ")}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-medium">{u.servicePlan}</TableCell>
+                                <TableCell>
+                                  <Badge className={cn("border capitalize font-medium", clientStatusClass[u.status])}>
+                                    {u.status.replace("_", " ")}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </div>
 
-                    <Card className="border-gray-200">
+                    <Card className="border-gray-200 shadow-sm">
                       <CardHeader>
-                        <CardTitle className="text-base">User Controls</CardTitle>
-                        <CardDescription>Activate or deactivate selected user</CardDescription>
+                        <CardTitle className="text-lg font-semibold">User Controls</CardTitle>
+                        <CardDescription>Manage selected user account status</CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-3 text-sm">
-                        <div className="flex flex-wrap gap-2">
-                          <Button size="sm" onClick={() => setUserActivation(true)} disabled={!selected || selected.status === "active"}>Activate</Button>
-                          <Button size="sm" variant="destructive" onClick={() => setUserActivation(false)} disabled={!selected || selected.status === "paused"}>Deactivate</Button>
+                      <CardContent className="space-y-4">
+                        <div className="flex flex-wrap gap-3">
+                          <Button 
+                            size="sm" 
+                            onClick={() => setUserActivation(true)} 
+                            disabled={!selected || selected.status === "active"}
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                          >
+                            Activate Account
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive" 
+                            onClick={() => setUserActivation(false)} 
+                            disabled={!selected || selected.status === "paused"}
+                          >
+                            Deactivate Account
+                          </Button>
                         </div>
 
                         {userActionMessage ? (
-                          <p className={cn("text-xs", userActionMessage.includes("first") ? "text-red-600" : "text-emerald-600")}>{userActionMessage}</p>
+                          <div className={cn(
+                            "rounded-lg p-3 text-sm font-medium",
+                            userActionMessage.includes("first") 
+                              ? "bg-red-50 text-red-700 border border-red-200" 
+                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          )}>
+                            {userActionMessage}
+                          </div>
                         ) : null}
 
                         {selected ? (
-                          <div className="rounded bg-gray-50 p-3">
-                            <p className="text-xs text-muted-foreground">Selected User</p>
-                            <p className="font-medium text-gray-900">{selected.name} ({selected.id})</p>
-                            <p className="text-xs text-muted-foreground">Current status: {selected.status}</p>
-                            <p className="text-xs text-muted-foreground">Last activity: {dt(selected.lastActivityAt)}</p>
+                          <div className="rounded-xl bg-gray-50 p-4 space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Selected User</p>
+                            <p className="font-semibold text-gray-900">{selected.name}</p>
+                            <p className="text-sm text-muted-foreground">{selected.companyName}</p>
+                            <div className="pt-2 space-y-1">
+                              <p className="text-xs text-muted-foreground">
+                                <span className="font-medium">Status:</span> {selected.status.replace("_", " ")}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                <span className="font-medium">Last activity:</span> {dt(selected.lastActivityAt)}
+                              </p>
+                            </div>
                           </div>
                         ) : (
-                          <p className="text-muted-foreground">No users for this filter.</p>
+                          <div className="rounded-xl bg-gray-50 p-4 text-center">
+                            <p className="text-muted-foreground">No users match the current filter criteria.</p>
+                          </div>
                         )}
                       </CardContent>
                     </Card>
@@ -682,75 +756,21 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
               </Card>
             ) : null}
 
-            {activeView === "pages" ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Pages Management</CardTitle>
-                  <CardDescription>Track main pages across landing, country, support, and product sections</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-                    <div className="relative lg:col-span-8">
-                      <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                      <Input className="pl-9" placeholder="Search by title/path/section" value={pageQ} onChange={(e) => setPageQ(e.target.value)} />
-                    </div>
-                    <div className="lg:col-span-4">
-                      <Select value={pageStage} onValueChange={(v: "all" | PageStage) => setPageStage(v)}>
-                        <SelectTrigger><SelectValue placeholder="Stage" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All stages</SelectItem>
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="review">Review</SelectItem>
-                          <SelectItem value="published">Published</SelectItem>
-                          <SelectItem value="archived">Archived</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Path</TableHead>
-                        <TableHead>Section</TableHead>
-                        <TableHead>Stage</TableHead>
-                        <TableHead>Owner</TableHead>
-                        <TableHead>Updated</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredPages.map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="font-medium">{p.title}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{p.path}</TableCell>
-                          <TableCell>{p.section}</TableCell>
-                          <TableCell><Badge className={cn("border capitalize", pageStageClass[p.stage])}>{p.stage}</Badge></TableCell>
-                          <TableCell>{p.owner}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{dt(p.updatedAt)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            ) : null}
-
             {activeView === "blogs" ? (
-              <Card>
+              <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Blog Management</CardTitle>
-                  <CardDescription>Editorial workflow for blog publishing</CardDescription>
+                  <CardTitle className="text-xl font-semibold">Content Management</CardTitle>
+                  <CardDescription>Manage blog posts and service pages in one unified workflow</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
                     <div className="relative lg:col-span-8">
                       <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                      <Input className="pl-9" placeholder="Search by title or slug" value={contentQ} onChange={(e) => setContentQ(e.target.value)} />
+                      <Input className="pl-10 h-11" placeholder="Search by title or slug" value={contentQ} onChange={(e) => setContentQ(e.target.value)} />
                     </div>
                     <div className="lg:col-span-4">
                       <Select value={contentStage} onValueChange={(v: "all" | ContentStage) => setContentStage(v)}>
-                        <SelectTrigger><SelectValue placeholder="Stage" /></SelectTrigger>
+                        <SelectTrigger className="h-11"><SelectValue placeholder="Stage" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All stages</SelectItem>
                           <SelectItem value="draft">Draft</SelectItem>
@@ -765,83 +785,47 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
                     </div>
                   </div>
 
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Region</TableHead>
-                        <TableHead>Stage</TableHead>
-                        <TableHead>Owner</TableHead>
-                        <TableHead>Updated</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredBlogs.map((c) => (
-                        <TableRow key={c.id}>
-                          <TableCell><p className="font-medium">{c.title}</p><p className="text-xs text-muted-foreground">/{c.slug}</p></TableCell>
-                          <TableCell>{c.region}</TableCell>
-                          <TableCell><Badge className={cn("border capitalize", contentClass[c.stage])}>{c.stage.replace("_", " ")}</Badge></TableCell>
-                          <TableCell>{c.owner}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{dt(c.updatedAt)}</TableCell>
+                  <div className="overflow-hidden rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50/50">
+                          <TableHead className="font-semibold">Type</TableHead>
+                          <TableHead className="font-semibold">Title</TableHead>
+                          <TableHead className="font-semibold">Region</TableHead>
+                          <TableHead className="font-semibold">Stage</TableHead>
+                          <TableHead className="font-semibold">Owner</TableHead>
+                          <TableHead className="font-semibold">Updated</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            ) : null}
-
-            {activeView === "services" ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Service Page Management</CardTitle>
-                  <CardDescription>Manage service pages separately from blogs</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-                    <div className="relative lg:col-span-8">
-                      <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                      <Input className="pl-9" placeholder="Search service title or slug" value={contentQ} onChange={(e) => setContentQ(e.target.value)} />
-                    </div>
-                    <div className="lg:col-span-4">
-                      <Select value={contentStage} onValueChange={(v: "all" | ContentStage) => setContentStage(v)}>
-                        <SelectTrigger><SelectValue placeholder="Stage" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All stages</SelectItem>
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="review">Review</SelectItem>
-                          <SelectItem value="legal_review">Legal Review</SelectItem>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="scheduled">Scheduled</SelectItem>
-                          <SelectItem value="published">Published</SelectItem>
-                          <SelectItem value="archived">Archived</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                      </TableHeader>
+                      <TableBody>
+                        {contentQueue.filter((c) => {
+                          const matchesQ = [c.title, c.slug].join(" ").toLowerCase().includes(contentQ.toLowerCase());
+                          const matchesS = contentStage === "all" || c.stage === contentStage;
+                          return matchesQ && matchesS;
+                        }).map((c) => (
+                          <TableRow key={c.id} className="hover:bg-gray-50/50">
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize font-medium">{c.type}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-semibold text-gray-900">{c.title}</p>
+                                <p className="text-sm text-muted-foreground">/{c.slug}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">{c.region}</TableCell>
+                            <TableCell>
+                              <Badge className={cn("border capitalize font-medium", contentClass[c.stage])}>
+                                {c.stage.replace("_", " ")}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">{c.owner}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{dt(c.updatedAt)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Region</TableHead>
-                        <TableHead>Stage</TableHead>
-                        <TableHead>Owner</TableHead>
-                        <TableHead>Updated</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredServices.map((c) => (
-                        <TableRow key={c.id}>
-                          <TableCell><p className="font-medium">{c.title}</p><p className="text-xs text-muted-foreground">/{c.slug}</p></TableCell>
-                          <TableCell>{c.region}</TableCell>
-                          <TableCell><Badge className={cn("border capitalize", contentClass[c.stage])}>{c.stage.replace("_", " ")}</Badge></TableCell>
-                          <TableCell>{c.owner}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{dt(c.updatedAt)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
                 </CardContent>
               </Card>
             ) : null}
