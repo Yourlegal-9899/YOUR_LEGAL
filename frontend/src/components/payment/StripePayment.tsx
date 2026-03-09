@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api-base';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -20,7 +21,7 @@ function CheckoutForm({ amount, plan, serviceId, onSuccess, onError }) {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/payment/create-intent', {
+      const response = await fetch(`${API_BASE_URL}/payment/create-intent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

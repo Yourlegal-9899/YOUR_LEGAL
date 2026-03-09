@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api-base';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
@@ -16,7 +17,7 @@ export default function StripeCheckout({ plan, amount, metadata = {} }) {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/payment/create-checkout', {
+      const response = await fetch(`${API_BASE_URL}/payment/create-checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

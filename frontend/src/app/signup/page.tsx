@@ -27,6 +27,7 @@ import { Loader2, ArrowLeft, CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { API_BASE_URL } from '@/lib/api-base';
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState('');
@@ -58,7 +59,7 @@ export default function SignupPage() {
     }
     
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

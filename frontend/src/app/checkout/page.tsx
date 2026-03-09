@@ -6,6 +6,7 @@ import { ChevronLeft, CheckCircle, Loader2 } from 'lucide-react';
 import { NavHeader } from '@/components/layout/page-header';
 import { AppFooter } from '@/components/layout/page-footer';
 import Link from 'next/link';
+import { API_BASE_URL } from '@/lib/api-base';
 
 const stateFees = {
     'Wyoming LLC': { initial: 100, annual: 60, annualDesc: 'Minimum annual report fee', processingTime: '1-3 Business Days' },
@@ -150,7 +151,7 @@ function CheckoutPageContent() {
                                  <button
                                     onClick={async () => {
                                         try {
-                                            const response = await fetch('http://localhost:5000/api/payment/create-checkout', {
+                                            const response = await fetch(`${API_BASE_URL}/payment/create-checkout`, {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 credentials: 'include',
