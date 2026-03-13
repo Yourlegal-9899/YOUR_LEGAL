@@ -53,8 +53,10 @@ exports.createPaymentIntent = async (req, res) => {
 
 exports.createCheckoutSession = async (req, res) => {
   try {
-    const { amount, plan, country, state, entityType, serviceType } = req.body;
+    const { amount, plan, country, state, entityType, serviceType, serviceName, serviceId } = req.body;
     const numericAmount = Number(amount);
+    const planValue = plan && String(plan).trim() ? String(plan).trim() : undefined;
+    const resolvedServiceName = serviceName && String(serviceName).trim() ? String(serviceName).trim() : planValue || 'Service';
 
     if (!numericAmount || Number.isNaN(numericAmount) || numericAmount <= 0) {
       return res.status(400).json({ message: 'Amount is required.' });
@@ -84,7 +86,7 @@ exports.createCheckoutSession = async (req, res) => {
             currency: 'usd',
             unit_amount: Math.round(numericAmount * 100),
             product_data: {
-              name: `${plan || 'Service'} ${entityType || ''}`.trim(),
+              name: `${resolvedServiceName} ${entityType || ''}`.trim(),
               description: `${country || 'USA'} • ${state || 'Unknown'} • ${entityType || 'LLC'}`,
             },
           },
@@ -92,7 +94,9 @@ exports.createCheckoutSession = async (req, res) => {
       ],
       metadata: {
         userId: req.user._id.toString(),
-        plan: plan || '',
+        plan: planValue || '',
+        serviceName: resolvedServiceName,
+        serviceId: serviceId || '',
         country: country || 'USA',
         state: state || 'Unknown',
         entityType: entityType || 'LLC',
@@ -102,36 +106,53 @@ exports.createCheckoutSession = async (req, res) => {
       cancel_url: `${process.env.FRONTEND_URL}/checkout?planName=${encodeURIComponent(plan || '')}&state=${encodeURIComponent(state || '')}&entityType=${encodeURIComponent(entityType || '')}&country=${encodeURIComponent(country || 'USA')}`,
     });
 
-    const payment = await Payment.create({
+    const paymentPayload = {
       user: req.user._id,
       stripePaymentId: session.id,
       amount: numericAmount,
-      plan,
+      plan: planValue,
       status: 'pending',
       metadata: {
+        serviceName: resolvedServiceName,
+        serviceId: serviceId || '',
+        serviceType: serviceType || 'formation',
         country: country || 'USA',
         state: state || 'Unknown',
         entityType: entityType || 'LLC',
         checkoutSessionId: session.id,
       },
-    });
+    };
+
+    if (!planValue) {
+      delete paymentPayload.plan;
+    }
+
+    const payment = await Payment.create(paymentPayload);
 
     const existingOrder = await Order.findOne({ payment: payment._id });
     if (!existingOrder) {
-      await Order.create({
+      const orderPayload = {
         user: req.user._id,
         orderNumber: generateOrderNumber(),
         serviceType: serviceType || 'formation',
-        plan,
+        plan: planValue,
         status: 'pending',
         amount: numericAmount,
         payment: payment._id,
         metadata: {
+          serviceName: resolvedServiceName,
+          serviceId: serviceId || '',
           country: country || 'USA',
           state: state || 'Unknown',
           entityType: entityType || 'LLC',
         },
-      });
+      };
+
+      if (!planValue) {
+        delete orderPayload.plan;
+      }
+
+      await Order.create(orderPayload);
     }
 
     res.json({ success: true, sessionId: session.id, url: session.url });
@@ -186,11 +207,15 @@ async function handleCheckoutComplete(session) {
 
   // Only update user if authenticated (not guest)
   if (userId && userId !== 'guest') {
-    await User.findByIdAndUpdate(userId, {
-      servicePlan: plan,
-      status: 'active',
-      subscriptionStatus: 'active'
-    });
+    const updates = {};
+    if (plan) {
+      updates.servicePlan = plan;
+      updates.status = 'active';
+      updates.subscriptionStatus = 'active';
+    }
+    if (Object.keys(updates).length) {
+      await User.findByIdAndUpdate(userId, updates);
+    }
 
     const payment = await Payment.findOne({ stripePaymentId: sessionId });
     if (payment) {
@@ -250,11 +275,13 @@ async function handlePaymentSuccess(paymentIntent) {
     payment.status = 'succeeded';
     await payment.save();
 
-    await User.findByIdAndUpdate(payment.user, {
-      servicePlan: payment.plan,
-      status: 'active',
-      subscriptionStatus: 'active'
-    });
+    if (payment.plan) {
+      await User.findByIdAndUpdate(payment.user, {
+        servicePlan: payment.plan,
+        status: 'active',
+        subscriptionStatus: 'active'
+      });
+    }
   }
 }
 

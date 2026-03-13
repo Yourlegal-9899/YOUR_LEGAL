@@ -28,6 +28,7 @@ type CoreService = {
   icon: string;
   status: ServiceStatus;
   createdAt: string;
+  countries: string[];
 };
 
 type AddOnService = {
@@ -39,6 +40,7 @@ type AddOnService = {
   icon: string;
   status: ServiceStatus;
   createdAt: string;
+  countries: string[];
 };
 
 type CoreFormState = {
@@ -50,6 +52,7 @@ type CoreFormState = {
   category: string;
   icon: string;
   status: ServiceStatus;
+  countries: string[];
 };
 
 type AddOnFormState = {
@@ -59,6 +62,7 @@ type AddOnFormState = {
   price: string;
   icon: string;
   status: ServiceStatus;
+  countries: string[];
 };
 
 type DeleteTarget =
@@ -72,7 +76,8 @@ const statusClass: Record<ServiceStatus, string> = {
 };
 
 const coreCategories = ["Formation", "Finance", "Tax", "Compliance"];
-const addOnCategories = ["IP Protection", "Compliance", "Tax Strategy", "Expansion"];
+const addOnCategories = ["IP Protection", "Compliance", "Tax Strategy", "Expansion", "Legal", "Tax ID"];
+const serviceCountries = ["USA", "UK", "UAE", "Singapore", "India", "Australia", "Netherlands", "Saudi Arabia"];
 
 const coreCategoryToBackend: Record<string, string> = {
   Formation: "formation",
@@ -83,9 +88,11 @@ const coreCategoryToBackend: Record<string, string> = {
 
 const addOnCategoryToBackend: Record<string, string> = {
   "IP Protection": "audit-support",
-  Compliance: "bookkeeping",
-  "Tax Strategy": "virtual-cfo",
-  Expansion: "payroll",
+  Compliance: "annual-compliance",
+  "Tax Strategy": "tax-compliance",
+  Expansion: "formation",
+  Legal: "formation",
+  "Tax ID": "tax-compliance",
 };
 
 const backendToCoreCategory: Record<string, string> = {
@@ -97,10 +104,16 @@ const backendToCoreCategory: Record<string, string> = {
 
 const backendToAddOnCategory: Record<string, string> = {
   "audit-support": "IP Protection",
+  "annual-compliance": "Compliance",
+  "tax-compliance": "Tax Strategy",
+  formation: "Legal",
+  payroll: "Expansion",
   bookkeeping: "Compliance",
   "virtual-cfo": "Tax Strategy",
-  payroll: "Expansion",
 };
+
+const toggleCountrySelection = (current: string[], value: string) =>
+  current.includes(value) ? current.filter((item) => item !== value) : [...current, value];
 
 const inferUiType = (service: any): "core" | "addon" => {
   if (service?.uiType === "core" || service?.uiType === "addon") {
@@ -128,6 +141,7 @@ const emptyCoreForm = (): CoreFormState => ({
   category: "Formation",
   icon: "",
   status: "active",
+  countries: [],
 });
 
 const emptyAddOnForm = (): AddOnFormState => ({
@@ -137,6 +151,7 @@ const emptyAddOnForm = (): AddOnFormState => ({
   price: "",
   icon: "",
   status: "active",
+  countries: [],
 });
 
 const slugify = (value: string) =>
@@ -164,6 +179,7 @@ const initialCoreServices: CoreService[] = [
     icon: placeholderIcon("US LLC"),
     status: "active",
     createdAt: "2026-02-12T00:00:00Z",
+    countries: serviceCountries,
   },
   {
     id: "core_2",
@@ -176,6 +192,7 @@ const initialCoreServices: CoreService[] = [
     icon: placeholderIcon("C-Corp"),
     status: "active",
     createdAt: "2026-02-15T00:00:00Z",
+    countries: serviceCountries,
   },
   {
     id: "core_3",
@@ -188,6 +205,7 @@ const initialCoreServices: CoreService[] = [
     icon: placeholderIcon("Books"),
     status: "active",
     createdAt: "2026-02-18T00:00:00Z",
+    countries: serviceCountries,
   },
   {
     id: "core_4",
@@ -200,6 +218,7 @@ const initialCoreServices: CoreService[] = [
     icon: placeholderIcon("Tax"),
     status: "inactive",
     createdAt: "2026-02-22T00:00:00Z",
+    countries: serviceCountries,
   },
 ];
 
@@ -213,6 +232,7 @@ const initialAddOnServices: AddOnService[] = [
     icon: placeholderIcon("TM"),
     status: "active",
     createdAt: "2026-02-17T00:00:00Z",
+    countries: serviceCountries,
   },
   {
     id: "addon_2",
@@ -223,6 +243,7 @@ const initialAddOnServices: AddOnService[] = [
     icon: placeholderIcon("2553"),
     status: "active",
     createdAt: "2026-02-20T00:00:00Z",
+    countries: serviceCountries,
   },
   {
     id: "addon_3",
@@ -233,6 +254,7 @@ const initialAddOnServices: AddOnService[] = [
     icon: placeholderIcon("Good"),
     status: "inactive",
     createdAt: "2026-02-23T00:00:00Z",
+    countries: serviceCountries,
   },
   {
     id: "addon_4",
@@ -243,6 +265,7 @@ const initialAddOnServices: AddOnService[] = [
     icon: placeholderIcon("ITIN"),
     status: "active",
     createdAt: "2026-02-25T00:00:00Z",
+    countries: serviceCountries,
   },
   {
     id: "addon_5",
@@ -253,6 +276,7 @@ const initialAddOnServices: AddOnService[] = [
     icon: placeholderIcon("Expand"),
     status: "active",
     createdAt: "2026-02-27T00:00:00Z",
+    countries: serviceCountries,
   },
   {
     id: "addon_6",
@@ -263,6 +287,7 @@ const initialAddOnServices: AddOnService[] = [
     icon: placeholderIcon("Amend"),
     status: "active",
     createdAt: "2026-03-01T00:00:00Z",
+    countries: serviceCountries,
   },
 ];
 
@@ -301,6 +326,7 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
           icon: service.icon || placeholderIcon(service.name || "Service"),
           status: service.isActive ? "active" : "inactive",
           createdAt: service.createdAt || new Date().toISOString(),
+          countries: Array.isArray(service.countries) ? service.countries : [],
         });
       } else {
         addons.push({
@@ -312,6 +338,7 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
           icon: service.icon || placeholderIcon(service.name || "Service"),
           status: service.isActive ? "active" : "inactive",
           createdAt: service.createdAt || new Date().toISOString(),
+          countries: Array.isArray(service.countries) ? service.countries : [],
         });
       }
     });
@@ -369,6 +396,7 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
       pricing: { starter: price, growth: price, scale: price },
       category: coreCategoryToBackend[coreForm.category] || "formation",
       isActive: coreForm.status === "active",
+      countries: coreForm.countries,
       uiType: "core",
       uiCategory: coreForm.category,
       icon: coreForm.icon.trim() || placeholderIcon(coreForm.serviceName),
@@ -407,6 +435,7 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
       pricing: { starter: price, growth: price, scale: price },
       category: addOnCategoryToBackend[addOnForm.category] || "audit-support",
       isActive: addOnForm.status === "active",
+      countries: addOnForm.countries,
       uiType: "addon",
       uiCategory: addOnForm.category,
       icon: addOnForm.icon.trim() || placeholderIcon(addOnForm.name),
@@ -438,6 +467,7 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
       category: service.category,
       icon: service.icon,
       status: service.status,
+      countries: service.countries ?? [],
     });
     setMessage("");
   };
@@ -452,6 +482,7 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
       price: String(service.price),
       icon: service.icon,
       status: service.status,
+      countries: service.countries ?? [],
     });
     setMessage("");
   };
@@ -645,6 +676,29 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
                 </div>
 
                 <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-slate-700">Available Countries</label>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {serviceCountries.map((country) => (
+                      <label key={country} className="flex items-center gap-2 text-xs sm:text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                          checked={coreForm.countries.includes(country)}
+                          onChange={() =>
+                            setCoreForm((prev) => ({
+                              ...prev,
+                              countries: toggleCountrySelection(prev.countries, country),
+                            }))
+                          }
+                        />
+                        <span>{country}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Leave blank to make this service available globally.</p>
+                </div>
+
+                <div className="space-y-2">
                   <label className="text-xs sm:text-sm font-medium text-slate-700">Icon / Image URL</label>
                   <Input
                     placeholder="https://example.com/service-image.png"
@@ -691,20 +745,21 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
               <CardContent className="space-y-4">
                 <div className="overflow-x-auto rounded-lg border">
                   <Table className="min-w-[860px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Service Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCoreServices.length ? (
-                        filteredCoreServices.map((service) => (
-                          <TableRow key={service.id}>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Service Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Countries</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCoreServices.length ? (
+                      filteredCoreServices.map((service) => (
+                        <TableRow key={service.id}>
                             <TableCell>
                               <div className="flex items-center gap-2 sm:gap-3">
                                 <img
@@ -719,6 +774,9 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
                               </div>
                             </TableCell>
                             <TableCell className="text-sm">{service.category}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {service.countries?.length ? service.countries.join(", ") : "All"}
+                            </TableCell>
                             <TableCell className="text-sm">${service.price}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2 sm:gap-3">
@@ -742,17 +800,17 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
                                 </Button>
                               </div>
                             </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
-                            No core services match the current search.
-                          </TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
+                          No core services match the current search.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
                 </div>
               </CardContent>
             </Card>
@@ -825,6 +883,29 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-slate-700">Available Countries</label>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {serviceCountries.map((country) => (
+                      <label key={country} className="flex items-center gap-2 text-xs sm:text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                          checked={addOnForm.countries.includes(country)}
+                          onChange={() =>
+                            setAddOnForm((prev) => ({
+                              ...prev,
+                              countries: toggleCountrySelection(prev.countries, country),
+                            }))
+                          }
+                        />
+                        <span>{country}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Leave blank to make this service available globally.</p>
+                </div>
+
                 <div className="flex flex-col gap-2 sm:gap-3 rounded-lg border border-slate-200 px-3 py-2.5 sm:py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-xs sm:text-sm font-medium text-slate-800">Service Status</p>
@@ -862,20 +943,21 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
               <CardContent className="space-y-4">
                 <div className="overflow-x-auto rounded-lg border">
                   <Table className="min-w-[860px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Service Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredAddOnServices.length ? (
-                        filteredAddOnServices.map((service) => (
-                          <TableRow key={service.id}>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Service Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Countries</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAddOnServices.length ? (
+                      filteredAddOnServices.map((service) => (
+                        <TableRow key={service.id}>
                             <TableCell>
                               <div className="flex items-center gap-2 sm:gap-3">
                                 <img src={service.icon} alt={service.name} className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg border border-slate-200 object-cover shrink-0" />
@@ -886,6 +968,9 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
                               </div>
                             </TableCell>
                             <TableCell className="text-sm">{service.category}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {service.countries?.length ? service.countries.join(", ") : "All"}
+                            </TableCell>
                             <TableCell className="text-sm">${service.price}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2 sm:gap-3">
@@ -909,17 +994,17 @@ export function ServicesView({ ctx }: { ctx: AdminViewContext }) {
                                 </Button>
                               </div>
                             </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
-                            No add-on services match the current search.
-                          </TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
+                          No add-on services match the current search.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
                 </div>
               </CardContent>
             </Card>

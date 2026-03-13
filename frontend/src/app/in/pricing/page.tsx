@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, Calculator, Info, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { NavHeader } from '@/components/layout/page-header';
 import { AppFooter } from '@/components/layout/page-footer';
+import { API_BASE_URL } from '@/lib/api-base';
 
 const PlanCard = ({
     title,
@@ -65,6 +66,20 @@ const PlanCard = ({
             </button>
         </div>
     );
+};
+
+const resolveServicePrice = (service) => {
+    const pricing = service?.pricing || {};
+    const price = Number(pricing.starter ?? pricing.growth ?? pricing.scale ?? 0);
+    return Number.isFinite(price) ? price : 0;
+};
+
+const orderPlans = (plans, order) => {
+    const orderIndex = (name) => {
+        const idx = order.indexOf(name);
+        return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+    };
+    return [...plans].sort((a, b) => orderIndex(a.title) - orderIndex(b.title));
 };
 
 const IndiaFeeCalculator = () => {
@@ -144,6 +159,51 @@ export default function IndiaPricingPage() {
             features: ['Everything in Compliance', 'Audit Liaison & Coordination', 'Annual Income Tax Return', 'Virtual CFO (Strategic Reviews)', 'FEMA/RBI Compliance (FDI)'],
         },
     };
+    const planOrder = ['Startup', 'Compliance', 'Growth'];
+    const fallbackPlans = [planData.Startup, planData.Compliance, planData.Growth];
+    const [plans, setPlans] = useState(fallbackPlans);
+
+    useEffect(() => {
+        let isMounted = true;
+        const loadPlans = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/services?isActive=true&country=India`);
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !data?.success) {
+                    throw new Error(data?.message || 'Unable to load plans.');
+                }
+                const corePlans = (data.services || []).filter((service) => service.uiType === 'core' && service.isActive);
+                if (!corePlans.length) return;
+                const singleCountry = corePlans.filter((service) => Array.isArray(service.countries) && service.countries.length === 1);
+                const effectivePlans = singleCountry.length ? singleCountry : corePlans;
+                const mapped = effectivePlans.map((service) => {
+                    const meta = planData[service.name] || {};
+                    const price = resolveServicePrice(service) || meta.price;
+                    const featuresList = Array.isArray(service.features) && service.features.length
+                        ? service.features
+                        : meta.features || [];
+                    return {
+                        title: service.name,
+                        price,
+                        subtitle: service.description || meta.subtitle || '',
+                        features: featuresList,
+                        isPopular: service.name === 'Compliance',
+                    };
+                });
+                const ordered = orderPlans(mapped, planOrder);
+                if (isMounted && ordered.length) {
+                    setPlans(ordered);
+                }
+            } catch (error) {
+                // Keep fallback plans on error.
+            }
+        };
+
+        loadPlans();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     return (
         <div className="min-h-screen bg-white font-inter">
@@ -165,18 +225,13 @@ export default function IndiaPricingPage() {
                         <IndiaFeeCalculator />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <PlanCard
-                            {...planData.Startup}
-                            onSelect={() => router.push('/onboarding?planName=Startup&state=India&entityType=PvtLtd&country=India&amount=24999')}
-                        />
-                        <PlanCard
-                            {...planData.Compliance}
-                            onSelect={() => router.push('/onboarding?planName=Compliance&state=India&entityType=PvtLtd&country=India&amount=49999')}
-                        />
-                        <PlanCard
-                            {...planData.Growth}
-                            onSelect={() => router.push('/onboarding?planName=Growth&state=India&entityType=PvtLtd&country=India&amount=99999')}
-                        />
+                        {plans.map((plan) => (
+                            <PlanCard
+                                key={plan.title}
+                                {...plan}
+                                onSelect={() => router.push(`/onboarding?planName=${plan.title}&state=India&entityType=PvtLtd&country=India&amount=${plan.price}`)}
+                            />
+                        ))}
                     </div>
                 </div>
             </section>

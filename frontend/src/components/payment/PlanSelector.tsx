@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { API_BASE_URL } from '@/lib/api-base';
 
-const plans = [
+const fallbackPlans = [
   {
     name: 'Micro',
     price: 499,
@@ -48,6 +49,52 @@ const plans = [
 
 export default function PlanSelector({ onSelectPlan }) {
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [plans, setPlans] = useState(fallbackPlans);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadPlans = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/services?isActive=true&country=USA`);
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.message || 'Unable to load plans.');
+        }
+        const corePlans = (data.services || []).filter((service) => service.uiType === 'core' && service.isActive);
+        if (!corePlans.length) return;
+        const singleCountry = corePlans.filter((service) => Array.isArray(service.countries) && service.countries.length === 1);
+        const effectivePlans = singleCountry.length ? singleCountry : corePlans;
+        const mapped = effectivePlans.map((service) => {
+          const pricing = service?.pricing || {};
+          const price = Number(pricing.starter ?? pricing.growth ?? pricing.scale ?? 0);
+          const fallback = fallbackPlans.find((plan) => plan.name === service.name) || {};
+          return {
+            name: service.name,
+            price: Number.isFinite(price) && price > 0 ? price : fallback.price,
+            description: service.description || fallback.description || '',
+            features: Array.isArray(service.features) && service.features.length ? service.features : fallback.features || [],
+            popular: service.name === 'Vitals',
+          };
+        });
+        const order = ['Micro', 'Vitals', 'Elite'];
+        const orderIndex = (name) => {
+          const idx = order.indexOf(name);
+          return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+        };
+        const ordered = [...mapped].sort((a, b) => orderIndex(a.name) - orderIndex(b.name));
+        if (isMounted && ordered.length) {
+          setPlans(ordered);
+        }
+      } catch (error) {
+        // Keep fallback plans on error.
+      }
+    };
+
+    loadPlans();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSelectPlan = (plan) => {
     setSelectedPlan(plan.name);

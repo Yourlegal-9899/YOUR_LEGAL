@@ -59,8 +59,6 @@ import { QuickbooksView } from "@/components/admin/views/quickbooks-view";
 import { ReportsView } from "@/components/admin/views/reports-view";
 import { ServicesView } from "@/components/admin/views/services-view";
 import { SettingsView } from "@/components/admin/views/settings-view";
-import { SubscriptionsView } from "@/components/admin/views/subscriptions-view";
-import { TicketsView } from "@/components/admin/views/tickets-view";
 import { UsersView } from "@/components/admin/views/users-view";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminData } from "@/hooks/useAdminData";
@@ -75,7 +73,6 @@ type AdminView =
   | "documents"
   | "payments"
   | "subscriptions"
-  | "tickets"
   | "emails"
   | "reports"
   | "activity"
@@ -285,8 +282,6 @@ const viewMeta: Record<AdminView, { title: string; subtitle: string }> = {
   formations: { title: "Company Formations", subtitle: "Monitor formation progress by stage" },
   documents: { title: "Document Center", subtitle: "Track document collection and verification" },
   payments: { title: "Payments", subtitle: "Transactions, invoices, refunds and failures" },
-  subscriptions: { title: "Subscriptions", subtitle: "Manage plans, pricing and availability" },
-  tickets: { title: "Support Tickets", subtitle: "Respond to users and manage priorities" },
   emails: { title: "Emails", subtitle: "Templates, logs and resend controls" },
   reports: { title: "Reports", subtitle: "Revenue, growth and service analytics" },
   activity: { title: "Activity Logs", subtitle: "Audit trail of admin actions" },
@@ -306,8 +301,6 @@ const navItems: Array<{ key: AdminView; label: string; icon: React.ComponentType
   { key: "formations", label: "Company Formations", icon: Building2 },
   { key: "documents", label: "Documents", icon: FileCheck2 },
   { key: "payments", label: "Payments", icon: CreditCard },
-  { key: "subscriptions", label: "Subscriptions", icon: Package },
-  { key: "tickets", label: "Support Tickets", icon: LifeBuoy },
   { key: "emails", label: "Emails", icon: Mail },
   { key: "quickbooks", label: "QuickBooks", icon: ShieldCheck },
   { key: "compliance", label: "Compliance", icon: ShieldCheck },
@@ -326,8 +319,6 @@ const viewHref: Record<AdminView, string> = {
   onboarding: "/admin/onboarding",
   formations: "/admin/formations",
   payments: "/admin/payments",
-  subscriptions: "/admin/subscriptions",
-  tickets: "/admin/tickets",
   emails: "/admin/emails",
   reports: "/admin/reports",
   activity: "/admin/activity-logs",
@@ -2429,8 +2420,6 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
             {activeView === "onboarding" ? <OnboardingView ctx={viewCtx} /> : null}
             {activeView === "formations" ? <FormationsView ctx={viewCtx} /> : null}
             {activeView === "payments" ? <PaymentsView ctx={viewCtx} /> : null}
-            {activeView === "subscriptions" ? <SubscriptionsView ctx={viewCtx} /> : null}
-            {activeView === "tickets" ? <TicketsView ctx={viewCtx} /> : null}
             {activeView === "emails" ? <EmailsView ctx={viewCtx} /> : null}
             {activeView === "reports" ? <ReportsView ctx={viewCtx} /> : null}
             {activeView === "activity" ? <ActivityView ctx={viewCtx} /> : null}

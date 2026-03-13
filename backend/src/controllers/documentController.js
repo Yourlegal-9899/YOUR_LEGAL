@@ -1,22 +1,8 @@
 const mongoose = require('mongoose');
 const Document = require('../models/Document');
 const User = require('../models/User');
-
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
-
-const parseFileBuffer = (rawValue) => {
-  if (!rawValue || typeof rawValue !== 'string') {
-    return null;
-  }
-
-  const dataUrlMatch = rawValue.match(/^data:.*;base64,(.*)$/);
-  const base64 = dataUrlMatch ? dataUrlMatch[1] : rawValue;
-  try {
-    return Buffer.from(base64, 'base64');
-  } catch (error) {
-    return null;
-  }
-};
+const { getS3Object } = require('../utils/s3Client');
+const { MAX_FILE_BYTES, parseBase64File, storeDocument } = require('../utils/documentStorage');
 
 const toDocumentResponse = (doc, req) => {
   const host = req.get('host');
@@ -39,19 +25,6 @@ const toDocumentResponse = (doc, req) => {
 };
 
 const validateObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
-
-const createDocument = async ({ userId, source, status, fileName, mimeType, buffer, uploadedBy, taxFilingId }) =>
-  Document.create({
-    user: userId,
-    originalName: fileName,
-    mimeType,
-    size: buffer.length,
-    source,
-    status,
-    data: buffer,
-    uploadedBy,
-    taxFiling: taxFilingId || null,
-  });
 
 exports.getMyDocuments = async (req, res) => {
   try {
@@ -76,7 +49,7 @@ exports.uploadMyDocument = async (req, res) => {
       return res.status(400).json({ message: 'fileName, mimeType, and fileDataBase64 are required.' });
     }
 
-    const buffer = parseFileBuffer(fileDataBase64);
+    const buffer = parseBase64File(fileDataBase64);
     if (!buffer || buffer.length === 0) {
       return res.status(400).json({ message: 'Invalid file payload.' });
     }
@@ -84,7 +57,7 @@ exports.uploadMyDocument = async (req, res) => {
       return res.status(413).json({ message: 'File exceeds 10 MB limit.' });
     }
 
-    const doc = await createDocument({
+    const doc = await storeDocument({
       userId: req.user._id,
       source: 'client_uploads',
       status: 'pending',
@@ -140,7 +113,7 @@ exports.uploadOfficialDocumentAsAdmin = async (req, res) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    const buffer = parseFileBuffer(fileDataBase64);
+    const buffer = parseBase64File(fileDataBase64);
     if (!buffer || buffer.length === 0) {
       return res.status(400).json({ message: 'Invalid file payload.' });
     }
@@ -148,7 +121,7 @@ exports.uploadOfficialDocumentAsAdmin = async (req, res) => {
       return res.status(413).json({ message: 'File exceeds 10 MB limit.' });
     }
 
-    const doc = await createDocument({
+    const doc = await storeDocument({
       userId,
       source: 'legal_docs',
       status: 'verified',
@@ -219,10 +192,29 @@ exports.downloadDocument = async (req, res) => {
     }
 
     const safeName = doc.originalName.replace(/"/g, '');
-    res.setHeader('Content-Type', doc.mimeType);
-    res.setHeader('Content-Length', doc.size.toString());
+
+    if (doc.data && doc.data.length) {
+      res.setHeader('Content-Type', doc.mimeType);
+      res.setHeader('Content-Length', doc.size.toString());
+      res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+      return res.send(doc.data);
+    }
+
+    if (!doc.s3Bucket || !doc.s3Key) {
+      return res.status(404).json({ message: 'Document payload not found.' });
+    }
+
+    const s3Object = await getS3Object({ bucket: doc.s3Bucket, key: doc.s3Key });
+    if (!s3Object || !s3Object.Body) {
+      return res.status(404).json({ message: 'Document payload not found.' });
+    }
+
+    res.setHeader('Content-Type', s3Object.ContentType || doc.mimeType);
+    if (s3Object.ContentLength) {
+      res.setHeader('Content-Length', String(s3Object.ContentLength));
+    }
     res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
-    return res.send(doc.data);
+    return s3Object.Body.pipe(res);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

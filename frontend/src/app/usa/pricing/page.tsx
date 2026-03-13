@@ -23,12 +23,27 @@ import {
 import { Button } from '@/components/ui/button';
 import { NavHeader } from '@/components/layout/page-header';
 import { AppFooter } from '@/components/layout/page-footer';
+import { API_BASE_URL } from '@/lib/api-base';
 
 const stateFees = {
     'Wyoming LLC': { initial: 100, annual: 60, annualDesc: 'Minimum annual report fee', processingTime: '1-3 Business Days' },
     'Delaware LLC': { initial: 160, annual: 300, annualDesc: 'Flat annual tax', processingTime: '2-4 Business Days' },
     'Wyoming C-Corp': { initial: 100, annual: 60, annualDesc: 'Minimum annual report fee', processingTime: '1-3 Business Days' },
     'Delaware C-Corp': { initial: 160, annual: 175, annualDesc: 'Minimum franchise tax', processingTime: '2-4 Business Days' },
+};
+
+const resolveServicePrice = (service) => {
+    const pricing = service?.pricing || {};
+    const price = Number(pricing.starter ?? pricing.growth ?? pricing.scale ?? 0);
+    return Number.isFinite(price) ? price : 0;
+};
+
+const orderPlans = (plans, order) => {
+    const orderIndex = (name) => {
+        const idx = order.indexOf(name);
+        return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+    };
+    return [...plans].sort((a, b) => orderIndex(a.title) - orderIndex(b.title));
 };
 
 const PlanCard = ({ title, price, year2price, features, isPopular, onSelect, originalPrice, discount }) => {
@@ -248,6 +263,7 @@ const PricingSection = () => {
     const router = useRouter();
     const [selectedState, setSelectedState] = useState('Wyoming');
     const [selectedEntityType, setSelectedEntityType] = useState('LLC');
+    const planOrder = ['Micro', 'Vitals', 'Elite'];
 
     const handleSelectionChange = useCallback((state, entityType) => {
         setSelectedState(state);
@@ -295,6 +311,56 @@ const PricingSection = () => {
             isPopular: false,
         },
     };
+
+    const fallbackPlans = [planData.Micro, planData.Vitals, planData.Elite];
+    const [plans, setPlans] = useState(fallbackPlans);
+
+    useEffect(() => {
+        let isMounted = true;
+        const loadPlans = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/services?isActive=true&country=USA`);
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !data?.success) {
+                    throw new Error(data?.message || 'Unable to load plans.');
+                }
+                const corePlans = (data.services || []).filter((service) => service.uiType === 'core' && service.isActive);
+                if (!corePlans.length) return;
+                const singleCountry = corePlans.filter((service) => Array.isArray(service.countries) && service.countries.length === 1);
+                const effectivePlans = singleCountry.length ? singleCountry : corePlans;
+                const mapped = effectivePlans.map((service) => {
+                    const meta = planData[service.name] || {};
+                    const price = resolveServicePrice(service) || meta.price;
+                    const featuresList = Array.isArray(service.features) && service.features.length
+                        ? service.features
+                        : meta.features?.list || [];
+                    return {
+                        title: service.name,
+                        price,
+                        year2price: meta.year2price,
+                        originalPrice: meta.originalPrice,
+                        discount: meta.discount,
+                        features: {
+                            subtitle: service.description || meta.features?.subtitle || '',
+                            list: featuresList,
+                        },
+                        isPopular: service.name === 'Vitals',
+                    };
+                });
+                const ordered = orderPlans(mapped, planOrder);
+                if (isMounted && ordered.length) {
+                    setPlans(ordered);
+                }
+            } catch (error) {
+                // Keep fallback plans on error.
+            }
+        };
+
+        loadPlans();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
     
     return (
         <section id="pricing-content" className="py-20 bg-gray-50 animate-fade-in-up">
@@ -305,9 +371,9 @@ const PricingSection = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-                    <PlanCard {...planData.Micro} onSelect={handleSelectPlan} />
-                    <PlanCard {...planData.Vitals} onSelect={handleSelectPlan} />
-                    <PlanCard {...planData.Elite} onSelect={handleSelectPlan} />
+                    {plans.map((plan) => (
+                        <PlanCard key={plan.title} {...plan} onSelect={handleSelectPlan} />
+                    ))}
                 </div>
             </div>
         </section>

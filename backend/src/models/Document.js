@@ -37,7 +37,25 @@ const documentSchema = new mongoose.Schema(
     },
     data: {
       type: Buffer,
-      required: true,
+      required: false,
+    },
+    storageProvider: {
+      type: String,
+      enum: ['mongo', 's3'],
+      default: 'mongo',
+      index: true,
+    },
+    s3Bucket: {
+      type: String,
+      default: null,
+    },
+    s3Key: {
+      type: String,
+      default: null,
+    },
+    s3Region: {
+      type: String,
+      default: null,
     },
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,

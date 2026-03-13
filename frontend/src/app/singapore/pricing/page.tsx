@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CheckCircle,
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { NavHeader } from '@/components/layout/page-header';
 import { AppFooter } from '@/components/layout/page-footer';
+import { API_BASE_URL } from '@/lib/api-base';
 
 const PlanCard = ({ title, price, features, isPopular, onSelect }) => {
     const bgColor = isPopular ? 'bg-indigo-600' : 'bg-white';
@@ -56,6 +57,20 @@ const PlanCard = ({ title, price, features, isPopular, onSelect }) => {
             </button>
         </div>
     );
+};
+
+const resolveServicePrice = (service) => {
+    const pricing = service?.pricing || {};
+    const price = Number(pricing.starter ?? pricing.growth ?? pricing.scale ?? 0);
+    return Number.isFinite(price) ? price : 0;
+};
+
+const orderPlans = (plans, order) => {
+    const orderIndex = (name) => {
+        const idx = order.indexOf(name);
+        return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+    };
+    return [...plans].sort((a, b) => orderIndex(a.title) - orderIndex(b.title));
 };
 
 const singaporeFees = {
@@ -114,6 +129,53 @@ export default function SingaporePricingPage() {
         Compliance: { title: 'Compliance', price: 1999, features: { subtitle: 'Formation plus ongoing annual compliance.', list: ['All Formation Features', 'Registered Office Address', 'Corporate Secretary Service', 'Annual Return Filing (ACRA)']}, isPopular: true},
         AllInOne: { title: 'All-in-One', price: 3499, features: { subtitle: 'Complete package with bookkeeping and tax.', list: ['All Compliance Features', 'Unaudited Financial Statements', 'GST Registration & Filing', 'Annual Tax Filing (IRAS)']}},
     };
+    const planOrder = ['Formation', 'Compliance', 'All-in-One'];
+    const fallbackPlans = [planData.Formation, planData.Compliance, planData.AllInOne];
+    const [plans, setPlans] = useState(fallbackPlans);
+
+    useEffect(() => {
+        let isMounted = true;
+        const loadPlans = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/services?isActive=true&country=Singapore`);
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !data?.success) {
+                    throw new Error(data?.message || 'Unable to load plans.');
+                }
+                const corePlans = (data.services || []).filter((service) => service.uiType === 'core' && service.isActive);
+                if (!corePlans.length) return;
+                const singleCountry = corePlans.filter((service) => Array.isArray(service.countries) && service.countries.length === 1);
+                const effectivePlans = singleCountry.length ? singleCountry : corePlans;
+                const mapped = effectivePlans.map((service) => {
+                    const meta = planData[service.name] || {};
+                    const price = resolveServicePrice(service) || meta.price;
+                    const featuresList = Array.isArray(service.features) && service.features.length
+                        ? service.features
+                        : meta.features?.list || [];
+                    return {
+                        title: service.name,
+                        price,
+                        features: {
+                            subtitle: service.description || meta.features?.subtitle || '',
+                            list: featuresList,
+                        },
+                        isPopular: service.name === 'Compliance',
+                    };
+                });
+                const ordered = orderPlans(mapped, planOrder);
+                if (isMounted && ordered.length) {
+                    setPlans(ordered);
+                }
+            } catch (error) {
+                // Keep fallback plans on error.
+            }
+        };
+
+        loadPlans();
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     return (
         <div className="min-h-screen bg-white font-inter">
@@ -133,9 +195,13 @@ export default function SingaporePricingPage() {
                         <SingaporeFeeCalculator />
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <PlanCard {...planData.Formation} onSelect={() => router.push('/onboarding?planName=Formation&state=Singapore&entityType=PteLtd&country=Singapore&amount=999')} />
-                        <PlanCard {...planData.Compliance} onSelect={() => router.push('/onboarding?planName=Compliance&state=Singapore&entityType=PteLtd&country=Singapore&amount=1999')} />
-                        <PlanCard {...planData.AllInOne} onSelect={() => router.push('/onboarding?planName=AllInOne&state=Singapore&entityType=PteLtd&country=Singapore&amount=3499')} />
+                        {plans.map((plan) => (
+                            <PlanCard
+                                key={plan.title}
+                                {...plan}
+                                onSelect={() => router.push(`/onboarding?planName=${plan.title}&state=Singapore&entityType=PteLtd&country=Singapore&amount=${plan.price}`)}
+                            />
+                        ))}
                     </div>
                 </div>
             </section>

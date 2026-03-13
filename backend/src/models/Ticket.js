@@ -68,7 +68,6 @@ const ticketSchema = new mongoose.Schema({
   timestamps: true
 });
 
-ticketSchema.index({ ticketNumber: 1 });
 ticketSchema.index({ status: 1, priority: -1, createdAt: -1 });
 
 module.exports = mongoose.model('Ticket', ticketSchema);

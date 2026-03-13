@@ -378,34 +378,146 @@ const SectionWrapper = ({ title, children }) => (
 
 // --- New/Updated Sections ---
 
-// Services List Data
-const servicesList = [
-    { id: 'tm', title: 'Trademark Registration', price: 499, description: 'Protect your brand name and logo with a US Federal Trademark.', icon: Award, category: 'IP Protection' },
-    { id: 'scorp', title: 'S-Corp Election (Form 2553)', price: 149, description: 'Reduce self-employment taxes by electing S-Corp status with the IRS.', icon: FileText, category: 'Tax Strategy' },
-    { id: 'cgs', title: 'Certificate of Good Standing', price: 99, description: 'Official state document proving your business is compliant.', icon: ShieldCheck, category: 'Compliance' },
-    { id: 'foreign', title: 'Foreign Qualification', price: 249, description: 'Register your existing LLC to do business in another state.', icon: Globe, category: 'Expansion' },
-    { id: 'amend', title: 'Articles of Amendment', price: 199, description: 'Change your company name, address, or member structure.', icon: Settings, category: 'Legal' },
-    { id: 'ein_foreign', title: 'ITIN Application', price: 300, description: 'Individual Taxpayer Identification Number for non-US residents.', icon: User, category: 'Tax ID' },
-];
+const addOnIconMap = {
+    'IP Protection': Award,
+    'Tax Strategy': FileText,
+    'Compliance': ShieldCheck,
+    'Expansion': Globe,
+    'Legal': Settings,
+    'Tax ID': User,
+};
 
-const ServicesSection = () => {
-    const [purchasing, setPurchasing] = useState(null); // ID of service being purchased
-    const [purchasedServices, setPurchasedServices] = useState([]);
+const backendToAddOnCategory = {
+    'audit-support': 'IP Protection',
+    'tax-compliance': 'Tax Strategy',
+    'annual-compliance': 'Compliance',
+    formation: 'Legal',
+    payroll: 'Expansion',
+    bookkeeping: 'Compliance',
+    'virtual-cfo': 'Tax Strategy',
+};
+
+const resolveServicePrice = (service) => {
+    const pricing = service?.pricing || {};
+    const price = Number(pricing.starter ?? pricing.growth ?? pricing.scale ?? 0);
+    return Number.isFinite(price) ? price : 0;
+};
+
+const resolveUiCategory = (service) =>
+    service?.uiCategory || backendToAddOnCategory[service?.category] || 'Compliance';
+
+const resolveIcon = (service) => {
+    const iconUrl = service?.icon;
+    if (iconUrl && typeof iconUrl === 'string' && (iconUrl.startsWith('http') || iconUrl.startsWith('/'))) {
+        return { type: 'image', value: iconUrl };
+    }
+    const uiCategory = resolveUiCategory(service);
+    return { type: 'icon', value: addOnIconMap[uiCategory] || ShieldCheck };
+};
+
+const normalizeRegion = (region) => {
+    if (!region) return null;
+    const value = String(region).trim();
+    if (!value || value === 'N/A') return null;
+    if (value === 'SaudiArabia') return 'Saudi Arabia';
+    return value;
+};
+
+const serviceMatchesRegion = (service, region) => {
+    if (!region) return true;
+    const countries = Array.isArray(service?.countries) ? service.countries : [];
+    if (!countries.length) return true;
+    return countries.some((country) => String(country).toLowerCase() === region.toLowerCase());
+};
+
+const ServicesSection = ({ orders = [], userRegion }) => {
+    const [purchasing, setPurchasing] = useState(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [services, setServices] = useState([]);
+    const [isLoadingServices, setIsLoadingServices] = useState(false);
+    const [servicesError, setServicesError] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+    const normalizedRegion = useMemo(() => normalizeRegion(userRegion), [userRegion]);
 
     const handleBuyClick = (service) => {
         setPurchasing(service);
         setShowPaymentModal(true);
+        setServicesError('');
     };
 
-    const confirmPurchase = () => {
-        // Simulate API call and payment processing
-        setTimeout(() => {
-            setPurchasedServices([...purchasedServices, purchasing.id]);
-            setShowPaymentModal(false);
-            setPurchasing(null);
-            // In a real app, we would show a success toast here
-        }, 1500);
+    const purchasedServiceIds = useMemo(() => {
+        const ids = new Set();
+        (orders || []).forEach((order) => {
+            const paymentStatus = order?.payment?.status;
+            if (paymentStatus !== 'succeeded') return;
+            const serviceId = order?.metadata?.serviceId;
+            const serviceName = order?.metadata?.serviceName;
+            if (serviceId) ids.add(String(serviceId));
+            if (serviceName) ids.add(`name:${serviceName}`);
+        });
+        return ids;
+    }, [orders]);
+
+    useEffect(() => {
+        const loadServices = async () => {
+            setIsLoadingServices(true);
+            setServicesError('');
+            try {
+                const response = await fetch(`${API_BASE_URL}/services?isActive=true`);
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !data?.success) {
+                    throw new Error(data?.message || 'Unable to load services.');
+                }
+                const addOns = (data.services || []).filter((service) => service.uiType === 'addon' && service.isActive);
+                setServices(addOns);
+            } catch (error) {
+                setServices([]);
+                setServicesError(error instanceof Error ? error.message : 'Unable to load services.');
+            } finally {
+                setIsLoadingServices(false);
+            }
+        };
+
+        loadServices();
+    }, []);
+
+    const visibleServices = useMemo(
+        () => services.filter((service) => serviceMatchesRegion(service, normalizedRegion)),
+        [services, normalizedRegion]
+    );
+
+    const confirmPurchase = async () => {
+        if (!purchasing) return;
+        setIsProcessing(true);
+        setServicesError('');
+        try {
+            const response = await fetch(`${API_BASE_URL}/payment/create-checkout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    amount: purchasing.price,
+                    country: normalizedRegion || 'USA',
+                    serviceType: purchasing.serviceType || 'formation',
+                    serviceName: purchasing.title,
+                    serviceId: purchasing.id,
+                })
+            });
+
+            const data = await response.json().catch(() => null);
+            if (!response.ok) {
+                throw new Error(data?.message || 'Payment error. Please try again.');
+            }
+            if (data?.url) {
+                window.location.href = data.url;
+                return;
+            }
+            throw new Error('Unable to start Stripe checkout.');
+        } catch (error) {
+            setServicesError(error instanceof Error ? error.message : 'Payment error. Please try again.');
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     return (
@@ -413,39 +525,71 @@ const ServicesSection = () => {
              <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
                 <p className="text-gray-600 mb-8">Scale your business with our premium legal and tax services. Secure, one-click compliance.</p>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {servicesList.map(service => {
-                        const isPurchased = purchasedServices.includes(service.id);
-                        return (
-                            <div key={service.id} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                                        <service.icon className="w-6 h-6" />
-                                    </div>
-                                    <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase rounded-md">{service.category}</span>
-                                </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">{service.title}</h3>
-                                <p className="text-sm text-gray-600 mb-6 flex-grow">{service.description}</p>
-                                
-                                <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
-                                    <span className="text-xl font-bold text-gray-900">${service.price}</span>
-                                    {isPurchased ? (
-                                        <button disabled className="px-4 py-2 bg-green-100 text-green-700 font-bold rounded-xl text-sm flex items-center cursor-default">
-                                            <CheckCircle className="w-4 h-4 mr-1" /> Purchased
-                                        </button>
-                                    ) : (
-                                        <button 
-                                            onClick={() => handleBuyClick(service)}
-                                            className="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition text-sm flex items-center shadow-lg shadow-blue-200"
-                                        >
-                                            Add Service <ChevronRight className="w-4 h-4 ml-1" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
+                  {servicesError ? (
+                      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                          {servicesError}
+                      </div>
+                  ) : null}
+
+                  {isLoadingServices ? (
+                      <div className="flex items-center justify-center p-10 text-sm text-gray-500">
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading services...
+                      </div>
+                  ) : visibleServices.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-500">
+                          No add-on services available right now.
+                      </div>
+                  ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                     {visibleServices.map(service => {
+                          const uiCategory = resolveUiCategory(service);
+                          const price = resolveServicePrice(service);
+                          const iconData = resolveIcon(service);
+                          const serviceId = String(service._id || service.id || '');
+                          const isPurchased = purchasedServiceIds.has(serviceId) || purchasedServiceIds.has(`name:${service.name}`);
+                          return (
+                              <div key={serviceId} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col">
+                                  <div className="flex justify-between items-start mb-4">
+                                      <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                                          {iconData.type === 'image' ? (
+                                              <img src={iconData.value} alt={service.name} className="w-6 h-6 object-contain" />
+                                          ) : (
+                                              <iconData.value className="w-6 h-6" />
+                                          )}
+                                      </div>
+                                      <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase rounded-md">{uiCategory}</span>
+                                  </div>
+                                  <h3 className="text-lg font-bold text-gray-900 mb-2">{service.name}</h3>
+                                  <p className="text-sm text-gray-600 mb-6 flex-grow">{service.description}</p>
+                                  
+                                  <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100">
+                                      <span className="text-xl font-bold text-gray-900">${price}</span>
+                                      {isPurchased ? (
+                                          <button disabled className="px-4 py-2 bg-green-100 text-green-700 font-bold rounded-xl text-sm flex items-center cursor-default">
+                                              <CheckCircle className="w-4 h-4 mr-1" /> Purchased
+                                          </button>
+                                      ) : (
+                                          <button 
+                                              onClick={() => handleBuyClick({
+                                                  id: serviceId,
+                                                  title: service.name,
+                                                  description: service.description,
+                                                  price,
+                                                  category: uiCategory,
+                                                  icon: iconData,
+                                                  serviceType: service.category,
+                                              })}
+                                              className="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition text-sm flex items-center shadow-lg shadow-blue-200"
+                                          >
+                                              Add Service <ChevronRight className="w-4 h-4 ml-1" />
+                                          </button>
+                                      )}
+                                  </div>
+                              </div>
+                          )
+                      })}
+                  </div>
+                  )}
 
                 {/* Payment Modal Overlay */}
                 {showPaymentModal && purchasing && (
@@ -456,11 +600,17 @@ const ServicesSection = () => {
                                 <button onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5"/></button>
                             </div>
                             <div className="p-6 space-y-4">
-                                <div className="flex items-center space-x-4 mb-4">
-                                    <div className="p-2 bg-blue-100 text-blue-600 rounded-lg"><purchasing.icon className="w-6 h-6" /></div>
-                                    <div>
-                                        <p className="font-bold text-gray-900">{purchasing.title}</p>
-                                        <p className="text-sm text-gray-500">${purchasing.price} (One-time fee)</p>
+                                  <div className="flex items-center space-x-4 mb-4">
+                                      <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                                          {purchasing.icon?.type === 'image' ? (
+                                              <img src={purchasing.icon.value} alt={purchasing.title} className="w-6 h-6 object-contain" />
+                                          ) : purchasing.icon?.value ? (
+                                              <purchasing.icon.value className="w-6 h-6" />
+                                          ) : null}
+                                      </div>
+                                      <div>
+                                          <p className="font-bold text-gray-900">{purchasing.title}</p>
+                                          <p className="text-sm text-gray-500">${purchasing.price} (One-time fee)</p>
                                     </div>
                                 </div>
                                 
@@ -477,9 +627,10 @@ const ServicesSection = () => {
                             </div>
                             <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end space-x-3">
                                 <button onClick={() => setShowPaymentModal(false)} className="px-4 py-2 text-gray-600 font-semibold hover:bg-gray-200 rounded-lg transition">Cancel</button>
-                                <button onClick={confirmPurchase} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md flex items-center">
-                                    Pay ${purchasing.price}
-                                </button>
+                                  <button onClick={confirmPurchase} disabled={isProcessing} className="px-4 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md flex items-center disabled:opacity-60">
+                                      {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                      Pay ${purchasing.price}
+                                  </button>
                             </div>
                         </div>
                     </div>
@@ -2919,7 +3070,7 @@ export default function PortalPage({ onLogout }) {
         switch (activePath) {
             case 'dashboard': return <DashboardContent user={user} navigate={handleNavigation} isQuickBooksLinked={isQuickBooksLinked} financialSnapshot={financialSnapshot} isQuickBooksLoading={qbLoading} lastSyncAt={qbLastSyncAt} metrics={dashboardMetrics} tasks={dashboardTasks} isUserDataLoading={userDataLoading} />;
             case 'company': return <CompanySection userId={resolvedUserId} formations={myFormations} documents={myDocuments} isLoading={userDataLoading} />;
-            case 'services': return <ServicesSection />;
+            case 'services': return <ServicesSection orders={myOrders} userRegion={user?.region} />;
             case 'banking':
                 return (
                     <BankingSection

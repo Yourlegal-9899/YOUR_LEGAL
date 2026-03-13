@@ -3,8 +3,7 @@ const TaxFiling = require('../models/TaxFiling');
 const Document = require('../models/Document');
 const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
-
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const { MAX_FILE_BYTES, parseBase64File, storeDocument } = require('../utils/documentStorage');
 
 const createNotification = async (userId, title, message, metadata = {}) => {
   if (!userId) return;
@@ -26,19 +25,6 @@ const addTimelineEntry = (filing, label, message, userId) => {
     createdBy: userId,
     createdAt: new Date(),
   });
-};
-
-const parseFileBuffer = (rawValue) => {
-  if (!rawValue || typeof rawValue !== 'string') {
-    return null;
-  }
-  const dataUrlMatch = rawValue.match(/^data:.*;base64,(.*)$/);
-  const base64 = dataUrlMatch ? dataUrlMatch[1] : rawValue;
-  try {
-    return Buffer.from(base64, 'base64');
-  } catch (error) {
-    return null;
-  }
 };
 
 exports.getAllTaxFilings = async (req, res) => {
@@ -256,7 +242,7 @@ exports.uploadTaxFilingDocument = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to upload documents for this filing.' });
     }
 
-    const buffer = parseFileBuffer(fileDataBase64);
+    const buffer = parseBase64File(fileDataBase64);
     if (!buffer || buffer.length === 0) {
       return res.status(400).json({ message: 'Invalid file payload.' });
     }
@@ -264,16 +250,15 @@ exports.uploadTaxFilingDocument = async (req, res) => {
       return res.status(413).json({ message: 'File exceeds 10 MB limit.' });
     }
 
-    const doc = await Document.create({
-      user: req.user._id,
-      originalName: fileName,
-      mimeType,
-      size: buffer.length,
+    const doc = await storeDocument({
+      userId: req.user._id,
       source: 'client_uploads',
       status: 'pending',
-      data: buffer,
+      fileName,
+      mimeType,
+      buffer,
       uploadedBy: req.user._id,
-      taxFiling: filing._id,
+      taxFilingId: filing._id,
     });
 
     filing.documents = filing.documents || [];

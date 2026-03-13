@@ -59,7 +59,7 @@ const resolveSubmissionRegion = (submission) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password').sort('-createdAt');
+    const users = await User.find({ role: { $ne: 'admin' } }).select('-password').sort('-createdAt');
     const missingRegionUsers = users.filter((user) => !user.region);
 
     if (missingRegionUsers.length) {

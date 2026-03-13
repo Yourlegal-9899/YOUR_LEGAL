@@ -47,6 +47,7 @@ function OnboardingPageContent() {
   const [entityType, setEntityType] = useState(planEntityType || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [stepError, setStepError] = useState("");
 
   const [formData, setFormData] = useState({
     stakeholders: [
@@ -145,7 +146,13 @@ function OnboardingPageContent() {
     }
   }, [loading, user, planName, planState, planEntityType, router]);
 
+  const clearErrors = () => {
+    if (stepError) setStepError("");
+    if (submitError) setSubmitError("");
+  };
+
   const handleInputChange = (e) => {
+    clearErrors();
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -154,6 +161,7 @@ function OnboardingPageContent() {
   };
 
   const handleAddOnChange = (e) => {
+    clearErrors();
     const { name, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -162,6 +170,7 @@ function OnboardingPageContent() {
   };
 
   const handleBookkeepingChange = (e) => {
+    clearErrors();
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -170,6 +179,7 @@ function OnboardingPageContent() {
   };
 
   const handleExistingCompanyChange = (e) => {
+    clearErrors();
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -178,6 +188,7 @@ function OnboardingPageContent() {
   };
 
   const handleComplianceServicesChange = (e) => {
+    clearErrors();
     const { name, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -186,12 +197,14 @@ function OnboardingPageContent() {
   };
 
   const handleStakeholderChange = (index, field, value) => {
+    clearErrors();
     const updatedStakeholders = [...formData.stakeholders];
     updatedStakeholders[index][field] = value;
     setFormData((prev) => ({ ...prev, stakeholders: updatedStakeholders }));
   };
 
   const addStakeholder = () => {
+    clearErrors();
     setFormData((prev) => ({
       ...prev,
       stakeholders: [
@@ -217,6 +230,7 @@ function OnboardingPageContent() {
   };
 
   const removeStakeholder = (id) => {
+    clearErrors();
     setFormData((prev) => ({
       ...prev,
       stakeholders: prev.stakeholders.filter((s) => s.id !== id),
@@ -234,6 +248,130 @@ function OnboardingPageContent() {
     if (formData.addOns.annualCompliance) steps.push("Bookkeeping Setup");
     steps.push("Review & Submit");
     return steps;
+  };
+
+  const isBlank = (value) => {
+    if (value === undefined || value === null) return true;
+    if (typeof value === "string") return value.trim().length === 0;
+    return false;
+  };
+
+  const validateStakeholders = (missing) => {
+    formData.stakeholders.forEach((stakeholder, index) => {
+      const labelPrefix = `Stakeholder ${index + 1}`;
+      if (isBlank(stakeholder.name)) missing.push(`${labelPrefix} name`);
+      if (isBlank(stakeholder.email)) missing.push(`${labelPrefix} email`);
+      if (isBlank(stakeholder.phone)) missing.push(`${labelPrefix} phone`);
+      if (isBlank(stakeholder.dob)) missing.push(`${labelPrefix} date of birth`);
+      if (isBlank(stakeholder.nationality)) missing.push(`${labelPrefix} nationality`);
+      if (isBlank(stakeholder.address)) missing.push(`${labelPrefix} address`);
+      if (isBlank(stakeholder.ownership)) missing.push(`${labelPrefix} ownership`);
+
+      const isIndia = destination === "India" || formData.existingCompany.country === "India";
+      if (isIndia) {
+        if (isBlank(stakeholder.pan)) missing.push(`${labelPrefix} PAN`);
+        if (isBlank(stakeholder.aadhaar)) missing.push(`${labelPrefix} Aadhaar`);
+        if (stakeholder.hasDin === "Yes" && isBlank(stakeholder.dinNumber)) {
+          missing.push(`${labelPrefix} DIN number`);
+        }
+      } else {
+        if (isBlank(stakeholder.passportNo)) missing.push(`${labelPrefix} passport number`);
+      }
+
+      if (destination === "UAE" && isBlank(stakeholder.mothersName)) {
+        missing.push(`${labelPrefix} mother's name`);
+      }
+    });
+
+    if (formData.pocDifferent) {
+      if (isBlank(formData.pocName)) missing.push("POC name");
+      if (isBlank(formData.pocEmail)) missing.push("POC email");
+      if (isBlank(formData.pocPhone)) missing.push("POC phone");
+    }
+  };
+
+  const validateStep = () => {
+    if (currentStep === 0) {
+      if (!destination) return "Select a destination to continue.";
+      return "";
+    }
+
+    const stepName = getDynamicSteps()[currentStep - 1];
+    const missing = [];
+
+    if (stepName === "Company Details") {
+      if (destination === "USA") {
+        if (isBlank(formData.state)) missing.push("State of Incorporation");
+        if (isBlank(formData.estimatedRevenue)) missing.push("Estimated Revenue");
+      } else if (destination === "India") {
+        if (isBlank(formData.state)) missing.push("State of Incorporation");
+        if (isBlank(formData.indiaRegisteredOffice)) missing.push("Registered Office Preference");
+      } else if (destination === "UAE") {
+        if (isBlank(formData.freeZone)) missing.push("Free Zone");
+        if (isBlank(formData.licenseType)) missing.push("License Type");
+        if (isBlank(formData.businessPlan)) missing.push("Business Plan");
+      }
+
+      if (isBlank(formData.nameChoice1)) missing.push("Company name choice 1");
+      if (isBlank(formData.nameChoice2)) missing.push("Company name choice 2");
+      if (isBlank(formData.nameChoice3)) missing.push("Company name choice 3");
+      if (isBlank(formData.purpose)) missing.push("Business purpose");
+      if (isBlank(formData.sourceOfFunds)) missing.push("Source of funds");
+      if (isBlank(formData.targetMarkets)) missing.push("Target markets");
+
+      if (entityType === "C-Corp") {
+        if (isBlank(formData.shares)) missing.push("Authorized shares");
+        if (isBlank(formData.parValue)) missing.push("Par value");
+      }
+      if (entityType === "PvtLtd") {
+        if (isBlank(formData.authorizedCapital)) missing.push("Authorized capital");
+        if (isBlank(formData.paidUpCapital)) missing.push("Paid-up capital");
+      }
+    }
+
+    if (stepName === "Company Info") {
+      if (isBlank(formData.existingCompany.country)) missing.push("Company jurisdiction");
+      if (isBlank(formData.existingCompany.entityType)) missing.push("Entity structure");
+      if (isBlank(formData.existingCompany.name)) missing.push("Legal company name");
+      if (isBlank(formData.existingCompany.taxId)) missing.push("Tax ID");
+    }
+
+    if (stepName === "Required Services") {
+      const anyService = Object.values(formData.complianceServices || {}).some(Boolean);
+      if (!anyService) missing.push("At least one service selection");
+    }
+
+    if (stepName === "Accounting Setup" || stepName === "Bookkeeping Setup") {
+      if (isBlank(formData.bookkeeping.software)) missing.push("Accounting software");
+      if (isBlank(formData.bookkeeping.monthlyTransactions)) missing.push("Monthly transactions");
+      if (isBlank(formData.bookkeeping.avgTransactionValue)) missing.push("Average transaction value");
+      if (isBlank(formData.bookkeeping.bankAccounts)) missing.push("Bank accounts");
+      if (isBlank(formData.bookkeeping.fiscalYearEnd)) missing.push("Fiscal year end");
+    }
+
+    if (stepName === "Stakeholders & KYC" || stepName === "Stakeholders") {
+      validateStakeholders(missing);
+    }
+
+    if (stepName === "Review & Submit") {
+      if (!formData.eSignConsent) missing.push("E-sign consent");
+    }
+
+    if (missing.length) {
+      return `Please complete: ${missing.join(", ")}.`;
+    }
+
+    return "";
+  };
+
+  const goNextStep = () => {
+    const error = validateStep();
+    if (error) {
+      setStepError(error);
+      return;
+    }
+    setStepError("");
+    nextStep();
   };
 
   const renderProgressBar = () => {
@@ -280,6 +418,11 @@ function OnboardingPageContent() {
   };
 
   const handleSubmit = async () => {
+    const error = validateStep();
+    if (error) {
+      setStepError(error);
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError("");
     try {
@@ -482,7 +625,7 @@ function OnboardingPageContent() {
 
       <div className="flex justify-end mt-10">
         <button
-          onClick={nextStep}
+          onClick={goNextStep}
           disabled={!destination}
           className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center shadow-lg hover:shadow-xl transition-all"
         >
@@ -1397,44 +1540,51 @@ function OnboardingPageContent() {
             {getStepContent()}
           </div>
 
-          {currentStep > 0 && (
-            <div className="bg-gray-50/80 backdrop-blur-sm p-6 md:px-10 border-t border-gray-100 flex justify-between items-center">
-              <button
-                type="button"
-                onClick={prevStep}
-                className="flex items-center px-5 py-2.5 text-gray-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl font-bold transition-all"
-              >
-                <ChevronLeft size={20} className="mr-1" /> Back
-              </button>
+            {currentStep > 0 && (
+             <div className="bg-gray-50/80 backdrop-blur-sm p-6 md:px-10 border-t border-gray-100">
+                {stepError || submitError ? (
+                  <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+                    {stepError || submitError}
+                  </div>
+                ) : null}
+                <div className="flex justify-between items-center">
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    className="flex items-center px-5 py-2.5 text-gray-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl font-bold transition-all"
+                  >
+                    <ChevronLeft size={20} className="mr-1" /> Back
+                  </button>
 
-              {currentStep < totalSteps ? (
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  className="flex items-center px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-md hover:shadow-xl transition-all"
-                >
-                  Continue <ChevronRight size={20} className="ml-1" />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!formData.eSignConsent || isSubmitting}
-                  className="flex items-center px-8 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> Submitting
-                    </>
+                  {currentStep < totalSteps ? (
+                    <button
+                      type="button"
+                      onClick={goNextStep}
+                      className="flex items-center px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-md hover:shadow-xl transition-all"
+                    >
+                      Continue <ChevronRight size={20} className="ml-1" />
+                    </button>
                   ) : (
-                    <>
-                      Submit Application <CheckCircle2 size={20} className="ml-2" />
-                    </>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={!formData.eSignConsent || isSubmitting}
+                      className="flex items-center px-8 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" /> Submitting
+                        </>
+                      ) : (
+                        <>
+                          Submit Application <CheckCircle2 size={20} className="ml-2" />
+                        </>
+                      )}
+                    </button>
                   )}
-                </button>
-              )}
-            </div>
-          )}
+                </div>
+              </div>
+            )}
         </div>
 
         <div className="text-center mt-8 text-xs text-gray-400 font-medium flex items-center justify-center space-x-4">
