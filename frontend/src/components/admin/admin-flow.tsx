@@ -57,7 +57,6 @@ import { PaymentsView } from "@/components/admin/views/payments-view";
 import { QuickbooksView } from "@/components/admin/views/quickbooks-view";
 import { ReportsView } from "@/components/admin/views/reports-view";
 import { ServicesView } from "@/components/admin/views/services-view";
-import { SettingsView } from "@/components/admin/views/settings-view";
 import { UsersView } from "@/components/admin/views/users-view";
 import { ZohoLeadsView } from "@/components/admin/views/zoho-leads-view";
 import { useAuth } from "@/contexts/AuthContext";
@@ -73,10 +72,8 @@ type AdminView =
   | "formations"
   | "documents"
   | "payments"
-  | "subscriptions"
   | "reports"
   | "activity"
-  | "settings"
   | "blogs"
   | "services"
   | "quickbooks"
@@ -307,7 +304,6 @@ const viewMeta: Record<AdminView, { title: string; subtitle: string }> = {
   payments: { title: "Payments", subtitle: "Transactions, invoices, refunds and failures" },
   reports: { title: "Reports", subtitle: "Revenue, growth and service analytics" },
   activity: { title: "Activity Logs", subtitle: "Audit trail of admin actions" },
-  settings: { title: "Settings", subtitle: "Stripe, email, currency, tax and country settings" },
   blogs: { title: "Blog Posts", subtitle: "Legacy route: blog content queue" },
   services: { title: "Service Pages", subtitle: "Legacy route: service content queue" },
   quickbooks: { title: "QuickBooks Integration", subtitle: "Monitor accounting system connections" },
@@ -332,7 +328,6 @@ const navItems: Array<{ key: AdminView; label: string; icon: React.ComponentType
   { key: "services", label: "Service Pages", icon: Briefcase },
   { key: "reports", label: "Reports", icon: BarChart3 },
   { key: "activity", label: "Activity Logs", icon: History },
-  { key: "settings", label: "Settings", icon: Settings },
 ];
 
 const viewHref: Record<AdminView, string> = {
@@ -345,7 +340,6 @@ const viewHref: Record<AdminView, string> = {
   payments: "/admin/payments",
   reports: "/admin/reports",
   activity: "/admin/activity-logs",
-  settings: "/admin/settings",
   blogs: "/admin/blogs",
   services: "/admin/services",
   documents: "/admin/documents",
@@ -743,24 +737,6 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
 
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [activityQ, setActivityQ] = useState("");
-
-  const [systemSettings, setSystemSettings] = useState({
-    stripePublishableKey: "pk_test_xxxxxxxxxxxx",
-    stripeSecretKey: "sk_test_xxxxxxxxxxxx",
-    emailService: "SendGrid",
-    currency: "USD",
-    taxRate: "8.50",
-    countryAvailability: {
-      USA: true,
-      UK: true,
-      UAE: true,
-      Singapore: true,
-      India: true,
-      Australia: true,
-      Netherlands: true,
-    } as Record<UserRegion, boolean>,
-  });
-  const [settingsMessage, setSettingsMessage] = useState("");
   const [dashboardPayload, setDashboardPayload] = useState<DashboardPayload | null>(null);
   const [isDashboardMetricsLoading, setIsDashboardMetricsLoading] = useState(true);
   const [dashboardMetricsError, setDashboardMetricsError] = useState("");
@@ -776,7 +752,6 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     formationsLoading,
     ordersLoading,
     servicesLoading,
-    settingsLoading,
     complianceLoading,
     onboardingLoading,
     zohoLeadsLoading,
@@ -910,8 +885,6 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
         return isDashboardMetricsLoading || isUsersDataLoading;
       case "activity":
         return activityLoading;
-      case "settings":
-        return settingsLoading;
       case "blogs":
         return blogsLoading;
       case "services":
@@ -938,7 +911,6 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     onboardingLoading,
     ordersLoading,
     servicesLoading,
-    settingsLoading,
     zohoLeadsLoading,
   ]);
 
@@ -999,7 +971,6 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     adminData.loadServices();
     adminData.loadEmails();
     adminData.loadBlogs();
-    adminData.loadSettings();
     adminData.loadCompliance();
     adminData.loadActivityLogs();
   }, [
@@ -1011,7 +982,6 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     adminData.loadOnboardingSubmissions,
     adminData.loadOrders,
     adminData.loadServices,
-    adminData.loadSettings,
     adminData.loadTickets,
   ]);
 
@@ -1308,32 +1278,7 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     setPayments(mapped);
   }, [livePayments, liveUsers]);
 
-  useEffect(() => {
-    if (!adminData.settings.length) {
-      return;
-    }
 
-    const settingsMap = new Map(adminData.settings.map((setting: any) => [setting.key, setting.value]));
-    const countryAvailabilityValue = settingsMap.get("countryAvailability");
-
-    setSystemSettings((prev) => ({
-      ...prev,
-      stripePublishableKey: settingsMap.get("stripePublishableKey") ?? prev.stripePublishableKey,
-      stripeSecretKey: settingsMap.get("stripeSecretKey") ?? prev.stripeSecretKey,
-      emailService: settingsMap.get("emailService") ?? prev.emailService,
-      currency: settingsMap.get("currency") ?? prev.currency,
-      taxRate: String(settingsMap.get("taxRate") ?? prev.taxRate),
-      countryAvailability: {
-        ...prev.countryAvailability,
-        ...(countryAvailabilityValue && typeof countryAvailabilityValue === "object" ? countryAvailabilityValue : {}),
-      },
-    }));
-
-    const storedPlans = settingsMap.get("plans");
-    if (Array.isArray(storedPlans)) {
-      setPlans(storedPlans as PlanRecord[]);
-    }
-  }, [adminData.settings]);
 
   useEffect(() => {
     if (!liveUsers?.length) return;
@@ -1820,7 +1765,7 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     return Array.from(map.entries()).map(([service, count]) => ({ service, count }));
   }, [orders]);
 
-  const addActivity = (action: string, entity: string = "settings", entityId?: string) => {
+  const addActivity = (action: string, entity: string = "general", entityId?: string) => {
     const entry: ActivityLog = {
       id: `act_${Date.now()}`,
       action,
@@ -2104,17 +2049,7 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
   };
 
   const persistPlans = async (nextPlans: PlanRecord[]) => {
-    const result = await adminData.updateSetting({
-      key: "plans",
-      value: nextPlans,
-      category: "general",
-      description: "Admin subscription plans",
-    });
-    if (!result.success) {
-      setSettingsMessage(result.error || "Unable to save plans.");
-      return false;
-    }
-    adminData.loadSettings();
+    // Plans persistence removed - settings functionality disabled
     return true;
   };
 
@@ -2246,29 +2181,7 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     addActivity(`Updated CMS record ${recordId}`);
   };
 
-  const saveSettings = async () => {
-    setSettingsMessage("");
-    const updates = [
-      { key: "stripePublishableKey", value: systemSettings.stripePublishableKey, category: "payment" },
-      { key: "stripeSecretKey", value: systemSettings.stripeSecretKey, category: "payment" },
-      { key: "emailService", value: systemSettings.emailService, category: "email" },
-      { key: "currency", value: systemSettings.currency, category: "general" },
-      { key: "taxRate", value: systemSettings.taxRate, category: "general" },
-      { key: "countryAvailability", value: systemSettings.countryAvailability, category: "general" },
-    ];
 
-    const results = await Promise.all(updates.map((setting) => adminData.updateSetting(setting)));
-    const hasError = results.some((result) => !result.success);
-
-    if (hasError) {
-      setSettingsMessage("Some settings failed to save. Please retry.");
-      return;
-    }
-
-    setSettingsMessage("System settings saved successfully.");
-    addActivity("Updated system settings");
-    adminData.loadSettings();
-  };
 
   const viewCtx = {
     StatCard,
@@ -2378,9 +2291,7 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     activityQ,
     setActivityQ,
     filteredActivityLogs,
-    systemSettings,
-    setSystemSettings,
-    settingsMessage,
+
     contentQ,
     setContentQ,
     contentStage,
@@ -2428,7 +2339,6 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     adminUploadMessage,
     selectedClientUploadedDocuments,
     selectedClientAdminDocuments,
-    saveSettings,
   };
 
   return (
@@ -2610,7 +2520,6 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
             {activeView === "payments" ? <PaymentsView ctx={viewCtx} /> : null}
             {activeView === "reports" ? <ReportsView ctx={viewCtx} /> : null}
             {activeView === "activity" ? <ActivityView ctx={viewCtx} /> : null}
-            {activeView === "settings" ? <SettingsView ctx={viewCtx} /> : null}
             {activeView === "blogs" ? <BlogsView ctx={viewCtx} /> : null}
             {activeView === "services" ? <ServicesView ctx={viewCtx} /> : null}
             {activeView === "documents" ? <DocumentsView ctx={viewCtx} /> : null}
@@ -2626,5 +2535,12 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     </div>
   );
 }
+
+
+
+
+
+
+
 
 

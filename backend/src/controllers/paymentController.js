@@ -229,6 +229,12 @@ async function handleCheckoutComplete(session) {
         paymentIntentId: session.payment_intent,
       };
       await payment.save();
+
+      // Update associated order to confirmed
+      await Order.findOneAndUpdate(
+        { payment: payment._id },
+        { status: 'confirmed' }
+      );
     } else {
       await Payment.create({
         user: userId,
@@ -282,6 +288,12 @@ async function handlePaymentSuccess(paymentIntent) {
         subscriptionStatus: 'active'
       });
     }
+
+    // Update associated order to confirmed
+    await Order.findOneAndUpdate(
+      { payment: payment._id },
+      { status: 'confirmed' }
+    );
   }
 }
 

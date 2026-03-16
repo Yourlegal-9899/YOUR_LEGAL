@@ -1,4 +1,5 @@
 const Order = require('../models/Order');
+const Payment = require('../models/Payment');
 
 const generateOrderNumber = () => {
   return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -79,15 +80,34 @@ exports.createOrder = async (req, res) => {
 
 exports.updateOrder = async (req, res) => {
   try {
+    // First get the order to check if it has a payment
+    const existingOrder = await Order.findById(req.params.id);
+    
+    if (!existingOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Update payment status based on order status change
+    if (existingOrder.payment && req.body.status) {
+      const paymentStatusMap = {
+        'confirmed': 'succeeded',
+        'completed': 'succeeded',
+        'cancelled': 'failed',
+        'refunded': 'refunded'
+      };
+
+      const newPaymentStatus = paymentStatusMap[req.body.status];
+      if (newPaymentStatus) {
+        await Payment.findByIdAndUpdate(existingOrder.payment, { status: newPaymentStatus });
+      }
+    }
+
+    // Now update the order
     const order = await Order.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
     );
-
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
 
     res.json({ success: true, order });
   } catch (error) {

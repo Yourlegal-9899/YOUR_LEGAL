@@ -49,6 +49,7 @@ function OnboardingPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [stepError, setStepError] = useState("");
+  const [documentErrors, setDocumentErrors] = useState({});
 
   const [formData, setFormData] = useState({
     stakeholders: [
@@ -69,6 +70,13 @@ function OnboardingPageContent() {
         dinNumber: "",
         isResponsibleParty: true,
         mothersName: "",
+        documents: {
+          passport: null,
+          proofOfAddress: null,
+          pan: null,
+          aadhaar: null,
+          photo: null,
+        },
       },
     ],
     addOns: {
@@ -85,6 +93,11 @@ function OnboardingPageContent() {
       bankAccounts: "",
       fiscalYearEnd: "",
       hasPriorTaxReturns: "No",
+      documents: {
+        bankStatements: null,
+        taxId: null,
+        priorTaxReturn: null,
+      },
     },
     existingCompany: {
       country: "",
@@ -150,6 +163,7 @@ function OnboardingPageContent() {
   const clearErrors = () => {
     if (stepError) setStepError("");
     if (submitError) setSubmitError("");
+    setDocumentErrors({});
   };
 
   const handleInputChange = (e) => {
@@ -225,8 +239,92 @@ function OnboardingPageContent() {
           dinNumber: "",
           isResponsibleParty: false,
           mothersName: "",
+          documents: {
+            passport: null,
+            proofOfAddress: null,
+            pan: null,
+            aadhaar: null,
+            photo: null,
+          },
         },
       ],
+    }));
+  };
+
+  const handleDocumentUpload = (stakeholderIndex, documentType, file) => {
+    if (!file) return;
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      setDocumentErrors(prev => ({
+        ...prev,
+        [`${stakeholderIndex}_${documentType}`]: 'Please upload only JPG, PNG, or PDF files'
+      }));
+      return;
+    }
+    
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      setDocumentErrors(prev => ({
+        ...prev,
+        [`${stakeholderIndex}_${documentType}`]: 'File size must be less than 5MB'
+      }));
+      return;
+    }
+    
+    // Clear any previous errors for this document
+    setDocumentErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[`${stakeholderIndex}_${documentType}`];
+      return newErrors;
+    });
+    
+    // Update stakeholder documents
+    const updatedStakeholders = [...formData.stakeholders];
+    updatedStakeholders[stakeholderIndex].documents[documentType] = file;
+    setFormData(prev => ({ ...prev, stakeholders: updatedStakeholders }));
+  };
+  
+  const handleBookkeepingDocumentUpload = (documentType, file) => {
+    if (!file) return;
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf', 'text/csv', 'application/vnd.ms-excel'];
+    if (!allowedTypes.includes(file.type)) {
+      setDocumentErrors(prev => ({
+        ...prev,
+        [`bookkeeping_${documentType}`]: 'Please upload only JPG, PNG, PDF, or CSV files'
+      }));
+      return;
+    }
+    
+    // Validate file size (10MB max for bank statements)
+    if (file.size > 10 * 1024 * 1024) {
+      setDocumentErrors(prev => ({
+        ...prev,
+        [`bookkeeping_${documentType}`]: 'File size must be less than 10MB'
+      }));
+      return;
+    }
+    
+    // Clear any previous errors for this document
+    setDocumentErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[`bookkeeping_${documentType}`];
+      return newErrors;
+    });
+    
+    // Update bookkeeping documents
+    setFormData(prev => ({
+      ...prev,
+      bookkeeping: {
+        ...prev.bookkeeping,
+        documents: {
+          ...prev.bookkeeping.documents,
+          [documentType]: file
+        }
+      }
     }));
   };
 
@@ -275,12 +373,23 @@ function OnboardingPageContent() {
         if (stakeholder.hasDin === "Yes" && isBlank(stakeholder.dinNumber)) {
           missing.push(`${labelPrefix} DIN number`);
         }
+        // Document validation for India
+        if (!stakeholder.documents.pan) missing.push(`${labelPrefix} PAN document`);
+        if (!stakeholder.documents.aadhaar) missing.push(`${labelPrefix} Aadhaar document`);
+        if (!stakeholder.documents.proofOfAddress) missing.push(`${labelPrefix} Proof of Address document`);
       } else {
         if (isBlank(stakeholder.passportNo)) missing.push(`${labelPrefix} passport number`);
+        // Document validation for non-India
+        if (!stakeholder.documents.passport) missing.push(`${labelPrefix} passport document`);
+        if (!stakeholder.documents.proofOfAddress) missing.push(`${labelPrefix} Proof of Address document`);
       }
 
-      if (destination === "UAE" && isBlank(stakeholder.mothersName)) {
-        missing.push(`${labelPrefix} mother's name`);
+      if (destination === "UAE") {
+        if (isBlank(stakeholder.mothersName)) {
+          missing.push(`${labelPrefix} mother's name`);
+        }
+        // UAE specific document validation
+        if (!stakeholder.documents.photo) missing.push(`${labelPrefix} passport photo (white background)`);
       }
     });
 
@@ -348,6 +457,13 @@ function OnboardingPageContent() {
       if (isBlank(formData.bookkeeping.avgTransactionValue)) missing.push("Average transaction value");
       if (isBlank(formData.bookkeeping.bankAccounts)) missing.push("Bank accounts");
       if (isBlank(formData.bookkeeping.fiscalYearEnd)) missing.push("Fiscal year end");
+      
+      // Document validation for bookkeeping
+      if (!formData.bookkeeping.documents.bankStatements) missing.push("Bank statements document");
+      if (!formData.bookkeeping.documents.taxId) missing.push("Tax ID document");
+      if (formData.bookkeeping.hasPriorTaxReturns === "Yes" && !formData.bookkeeping.documents.priorTaxReturn) {
+        missing.push("Prior tax return document");
+      }
     }
 
     if (stepName === "Stakeholders & KYC" || stepName === "Stakeholders") {
@@ -426,7 +542,11 @@ function OnboardingPageContent() {
     }
     setIsSubmitting(true);
     setSubmitError("");
+    
     try {
+      // First, upload all documents
+      const uploadedDocuments = await uploadAllDocuments();
+      
       const response = await fetch(`${API_BASE_URL}/onboarding`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -438,7 +558,10 @@ function OnboardingPageContent() {
           planCountry,
           destination,
           entityType,
-          formData,
+          formData: {
+            ...formData,
+            uploadedDocuments, // Include document references
+          },
         }),
       });
       const data = await response.json().catch(() => null);
@@ -455,6 +578,89 @@ function OnboardingPageContent() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const uploadAllDocuments = async () => {
+    const uploadedDocs = [];
+    
+    try {
+      // Upload stakeholder documents
+      for (let i = 0; i < formData.stakeholders.length; i++) {
+        const stakeholder = formData.stakeholders[i];
+        const docs = stakeholder.documents;
+        
+        for (const [docType, file] of Object.entries(docs)) {
+          if (file) {
+            const uploadedDoc = await uploadSingleDocument(file, `${stakeholder.name || `Stakeholder ${i + 1}`} - ${docType}`);
+            if (uploadedDoc) {
+              uploadedDocs.push({
+                stakeholderIndex: i,
+                documentType: docType,
+                documentId: uploadedDoc.id,
+                fileName: uploadedDoc.name,
+                category: 'KYC'
+              });
+            }
+          }
+        }
+      }
+      
+      // Upload bookkeeping documents
+      const bookkeepingDocs = formData.bookkeeping.documents;
+      for (const [docType, file] of Object.entries(bookkeepingDocs)) {
+        if (file) {
+          const uploadedDoc = await uploadSingleDocument(file, `Bookkeeping - ${docType}`);
+          if (uploadedDoc) {
+            uploadedDocs.push({
+              documentType: docType,
+              documentId: uploadedDoc.id,
+              fileName: uploadedDoc.name,
+              category: 'Compliance'
+            });
+          }
+        }
+      }
+      
+      return uploadedDocs;
+    } catch (error) {
+      throw new Error(`Document upload failed: ${error.message}`);
+    }
+  };
+  
+  const uploadSingleDocument = async (file, fileName) => {
+    try {
+      const fileDataBase64 = await readFileAsBase64(file);
+      
+      const response = await fetch(`${API_BASE_URL}/documents/me/upload-client`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          fileName: fileName,
+          mimeType: file.type,
+          fileDataBase64: fileDataBase64,
+        }),
+      });
+      
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Failed to upload document");
+      }
+      
+      return data.document;
+    } catch (error) {
+      console.error(`Failed to upload ${fileName}:`, error);
+      throw error;
+    }
+  };
+  
+  const readFileAsBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   const renderSelection = () => (
@@ -1119,24 +1325,139 @@ function OnboardingPageContent() {
             </div>
 
             <div className="mt-4 border-2 border-dashed border-gray-200 bg-gray-50/50 rounded-xl p-4 text-center">
-              <p className="text-xs font-semibold text-gray-600 mb-2">Required Document Uploads (KYC and AML)</p>
+              <p className="text-xs font-semibold text-gray-600 mb-2">Required Document Uploads (KYC and AML) *</p>
               <div className="flex flex-col md:flex-row justify-center space-y-2 md:space-y-0 md:space-x-4 flex-wrap gap-y-2">
                 {destination === "India" || formData.existingCompany.country === "India" ? (
                   <>
-                    <button className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-gray-50 transition-colors">Upload PAN Copy</button>
-                    <button className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-gray-50 transition-colors">Upload Aadhaar/Passport</button>
-                    <button className="bg-white border border-gray-300 text-indigo-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-indigo-50 transition-colors border-indigo-200">Upload POA (Utility Bill)</button>
+                    <div className="flex flex-col items-center">
+                      <input
+                        type="file"
+                        id={`pan-${index}`}
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={(e) => handleDocumentUpload(index, 'pan', e.target.files[0])}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor={`pan-${index}`}
+                        className={`bg-white border text-gray-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer ${
+                          stakeholder.documents.pan ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300'
+                        }`}
+                      >
+                        {stakeholder.documents.pan ? '✓ PAN Uploaded' : 'Upload PAN Copy *'}
+                      </label>
+                      {documentErrors[`${index}_pan`] && (
+                        <p className="text-xs text-red-500 mt-1">{documentErrors[`${index}_pan`]}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <input
+                        type="file"
+                        id={`aadhaar-${index}`}
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={(e) => handleDocumentUpload(index, 'aadhaar', e.target.files[0])}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor={`aadhaar-${index}`}
+                        className={`bg-white border text-gray-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer ${
+                          stakeholder.documents.aadhaar ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300'
+                        }`}
+                      >
+                        {stakeholder.documents.aadhaar ? '✓ Aadhaar Uploaded' : 'Upload Aadhaar/Passport *'}
+                      </label>
+                      {documentErrors[`${index}_aadhaar`] && (
+                        <p className="text-xs text-red-500 mt-1">{documentErrors[`${index}_aadhaar`]}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <input
+                        type="file"
+                        id={`poa-${index}`}
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={(e) => handleDocumentUpload(index, 'proofOfAddress', e.target.files[0])}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor={`poa-${index}`}
+                        className={`bg-white border text-indigo-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-indigo-50 transition-colors cursor-pointer ${
+                          stakeholder.documents.proofOfAddress ? 'border-green-500 bg-green-50 text-green-700' : 'border-indigo-200'
+                        }`}
+                      >
+                        {stakeholder.documents.proofOfAddress ? '✓ POA Uploaded' : 'Upload POA (Utility Bill) *'}
+                      </label>
+                      {documentErrors[`${index}_proofOfAddress`] && (
+                        <p className="text-xs text-red-500 mt-1">{documentErrors[`${index}_proofOfAddress`]}</p>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <>
-                    <button className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-gray-50 transition-colors">Upload Passport</button>
-                    <button className="bg-white border border-gray-300 text-indigo-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-indigo-50 transition-colors border-indigo-200">Upload POA (Utility Bill)</button>
+                    <div className="flex flex-col items-center">
+                      <input
+                        type="file"
+                        id={`passport-${index}`}
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={(e) => handleDocumentUpload(index, 'passport', e.target.files[0])}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor={`passport-${index}`}
+                        className={`bg-white border text-gray-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer ${
+                          stakeholder.documents.passport ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300'
+                        }`}
+                      >
+                        {stakeholder.documents.passport ? '✓ Passport Uploaded' : 'Upload Passport *'}
+                      </label>
+                      {documentErrors[`${index}_passport`] && (
+                        <p className="text-xs text-red-500 mt-1">{documentErrors[`${index}_passport`]}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <input
+                        type="file"
+                        id={`poa-${index}`}
+                        accept=".jpg,.jpeg,.png,.pdf"
+                        onChange={(e) => handleDocumentUpload(index, 'proofOfAddress', e.target.files[0])}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor={`poa-${index}`}
+                        className={`bg-white border text-indigo-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-indigo-50 transition-colors cursor-pointer ${
+                          stakeholder.documents.proofOfAddress ? 'border-green-500 bg-green-50 text-green-700' : 'border-indigo-200'
+                        }`}
+                      >
+                        {stakeholder.documents.proofOfAddress ? '✓ POA Uploaded' : 'Upload POA (Utility Bill) *'}
+                      </label>
+                      {documentErrors[`${index}_proofOfAddress`] && (
+                        <p className="text-xs text-red-500 mt-1">{documentErrors[`${index}_proofOfAddress`]}</p>
+                      )}
+                    </div>
                     {destination === "UAE" && (
-                      <button className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-gray-50 transition-colors">Upload Passport Photo (White BG)</button>
+                      <div className="flex flex-col items-center">
+                        <input
+                          type="file"
+                          id={`photo-${index}`}
+                          accept=".jpg,.jpeg,.png"
+                          onChange={(e) => handleDocumentUpload(index, 'photo', e.target.files[0])}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor={`photo-${index}`}
+                          className={`bg-white border text-gray-700 px-4 py-2 rounded-lg shadow-sm text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer ${
+                            stakeholder.documents.photo ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300'
+                          }`}
+                        >
+                          {stakeholder.documents.photo ? '✓ Photo Uploaded' : 'Upload Passport Photo (White BG) *'}
+                        </label>
+                        {documentErrors[`${index}_photo`] && (
+                          <p className="text-xs text-red-500 mt-1">{documentErrors[`${index}_photo`]}</p>
+                        )}
+                      </div>
                     )}
                   </>
                 )}
               </div>
+              <p className="text-xs text-red-600 mt-2 font-medium">* All documents are mandatory and must be uploaded to proceed</p>
             </div>
           </div>
         </div>
@@ -1320,28 +1641,86 @@ function OnboardingPageContent() {
 
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-white border border-green-100 rounded-lg">
-              <span className="text-sm text-gray-700 font-medium mb-2 sm:mb-0">Last 3 Months Bank Statements</span>
-              <button type="button" className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded shadow-sm text-xs font-medium hover:bg-gray-50">Upload PDF / CSV</button>
+              <span className="text-sm text-gray-700 font-medium mb-2 sm:mb-0">Last 3 Months Bank Statements *</span>
+              <div className="flex flex-col items-end">
+                <input
+                  type="file"
+                  id="bankStatements"
+                  accept=".pdf,.csv,.xlsx,.xls"
+                  onChange={(e) => handleBookkeepingDocumentUpload('bankStatements', e.target.files[0])}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="bankStatements"
+                  className={`bg-white border text-gray-700 px-3 py-1.5 rounded shadow-sm text-xs font-medium hover:bg-gray-50 cursor-pointer ${
+                    formData.bookkeeping.documents.bankStatements ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300'
+                  }`}
+                >
+                  {formData.bookkeeping.documents.bankStatements ? '✓ Uploaded' : 'Upload PDF / CSV'}
+                </label>
+                {documentErrors['bookkeeping_bankStatements'] && (
+                  <p className="text-xs text-red-500 mt-1">{documentErrors['bookkeeping_bankStatements']}</p>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-white border border-green-100 rounded-lg">
               <span className="text-sm text-gray-700 font-medium mb-2 sm:mb-0">
-                {(destination === "USA" || formData.existingCompany.country === "USA") ? "EIN Confirmation Letter (Form SS-4)" :
-                 (destination === "India" || formData.existingCompany.country === "India") ? "GST Registration Certificate / PAN" : "FTA TRN Certificate / Trade License"}
+                {(destination === "USA" || formData.existingCompany.country === "USA") ? "EIN Confirmation Letter (Form SS-4) *" :
+                 (destination === "India" || formData.existingCompany.country === "India") ? "GST Registration Certificate / PAN *" : "FTA TRN Certificate / Trade License *"}
               </span>
-              <button type="button" className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded shadow-sm text-xs font-medium hover:bg-gray-50">Upload File</button>
+              <div className="flex flex-col items-end">
+                <input
+                  type="file"
+                  id="taxId"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => handleBookkeepingDocumentUpload('taxId', e.target.files[0])}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="taxId"
+                  className={`bg-white border text-gray-700 px-3 py-1.5 rounded shadow-sm text-xs font-medium hover:bg-gray-50 cursor-pointer ${
+                    formData.bookkeeping.documents.taxId ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300'
+                  }`}
+                >
+                  {formData.bookkeeping.documents.taxId ? '✓ Uploaded' : 'Upload File'}
+                </label>
+                {documentErrors['bookkeeping_taxId'] && (
+                  <p className="text-xs text-red-500 mt-1">{documentErrors['bookkeeping_taxId']}</p>
+                )}
+              </div>
             </div>
 
             {formData.bookkeeping.hasPriorTaxReturns === "Yes" && (
               <div className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-white border border-green-100 rounded-lg">
                 <span className="text-sm text-gray-700 font-medium mb-2 sm:mb-0">
-                  {(destination === "USA" || formData.existingCompany.country === "USA") ? "Prior Year Tax Return (1120/1065)" :
-                   (destination === "India" || formData.existingCompany.country === "India") ? "Previous ITR / Audited Financials" : "Previous Corporate Tax/VAT Return"}
+                  {(destination === "USA" || formData.existingCompany.country === "USA") ? "Prior Year Tax Return (1120/1065) *" :
+                   (destination === "India" || formData.existingCompany.country === "India") ? "Previous ITR / Audited Financials *" : "Previous Corporate Tax/VAT Return *"}
                 </span>
-                <button type="button" className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded shadow-sm text-xs font-medium hover:bg-gray-50">Upload Return</button>
+                <div className="flex flex-col items-end">
+                  <input
+                    type="file"
+                    id="priorTaxReturn"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => handleBookkeepingDocumentUpload('priorTaxReturn', e.target.files[0])}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="priorTaxReturn"
+                    className={`bg-white border text-gray-700 px-3 py-1.5 rounded shadow-sm text-xs font-medium hover:bg-gray-50 cursor-pointer ${
+                      formData.bookkeeping.documents.priorTaxReturn ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300'
+                    }`}
+                  >
+                    {formData.bookkeeping.documents.priorTaxReturn ? '✓ Uploaded' : 'Upload Return'}
+                  </label>
+                  {documentErrors['bookkeeping_priorTaxReturn'] && (
+                    <p className="text-xs text-red-500 mt-1">{documentErrors['bookkeeping_priorTaxReturn']}</p>
+                  )}
+                </div>
               </div>
             )}
           </div>
+          <p className="text-xs text-red-600 mt-3 font-medium">* All documents are mandatory for compliance setup</p>
         </div>
       </div>
     </div>
@@ -1576,7 +1955,7 @@ function OnboardingPageContent() {
                     >
                       {isSubmitting ? (
                         <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" /> Submitting
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" /> Uploading Documents & Submitting...
                         </>
                       ) : (
                         <>
@@ -1607,4 +1986,3 @@ export default function OnboardingPage() {
     </Suspense>
   );
 }
-
