@@ -30,20 +30,6 @@ export function DocumentsView({ ctx }: { ctx: AdminViewContext }) {
         <CardDescription>Track collection and verification by client</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <div className="flex items-start gap-3">
-            <div className="bg-blue-100 p-2 rounded-lg">
-              <Search className="h-4 w-4 text-blue-600" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-blue-900 text-sm">Onboarding Documents Integration</h4>
-              <p className="text-xs text-blue-700 mt-1">
-                Documents uploaded during the company formation onboarding process automatically appear here as "client_uploads" with special badges. 
-                KYC documents (passport, PAN, Aadhaar, proof of address) and compliance documents (bank statements, tax IDs) are automatically categorized.
-              </p>
-            </div>
-          </div>
-        </div>
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
           <div className="relative lg:col-span-8">
             <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
