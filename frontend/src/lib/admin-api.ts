@@ -145,6 +145,8 @@ export const complianceAPI = {
 // Admin (existing)
 export const adminAPI = {
   getUsers: () => fetchWithAuth(`${API_BASE_URL}/admin/users`),
+  createUser: (data: { name: string; email: string; password: string; companyName?: string; region?: string; servicePlan?: string }) =>
+    fetchWithAuth(`${API_BASE_URL}/admin/users`, { method: 'POST', body: JSON.stringify(data) }),
   updateUserStatus: (userId: string, status: string) =>
     fetchWithAuth(`${API_BASE_URL}/admin/users/status`, { method: 'PUT', body: JSON.stringify({ userId, status }) }),
   getStats: () => fetchWithAuth(`${API_BASE_URL}/admin/stats`),

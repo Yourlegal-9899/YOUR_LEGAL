@@ -12,6 +12,7 @@ interface User {
   companyName?: string;
   servicePlan?: string;
   subscriptionStatus?: string;
+  bypassPlan?: boolean;
 }
 
 interface AuthContextType {

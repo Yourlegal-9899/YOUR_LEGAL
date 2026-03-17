@@ -35,7 +35,7 @@ export default function LoginPage() {
 
       if (user.role === 'admin') {
         router.replace('/admin');
-      } else if (!user.servicePlan) {
+      } else if (!user.servicePlan && !user.bypassPlan) {
         router.replace('/usa/pricing');
       } else {
         router.replace('/dashboard');

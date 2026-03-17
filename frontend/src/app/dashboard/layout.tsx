@@ -15,7 +15,7 @@ export default function DashboardLayout({
   const router = useRouter();
 
   const needsLogin = !loading && !user;
-  const needsPlan = !loading && user && user.role !== 'admin' && !user.servicePlan;
+  const needsPlan = !loading && user && user.role !== 'admin' && !user.servicePlan && !user.bypassPlan;
 
   useEffect(() => {
     if (needsLogin) {

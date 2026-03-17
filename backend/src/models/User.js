@@ -34,6 +34,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['Starter', 'Growth', 'Scale', 'Micro', 'Vitals', 'Elite']
   },
+  bypassPlan: {
+    type: Boolean,
+    default: false
+  },
   status: {
     type: String,
     enum: ['lead', 'active', 'awaiting_docs', 'compliance_risk', 'paused', 'closed'],

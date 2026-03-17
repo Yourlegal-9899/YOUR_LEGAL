@@ -404,6 +404,15 @@ export function useAdminData() {
     }
   }, [loadOnboardingSubmissions, loadFormations]);
 
+  const createUser = useCallback(async (userData: any) => {
+    try {
+      await adminAPI.createUser(userData);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }, []);
+
   return {
     // Data
     activityLogs,
@@ -461,5 +470,6 @@ export function useAdminData() {
     updateSetting,
     sendEmail,
     createFormationFromOnboarding,
+    createUser,
   };
 }

@@ -677,6 +677,15 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
   const [region, setRegion] = useState<"all" | UserRegion>("all");
   const [selectedId, setSelectedId] = useState("");
   const [userActionMessage, setUserActionMessage] = useState("");
+  const [createUserForm, setCreateUserForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    companyName: "",
+    region: "USA" as UserRegion,
+  });
+  const [createUserMessage, setCreateUserMessage] = useState("");
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [isUserDocumentModalOpen, setIsUserDocumentModalOpen] = useState(false);
   const [adminUploadFile, setAdminUploadFile] = useState<File | null>(null);
   const [adminUploadFileInputKey, setAdminUploadFileInputKey] = useState(0);
@@ -1895,6 +1904,37 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     addActivity(activate ? `Activated user ${targetUser.name}` : `Deactivated user ${targetUser.name}`);
   };
 
+  const createAdminUser = async () => {
+    const payload = {
+      name: createUserForm.name.trim(),
+      email: createUserForm.email.trim(),
+      password: createUserForm.password,
+      companyName: createUserForm.companyName.trim(),
+      region: createUserForm.region,
+    };
+
+    if (!payload.name || !payload.email || !payload.password) {
+      setCreateUserMessage("Name, email, and password are required.");
+      return;
+    }
+
+    setIsCreatingUser(true);
+    setCreateUserMessage("");
+    try {
+      const result = await adminData.createUser(payload);
+      if (!result.success) {
+        throw new Error(result.error || "Unable to create user.");
+      }
+      setCreateUserMessage("User created. They can log in immediately.");
+      setCreateUserForm({ name: "", email: "", password: "", companyName: "", region: "USA" });
+      await loadAdminUsersData();
+    } catch (error) {
+      setCreateUserMessage(error instanceof Error ? error.message : "Unable to create user.");
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
   const selectUser = (userId: string) => {
     setSelectedId(userId);
     setUserActionMessage("");
@@ -2264,6 +2304,11 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     clientStatusClass,
     setUserActivation,
     userActionMessage,
+    createUserForm,
+    setCreateUserForm,
+    createAdminUser,
+    createUserMessage,
+    isCreatingUser,
     selectedUserOrders,
     selectedUserPayments,
     selectedUserDocuments,

@@ -43,7 +43,8 @@ exports.register = async (req, res) => {
           role: user.role,
           companyName: user.companyName,
           servicePlan: user.servicePlan,
-          subscriptionStatus: user.subscriptionStatus
+          subscriptionStatus: user.subscriptionStatus,
+          bypassPlan: user.bypassPlan
         }
       });
     });
@@ -90,7 +91,8 @@ exports.login = async (req, res) => {
           role: user.role,
           companyName: user.companyName,
           servicePlan: user.servicePlan,
-          subscriptionStatus: user.subscriptionStatus
+          subscriptionStatus: user.subscriptionStatus,
+          bypassPlan: user.bypassPlan
         }
       });
     });

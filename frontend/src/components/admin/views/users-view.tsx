@@ -26,6 +26,11 @@ export function UsersView({ ctx }: { ctx: AdminViewContext }) {
     clientStatusClass,
     setUserActivation,
     userActionMessage,
+    createUserForm,
+    setCreateUserForm,
+    createAdminUser,
+    createUserMessage,
+    isCreatingUser,
     selectedUserOrders,
     d,
     selectedUserPayments,
@@ -189,6 +194,54 @@ export function UsersView({ ctx }: { ctx: AdminViewContext }) {
                   {userActionMessage}
                 </div>
               ) : null}
+
+              <div className="rounded-xl border p-4 space-y-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Create User (Bypass Plan)</p>
+                <Input
+                  placeholder="Full name"
+                  value={createUserForm.name}
+                  onChange={(e) => setCreateUserForm((prev: any) => ({ ...prev, name: e.target.value }))}
+                />
+                <Input
+                  placeholder="Email address"
+                  value={createUserForm.email}
+                  onChange={(e) => setCreateUserForm((prev: any) => ({ ...prev, email: e.target.value }))}
+                />
+                <Input
+                  type="password"
+                  placeholder="Temporary password"
+                  value={createUserForm.password}
+                  onChange={(e) => setCreateUserForm((prev: any) => ({ ...prev, password: e.target.value }))}
+                />
+                <Input
+                  placeholder="Company name (optional)"
+                  value={createUserForm.companyName}
+                  onChange={(e) => setCreateUserForm((prev: any) => ({ ...prev, companyName: e.target.value }))}
+                />
+                <Select
+                  value={createUserForm.region}
+                  onValueChange={(value) => setCreateUserForm((prev: any) => ({ ...prev, region: value as any }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Region" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USA">USA</SelectItem>
+                    <SelectItem value="UK">UK</SelectItem>
+                    <SelectItem value="UAE">UAE</SelectItem>
+                    <SelectItem value="Singapore">Singapore</SelectItem>
+                    <SelectItem value="India">India</SelectItem>
+                    <SelectItem value="Australia">Australia</SelectItem>
+                    <SelectItem value="Netherlands">Netherlands</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button size="sm" onClick={createAdminUser} disabled={isCreatingUser} className="bg-blue-600 hover:bg-blue-700">
+                  {isCreatingUser ? "Creating..." : "Create User"}
+                </Button>
+                {createUserMessage ? (
+                  <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                    {createUserMessage}
+                  </div>
+                ) : null}
+              </div>
 
               {selected ? (
                 <div className="space-y-4">

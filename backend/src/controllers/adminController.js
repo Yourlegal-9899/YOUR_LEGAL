@@ -232,3 +232,49 @@ exports.getAdminStats = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.createUserAsAdmin = async (req, res) => {
+  try {
+    const { name, email, password, companyName, region, servicePlan } = req.body;
+    const normalizedPlan = servicePlan && String(servicePlan).trim() ? String(servicePlan).trim() : undefined;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required.' });
+    }
+
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ message: 'User already exists.' });
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      password,
+      companyName,
+      region,
+      servicePlan: normalizedPlan,
+      bypassPlan: true,
+      status: 'active'
+    });
+
+    res.status(201).json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        companyName: user.companyName,
+        servicePlan: user.servicePlan,
+        subscriptionStatus: user.subscriptionStatus,
+        bypassPlan: user.bypassPlan,
+        status: user.status,
+        region: user.region,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
