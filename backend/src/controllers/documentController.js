@@ -31,7 +31,13 @@ const validateObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const normalizeDocumentType = (value) => {
   if (!value) return undefined;
-  return String(value).trim().toLowerCase().replace(/\s+/g, '_');
+  const raw = String(value).trim();
+  const snake = raw
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .replace(/[\s-]+/g, '_')
+    .toLowerCase();
+  if (snake === 'proofofaddress') return 'proof_of_address';
+  return snake;
 };
 
 exports.getMyDocuments = async (req, res) => {
