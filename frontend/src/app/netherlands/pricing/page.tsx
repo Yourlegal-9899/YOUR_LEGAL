@@ -181,7 +181,7 @@ export default function NetherlandsPricingPage() {
                             <PlanCard
                                 key={plan.title}
                                 {...plan}
-                                onSelect={() => router.push(`/onboarding?planName=${plan.title}&state=Netherlands&entityType=BV&country=Netherlands&amount=${plan.price}`)}
+                                onSelect={() => router.push(`/checkout?planName=${plan.title}&state=Netherlands&entityType=BV&country=Netherlands&amount=${plan.price}`)}
                             />
                         ))}
                     </div>

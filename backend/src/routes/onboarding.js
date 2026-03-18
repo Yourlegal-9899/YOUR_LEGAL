@@ -3,12 +3,14 @@ const {
   createOnboardingSubmission,
   getOnboardingSubmissions,
   createFormationFromOnboarding,
+  getMyOnboardingStatus,
 } = require('../controllers/onboardingController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.post('/', protect, createOnboardingSubmission);
+router.get('/me', protect, getMyOnboardingStatus);
 router.get('/admin', protect, authorize('admin'), getOnboardingSubmissions);
 router.post('/admin/:id/create-formation', protect, authorize('admin'), createFormationFromOnboarding);
 

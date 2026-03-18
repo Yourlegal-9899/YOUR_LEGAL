@@ -19,17 +19,57 @@ const leadSchema = new mongoose.Schema({
   phone: String,
   company: String,
   leadSource: String,
-  zohoCreatedTime: Date,
+  zohoCreatedTime: {
+    type: Date,
+    default: null
+  },
   lastSyncedAt: {
     type: Date,
     default: Date.now
   },
+  lastSyncError: String,
   status: {
     type: String,
     enum: ['new', 'contacted', 'qualified', 'converted', 'lost'],
     default: 'new'
   },
   notes: String,
+  comments: [{
+    body: String,
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  activities: [{
+    type: {
+      type: String,
+      default: 'note'
+    },
+    message: String,
+    actor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    meta: mongoose.Schema.Types.Mixed,
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  assignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  assignedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  assignedAt: Date,
   convertedToUser: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

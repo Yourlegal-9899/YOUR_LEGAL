@@ -19,6 +19,18 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   return data;
 };
 
+const buildQuery = (params?: Record<string, any>) => {
+  const query = new URLSearchParams();
+  if (!params) return query.toString();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    query.append(key, String(value));
+  });
+
+  return query.toString();
+};
+
 // Activity Logs
 export const activityLogsAPI = {
   getAll: (params?: { page?: number; limit?: number; entity?: string; userId?: string }) => {
@@ -145,8 +157,11 @@ export const complianceAPI = {
 // Admin (existing)
 export const adminAPI = {
   getUsers: () => fetchWithAuth(`${API_BASE_URL}/admin/users`),
+  getAdminUsers: () => fetchWithAuth(`${API_BASE_URL}/admin/admin-users`),
   createUser: (data: { name: string; email: string; password: string; companyName?: string; region?: string; servicePlan?: string }) =>
     fetchWithAuth(`${API_BASE_URL}/admin/users`, { method: 'POST', body: JSON.stringify(data) }),
+  updateUser: (userId: string, data: { name?: string; email?: string; phone?: string; companyName?: string; region?: string }) =>
+    fetchWithAuth(`${API_BASE_URL}/admin/users/${userId}`, { method: 'PUT', body: JSON.stringify(data) }),
   updateUserStatus: (userId: string, status: string) =>
     fetchWithAuth(`${API_BASE_URL}/admin/users/status`, { method: 'PUT', body: JSON.stringify({ userId, status }) }),
   getStats: () => fetchWithAuth(`${API_BASE_URL}/admin/stats`),
@@ -155,6 +170,19 @@ export const adminAPI = {
 // Zoho CRM Leads (admin)
 export const zohoAPI = {
   getLeads: () => fetchWithAuth(`${API_BASE_URL}/zoho/leads`),
+  getStoredLeads: (params?: { status?: string; search?: string; page?: number; limit?: number; source?: string; assignedTo?: string; dateFrom?: string; dateTo?: string }) => {
+    const query = buildQuery(params as any);
+    return fetchWithAuth(`${API_BASE_URL}/zoho/stored-leads?${query}`);
+  },
+  syncLeads: () => fetchWithAuth(`${API_BASE_URL}/zoho/sync`, { method: 'POST' }),
+  getSyncStatus: () => fetchWithAuth(`${API_BASE_URL}/zoho/sync-status`),
+  getLeadById: (id: string) => fetchWithAuth(`${API_BASE_URL}/zoho/leads/${id}`),
+  updateLeadStatus: (id: string, status: string) =>
+    fetchWithAuth(`${API_BASE_URL}/zoho/leads/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  assignLead: (id: string, assignedTo?: string | null) =>
+    fetchWithAuth(`${API_BASE_URL}/zoho/leads/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ assignedTo }) }),
+  addLeadNote: (id: string, body: string) =>
+    fetchWithAuth(`${API_BASE_URL}/zoho/leads/${id}/notes`, { method: 'POST', body: JSON.stringify({ body }) }),
 };
 
 // Payments (existing)

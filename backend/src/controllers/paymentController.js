@@ -72,7 +72,7 @@ exports.createPaymentIntent = async (req, res) => {
 
 exports.createCheckoutSession = async (req, res) => {
   try {
-    const { amount, plan, country, state, entityType, serviceType, serviceName, serviceId } = req.body;
+    const { amount, plan, country, state, entityType, serviceType, serviceName, serviceId, successRedirect } = req.body;
     const numericAmount = Number(amount);
     const planValue = normalizePlanName(plan);
     const resolvedServiceName = serviceName && String(serviceName).trim() ? String(serviceName).trim() : planValue || 'Service';
@@ -93,6 +93,15 @@ exports.createCheckoutSession = async (req, res) => {
       await User.findByIdAndUpdate(req.user._id, { stripeCustomerId: customer.id });
       req.user.stripeCustomerId = customer.id;
     }
+
+    const successPlanName = plan || resolvedServiceName || '';
+    const successState = state || 'Unknown';
+    const successEntityType = entityType || 'LLC';
+    const successCountry = country || 'USA';
+
+    const defaultSuccessUrl = `${process.env.FRONTEND_URL}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+    const onboardingSuccessUrl = `${process.env.FRONTEND_URL}/onboarding?planName=${encodeURIComponent(successPlanName)}&state=${encodeURIComponent(successState)}&entityType=${encodeURIComponent(successEntityType)}&country=${encodeURIComponent(successCountry)}&amount=${encodeURIComponent(String(numericAmount))}&payment=success&session_id={CHECKOUT_SESSION_ID}`;
+    const successUrl = successRedirect === 'onboarding' ? onboardingSuccessUrl : defaultSuccessUrl;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -121,7 +130,7 @@ exports.createCheckoutSession = async (req, res) => {
         entityType: entityType || 'LLC',
         serviceType: serviceType || 'formation',
       },
-      success_url: `${process.env.FRONTEND_URL}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: successUrl,
       cancel_url: `${process.env.FRONTEND_URL}/checkout?planName=${encodeURIComponent(plan || '')}&state=${encodeURIComponent(state || '')}&entityType=${encodeURIComponent(entityType || '')}&country=${encodeURIComponent(country || 'USA')}`,
     });
 

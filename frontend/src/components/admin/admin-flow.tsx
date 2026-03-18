@@ -83,7 +83,7 @@ type AdminView =
   | "zoho-leads";
 type DocumentStatus = "pending" | "verified" | "rejected" | "missing";
 type DocumentSource = "client_uploads" | "legal_docs";
-type DocumentCategory = "KYC" | "Tax" | "Compliance" | "Banking";
+type DocumentCategory = "KYC" | "Tax" | "Compliance" | "Banking" | "Legal" | "Corporate" | "Incorporation";
 type ComplianceHealth = "overdue" | "due_7d" | "due_21d" | "on_track";
 type OrderStatus = "pending" | "in_progress" | "waiting_documents" | "completed" | "cancelled";
 type FormationStage = "name_check" | "filing_prep" | "state_filing" | "approved";
@@ -264,6 +264,7 @@ type LiveAdminUser = {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   companyName: string;
   region?: string;
   status: ClientStatus;
@@ -692,6 +693,8 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
   const [adminUploadFileInputKey, setAdminUploadFileInputKey] = useState(0);
   const [adminUploadDocumentName, setAdminUploadDocumentName] = useState("");
   const [adminUploadDocumentCategory, setAdminUploadDocumentCategory] = useState<DocumentCategory>("Compliance");
+  const [adminUploadSubfolder, setAdminUploadSubfolder] = useState("");
+  const [adminUploadDocumentType, setAdminUploadDocumentType] = useState("");
   const [adminUploadMessage, setAdminUploadMessage] = useState("");
 
   const [contentQ, setContentQ] = useState("");
@@ -1092,7 +1095,8 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
         id: String(user._id),
         name: user.name,
         email: user.email,
-        companyName: user.companyName || "N/A",
+        phone: user.phone || "",
+        companyName: user.companyName || "",
         region: user.region,
         status: user.status || "lead",
         servicePlan: user.servicePlan || "N/A",
@@ -1516,7 +1520,19 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
         }
 
         const categoryFromFolder = (value: string) =>
-          value === "Tax" ? "Tax" : value === "Banking" ? "Banking" : value === "KYC" ? "KYC" : "Compliance";
+          value === "Tax"
+            ? "Tax"
+            : value === "Banking"
+              ? "Banking"
+              : value === "KYC"
+                ? "KYC"
+                : value === "Legal"
+                  ? "Legal"
+                  : value === "Corporate"
+                    ? "Corporate"
+                    : value === "Incorporation"
+                      ? "Incorporation"
+                      : "Compliance";
 
         return {
           id: String(doc.id),
@@ -1866,11 +1882,12 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
                   ? {
                       ...user,
                       status: data.user.status || nextStatus,
-                      servicePlan: data.user.servicePlan || user.servicePlan,
-                      region: data.user.region || user.region,
-                      companyName: data.user.companyName || user.companyName,
-                      quickBooksConnected: Boolean(data.user.quickBooksConnected),
-                      quickBooksStatus: data.user.quickBooksConnected ? "connected" : "disconnected",
+                      servicePlan: data.user.servicePlan ?? user.servicePlan,
+                      region: data.user.region ?? user.region,
+                      phone: data.user.phone ?? user.phone,
+                      companyName: data.user.companyName ?? user.companyName,
+                      quickBooksConnected: data.user.quickBooksConnected ?? user.quickBooksConnected,
+                      quickBooksStatus: (data.user.quickBooksConnected ?? user.quickBooksConnected) ? "connected" : "disconnected",
                     }
                   : user
               )
@@ -1903,6 +1920,67 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
 
     setUserActionMessage(activate ? `${targetUser.name} activated.` : `${targetUser.name} deactivated.`);
     addActivity(activate ? `Activated user ${targetUser.name}` : `Deactivated user ${targetUser.name}`);
+  };
+
+  const updateUserProfile = async (userId: string, updates: { name?: string; email?: string; phone?: string; companyName?: string; region?: string }) => {
+    if (!userId) {
+      return { success: false, error: "Select a user first." };
+    }
+
+    try {
+      const result = await adminData.updateUser(userId, updates);
+      if (!result.success) {
+        throw new Error(result.error || "Unable to update user profile.");
+      }
+
+      const updatedUser = result.user || {};
+
+      if (liveUsers) {
+        setLiveUsers((prev) => {
+          if (!prev) return prev;
+          const next = prev.map((user) =>
+            user.id === userId
+              ? {
+                  ...user,
+                  name: updatedUser.name ?? user.name,
+                  email: updatedUser.email ?? user.email,
+                  phone: updatedUser.phone ?? user.phone,
+                  companyName: updatedUser.companyName ?? user.companyName,
+                  region: updatedUser.region ?? user.region,
+                  status: updatedUser.status ?? user.status,
+                  servicePlan: updatedUser.servicePlan ?? user.servicePlan,
+                  subscriptionStatus: updatedUser.subscriptionStatus ?? user.subscriptionStatus,
+                  quickBooksConnected: updatedUser.quickBooksConnected ?? user.quickBooksConnected,
+                  quickBooksStatus: (updatedUser.quickBooksConnected ?? user.quickBooksConnected) ? "connected" : "disconnected",
+                }
+              : user
+          );
+          adminUsersCache.users = next;
+          return next;
+        });
+      } else {
+        setUserRecords((prev) =>
+          prev.map((user) =>
+            user.id === userId
+              ? {
+                  ...user,
+                  name: updatedUser.name ?? user.name,
+                  email: updatedUser.email ?? user.email,
+                  companyName: updatedUser.companyName ?? user.companyName,
+                  region: updatedUser.region ?? user.region,
+                  status: updatedUser.status ?? user.status,
+                  servicePlan: updatedUser.servicePlan ?? user.servicePlan,
+                }
+              : user
+          )
+        );
+      }
+
+      addActivity(`Updated profile for ${updatedUser.name || "user"}`, "user", userId);
+      return { success: true, user: updatedUser };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : "Unable to update user profile." };
+    }
   };
 
   const createAdminUser = async () => {
@@ -1947,6 +2025,8 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     setAdminUploadFileInputKey((prev) => prev + 1);
     setAdminUploadDocumentName("");
     setAdminUploadDocumentCategory("Compliance");
+    setAdminUploadSubfolder("");
+    setAdminUploadDocumentType("");
     setAdminUploadMessage("");
     setIsUserDocumentModalOpen(true);
   };
@@ -1997,8 +2077,8 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
         mimeType: adminUploadFile.type || "application/octet-stream",
         fileDataBase64,
         folder: adminUploadDocumentCategory,
-        subfolder: "Admin Upload",
-        documentType: "other",
+        subfolder: adminUploadSubfolder.trim() || "Admin Upload",
+        documentType: adminUploadDocumentType || "other",
       }),
     });
       const data = await response.json().catch(() => null);
@@ -2048,6 +2128,37 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
       addActivity(`Updated document ${documentId} to ${nextStatus}`);
     } catch (error) {
       setDocumentActionMessage(error instanceof Error ? error.message : "Unable to update document status.");
+    }
+  };
+
+  const deleteDocumentById = async (documentId: string) => {
+    const target = documentRecords.find((doc) => doc.id === documentId);
+    if (!target) return;
+    const confirmed = window.confirm(`Delete "${target.document}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Unable to delete document.");
+      }
+
+      setDocumentRecords((prev) => prev.filter((doc) => doc.id !== documentId));
+      setLiveUserDocuments((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((userId) => {
+          next[userId] = (next[userId] || []).filter((doc) => doc.id !== documentId);
+        });
+        return next;
+      });
+      setDocumentActionMessage("Document deleted.");
+      addActivity(`Deleted document ${documentId}`, "document", documentId);
+    } catch (error) {
+      setDocumentActionMessage(error instanceof Error ? error.message : "Unable to delete document.");
     }
   };
 
@@ -2145,7 +2256,7 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     const countries = planForm.countries
       .split(",")
       .map((value) => value.trim())
-      .filter((value): value is UserRegion => ["USA", "UK", "UAE", "Singapore", "India", "Australia", "Netherlands"].includes(value));
+      .filter((value): value is UserRegion => ["USA", "UK", "UAE", "Singapore", "India", "Australia", "Netherlands", "Saudi Arabia"].includes(value));
 
     let nextPlans: PlanRecord[] = [];
 
@@ -2304,6 +2415,7 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     qbClass,
     clientStatusClass,
     setUserActivation,
+    updateUserProfile,
     userActionMessage,
     createUserForm,
     setCreateUserForm,
@@ -2396,6 +2508,7 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     filteredDocuments,
     sourceClass,
     setDocumentState,
+    deleteDocumentById,
     openDocumentModalForClient,
     qbQ,
     setQbQ,
@@ -2425,11 +2538,16 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     adminUploadDocumentName,
     adminUploadDocumentCategory,
     setAdminUploadDocumentCategory,
+    adminUploadSubfolder,
+    setAdminUploadSubfolder,
+    adminUploadDocumentType,
+    setAdminUploadDocumentType,
     uploadDocumentForSelectedClient,
     adminUploadFile,
     adminUploadMessage,
     selectedClientUploadedDocuments,
     selectedClientAdminDocuments,
+    loadUserDocuments,
   };
 
   return (

@@ -1,12 +1,13 @@
 
 'use client';
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ChevronLeft, CheckCircle, Loader2 } from 'lucide-react';
 import { NavHeader } from '@/components/layout/page-header';
 import { AppFooter } from '@/components/layout/page-footer';
 import Link from 'next/link';
 import { API_BASE_URL } from '@/lib/api-base';
+import { useAuth } from '@/contexts/AuthContext';
 
 const stateFees = {
     'Wyoming LLC': { initial: 100, annual: 60, annualDesc: 'Minimum annual report fee', processingTime: '1-3 Business Days' },
@@ -18,11 +19,34 @@ const stateFees = {
 function CheckoutPageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const { user, loading } = useAuth();
     const planName = searchParams.get('planName');
     const state = searchParams.get('state');
     const entityType = searchParams.get('entityType');
     const country = searchParams.get('country') || 'USA';
     const amount = searchParams.get('amount');
+
+    useEffect(() => {
+        if (loading) return;
+        if (!user) {
+            router.replace('/login');
+            return;
+        }
+        if (user.role === 'admin') {
+            router.replace('/admin');
+            return;
+        }
+        if (user.servicePlan || user.bypassPlan) {
+            const params = new URLSearchParams();
+            if (planName) params.set('planName', planName);
+            if (state) params.set('state', state);
+            if (entityType) params.set('entityType', entityType);
+            if (country) params.set('country', country);
+            if (amount) params.set('amount', amount);
+            const url = params.toString() ? `/onboarding?${params.toString()}` : '/onboarding';
+            router.replace(url);
+        }
+    }, [loading, user, planName, state, entityType, country, amount, router]);
 
     const planData = {
         'Micro': { title: 'Micro', price: 499 },
@@ -138,14 +162,15 @@ function CheckoutPageContent() {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 credentials: 'include',
-                                                body: JSON.stringify({
-                                                    amount: totalDueToday,
-                                                    plan: planName,
-                                                    country: country,
-                                                    state,
-                                                    entityType
-                                                })
-                                            });
+                                            body: JSON.stringify({
+                                                amount: totalDueToday,
+                                                plan: planName,
+                                                country: country,
+                                                state,
+                                                entityType,
+                                                successRedirect: 'onboarding'
+                                            })
+                                        });
                                             
                                             if (!response.ok) {
                                                 const error = await response.json();

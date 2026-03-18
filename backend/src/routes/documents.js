@@ -6,6 +6,7 @@ const {
   uploadOfficialDocumentAsAdmin,
   updateDocumentStatusAsAdmin,
   downloadDocument,
+  deleteDocument,
 } = require('../controllers/documentController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -19,5 +20,6 @@ router.post('/admin/user/:userId/upload-official', protect, authorize('admin'), 
 router.patch('/admin/:documentId/status', protect, authorize('admin'), updateDocumentStatusAsAdmin);
 
 router.get('/:documentId/download', protect, downloadDocument);
+router.delete('/:documentId', protect, deleteDocument);
 
 module.exports = router;

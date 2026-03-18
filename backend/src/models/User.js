@@ -14,12 +14,25 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
+  phone: {
+    type: String,
+    trim: true
+  },
   password: {
     type: String,
     required: [true, 'Password is required'],
     minlength: 6,
     select: false
   },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationToken: String,
+  emailVerificationExpires: Date,
+  passwordResetToken: String,
+  passwordResetExpires: Date,
+  googleId: String,
   role: {
     type: String,
     enum: ['user', 'admin'],
@@ -32,7 +45,7 @@ const userSchema = new mongoose.Schema({
   },
   servicePlan: {
     type: String,
-    enum: ['Starter', 'Growth', 'Scale', 'Micro', 'Vitals', 'Elite']
+    enum: ['Starter', 'Growth', 'Scale', 'Micro', 'Vitals', 'Elite', 'Startup', 'Compliance', 'Formation', 'AllInOne']
   },
   bypassPlan: {
     type: Boolean,

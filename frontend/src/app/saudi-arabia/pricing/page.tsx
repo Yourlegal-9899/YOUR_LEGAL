@@ -182,7 +182,7 @@ export default function SaudiPricingPage() {
                             <PlanCard
                                 key={plan.title}
                                 {...plan}
-                                onSelect={() => router.push(`/onboarding?planName=${plan.title}&state=SaudiArabia&entityType=LLC&country=SaudiArabia&amount=${plan.price}`)}
+                                onSelect={() => router.push(`/checkout?planName=${plan.title}&state=SaudiArabia&entityType=LLC&country=SaudiArabia&amount=${plan.price}`)}
                             />
                         ))}
                     </div>

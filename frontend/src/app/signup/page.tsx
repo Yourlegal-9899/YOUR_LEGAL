@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,15 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar } from "@/components/ui/calendar"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from '@/lib/utils';
-import { format } from "date-fns"
-import { Loader2, ArrowLeft, CalendarIcon } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -32,13 +23,13 @@ import { API_BASE_URL } from '@/lib/api-base';
 export default function SignupPage() {
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [incorporationDate, setIncorporationDate] = useState<Date | undefined>();
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [region, setRegion] = useState('USA');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { checkAuth } = useAuth();
   const router = useRouter();
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -46,7 +37,7 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
 
-    if (!fullName || !companyName || !incorporationDate) {
+    if (!fullName || !companyName || !phone || !region) {
       setError("Please fill out all fields.");
       setLoading(false);
       return;
@@ -67,7 +58,9 @@ export default function SignupPage() {
           name: fullName,
           email: email,
           password: password,
-          companyName: companyName
+          companyName: companyName,
+          phone: phone,
+          region: region
         })
       });
 
@@ -77,14 +70,15 @@ export default function SignupPage() {
         throw new Error(data.message || 'Registration failed');
       }
 
-      await checkAuth();
-
+      const verificationRequired = data?.verificationRequired !== false;
       toast({
         title: 'Account Created!',
-        description: 'Please choose a plan to continue.',
+        description: verificationRequired
+          ? 'Please verify your email to continue.'
+          : 'Account created. You can log in now.',
       });
 
-      router.push('/usa/pricing');
+      router.push('/login');
 
     } catch (error: any) {
       setError(error.message || "An unexpected error occurred. Please try again.");
@@ -137,31 +131,6 @@ export default function SignupPage() {
                 className="bg-gray-50"
               />
             </div>
-             <div className="grid gap-2">
-                <Label htmlFor="incorporationDate">Date of Incorporation</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal bg-gray-50",
-                        !incorporationDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {incorporationDate ? format(incorporationDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={incorporationDate}
-                      onSelect={setIncorporationDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-            </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -173,6 +142,37 @@ export default function SignupPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-gray-50"
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Phone No.</Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+1 555 010 9999"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="bg-gray-50"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="region">Country</Label>
+              <select
+                id="region"
+                required
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+              >
+                <option value="USA">United States (USA)</option>
+                <option value="UK">United Kingdom (UK)</option>
+                <option value="UAE">United Arab Emirates (UAE)</option>
+                <option value="India">India</option>
+                <option value="Singapore">Singapore</option>
+                <option value="Australia">Australia</option>
+                <option value="Netherlands">Netherlands</option>
+                <option value="SaudiArabia">Saudi Arabia</option>
+              </select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>

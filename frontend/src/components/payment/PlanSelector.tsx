@@ -47,15 +47,17 @@ const fallbackPlans = [
   }
 ];
 
-export default function PlanSelector({ onSelectPlan }) {
+export default function PlanSelector({ onSelectPlan, country = 'USA' }) {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [plans, setPlans] = useState(fallbackPlans);
 
   useEffect(() => {
     let isMounted = true;
+    setSelectedPlan(null);
+    setPlans(fallbackPlans);
     const loadPlans = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/services?isActive=true&country=USA`);
+        const response = await fetch(`${API_BASE_URL}/services?isActive=true&country=${encodeURIComponent(country)}`);
         const data = await response.json().catch(() => null);
         if (!response.ok || !data?.success) {
           throw new Error(data?.message || 'Unable to load plans.');
@@ -94,7 +96,7 @@ export default function PlanSelector({ onSelectPlan }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [country]);
 
   const handleSelectPlan = (plan) => {
     setSelectedPlan(plan.name);

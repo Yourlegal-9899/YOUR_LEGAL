@@ -7,7 +7,7 @@ import {
     ChevronRight, Mail, Bot, LifeBuoy, X, FileText, Upload, Clock, Briefcase, DollarSign, Zap, PhoneCall, 
     Link, CreditCard, Menu, Globe, Clock4, Shield, BookOpen, MessageCircle, BarChart3, TrendingUp, Handshake, Gift, 
     ShoppingCart, Calculator, MapPin, ChevronLeft, Award, RefreshCw, Key, ShieldCheck, TrendingDown, Clock3, ListChecks,
-    ChevronDown, CreditCard as CardIcon, Plus, FileCheck, Landmark, Loader2, SendHorizontal, MailQuestion, Phone, Video, HelpCircle, UserCog, Lock, ToggleLeft, ToggleRight, Search, Sun, Moon, ArrowRight, BookUser, Banknote
+    ChevronDown, CreditCard as CardIcon, Plus, FileCheck, Landmark, Loader2, SendHorizontal, MailQuestion, Phone, Video, HelpCircle, UserCog, Lock, ToggleLeft, ToggleRight, Search, Filter, Sun, Moon, ArrowRight, BookUser, Banknote
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFormStatus } from 'react-dom';
@@ -96,7 +96,7 @@ const MetricCard = ({ title, value, icon: Icon, color, bgColor, tooltip }) => (
     </div>
 );
 
-const TaskItem = ({ title, status, due, icon: Icon, priority }) => {
+const TaskItem = ({ title, status, due, icon: Icon, priority, actionLabel = "Open", onAction }) => {
     let statusClass = "bg-gray-200 text-gray-700";
     if (priority === "Critical") statusClass = "bg-red-100 text-red-600 font-bold";
     if (priority === "High") statusClass = "bg-amber-100 text-amber-600";
@@ -113,14 +113,20 @@ const TaskItem = ({ title, status, due, icon: Icon, priority }) => {
             <div className={`text-xs px-3 py-1 rounded-full ${statusClass}`}>
                 {status}
             </div>
-            <button className="text-blue-600 hover:text-blue-800 transition text-sm font-medium">
-                Action <ChevronRight className="w-3 h-3 inline ml-1" />
-            </button>
+            {onAction ? (
+                <button
+                    type="button"
+                    onClick={onAction}
+                    className="text-blue-600 hover:text-blue-800 transition text-sm font-medium"
+                >
+                    {actionLabel} <ChevronRight className="w-3 h-3 inline ml-1" />
+                </button>
+            ) : null}
         </div>
     );
 };
 
-const FinancialSnapshot = ({ isQuickBooksLinked, data, isLoading, lastSyncAt }) => {
+const FinancialSnapshot = ({ isQuickBooksLinked, data, isLoading, lastSyncAt, subtitle = 'Last 4 Months Performance' }) => {
     const hasData = Array.isArray(data) && data.length > 0;
     const maxValue = hasData
         ? Math.max(...data.map(d => Math.max(d.revenue || 0, d.expense || 0)))
@@ -136,7 +142,7 @@ const FinancialSnapshot = ({ isQuickBooksLinked, data, isLoading, lastSyncAt }) 
                     <h3 className="text-xl font-bold text-gray-800 mb-1 flex items-center">
                         <BarChart3 className="w-5 h-5 mr-2 text-blue-600" /> Financial Snapshot
                     </h3>
-                    <p className="text-sm text-gray-500">Last 4 Months Performance</p>
+                    <p className="text-sm text-gray-500">{subtitle}</p>
                     {lastSyncLabel && isQuickBooksLinked && (
                         <p className="text-xs text-gray-400 mt-1">Last synced: {lastSyncLabel}</p>
                     )}
@@ -336,7 +342,11 @@ const DashboardContent = ({ user, navigate, isQuickBooksLinked, financialSnapsho
                               </div>
                           ) : (
                               tasks.map(task => (
-                                  <TaskItem key={task.id} {...task} />
+                                  <TaskItem
+                                      key={task.id}
+                                      {...task}
+                                      onAction={task.actionPath ? () => navigate(task.actionPath) : undefined}
+                                  />
                               ))
                           )}
                       </div>
@@ -360,7 +370,7 @@ const DashboardContent = ({ user, navigate, isQuickBooksLinked, financialSnapsho
                         <Globe className="w-4 h-4 mr-2 text-blue-600" /> Global Founder Resources
                     </h4>
                     <p className="text-sm text-gray-500">Access exclusive guides on non-resident taxation, VAT, and international banking.</p>
-                    <a href="#" className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-2 block">Read Guides →</a>
+                    <a href="/blog" className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-2 block">Read Guides -{'>'}</a>
                 </div>
             </div>
 
@@ -848,6 +858,23 @@ const CompanySection = ({ userId, formations, documents, isLoading }) => {
     const resolveDocumentUrl = (docId: string, forceDownload = false) =>
         `${API_BASE_URL}/documents/${docId}/download${forceDownload ? '?download=1' : ''}`;
 
+    const incorporationDocTypes = new Set([
+        'certificate_of_incorporation',
+        'operating_agreement',
+        'bylaws',
+        'state_filings',
+        'ein_confirmation',
+    ]);
+    const isIncorporationDoc = (doc: any) => {
+        const folder = String(doc?.folder || '').toLowerCase();
+        const subfolder = String(doc?.subfolder || '').toLowerCase();
+        const documentType = String(doc?.documentType || '').toLowerCase();
+        return incorporationDocTypes.has(documentType) || folder === 'incorporation' || subfolder === 'incorporation' || folder === 'corporate' || subfolder === 'corporate';
+    };
+    const incorporationDocuments = (documents || []).filter(
+        (doc) => doc.source === 'legal_docs' && isIncorporationDoc(doc)
+    );
+
     const openOfficialDocument = async (doc: any, mode: 'view' | 'download') => {
         const docId = doc?.id || doc?._id;
         if (!docId) return;
@@ -978,14 +1005,13 @@ const CompanySection = ({ userId, formations, documents, isLoading }) => {
 
                     <div className="lg:col-span-1 space-y-6">
                         <div className="bg-blue-50 p-6 rounded-xl border border-blue-100">
-                            <h4 className="font-bold text-blue-800 mb-2 flex items-center"><ShieldCheck className="w-5 h-5 mr-2"/> Official Documents</h4>
-                            <p className="text-xs text-blue-600 mb-4">Access your certified formation documents.</p>
+                            <h4 className="font-bold text-blue-800 mb-2 flex items-center"><ShieldCheck className="w-5 h-5 mr-2"/> Incorporation Documents</h4>
+                            <p className="text-xs text-blue-600 mb-4">Only incorporation-related documents are shown here.</p>
                             <ul className="space-y-3">
-                                {(documents || []).filter((doc) => doc.source === 'legal_docs').length === 0 ? (
-                                    <li className="text-sm text-gray-500">No official documents available yet.</li>
+                                {incorporationDocuments.length === 0 ? (
+                                    <li className="text-sm text-gray-500">No incorporation documents available yet.</li>
                                 ) : (
-                                    (documents || [])
-                                        .filter((doc) => doc.source === 'legal_docs')
+                                    incorporationDocuments
                                         .slice(0, 5)
                                         .map((doc) => (
                                             <li key={doc._id || doc.id} className="flex items-center justify-between text-sm text-gray-700 bg-white p-2 rounded shadow-sm">
@@ -1037,7 +1063,8 @@ const CompanySection = ({ userId, formations, documents, isLoading }) => {
 };
 
 // Sub-components for Bookkeeping
-const BookkeepingOverview = ({ isQuickBooksLinked, lastSyncAt, bankAccountCount, financialSnapshot, isQuickBooksLoading, onNavigate }) => {
+const BookkeepingOverview = ({ isQuickBooksLinked, lastSyncAt, bankAccountCount, financialSnapshot, isQuickBooksLoading, onNavigate, companyName }) => {
+    const [selectedPeriod, setSelectedPeriod] = useState('current_month');
     const lastSyncLabel = lastSyncAt
         ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(lastSyncAt)
         : 'Not synced yet';
@@ -1045,29 +1072,118 @@ const BookkeepingOverview = ({ isQuickBooksLinked, lastSyncAt, bankAccountCount,
         ? `${bankAccountCount} account${bankAccountCount === 1 ? '' : 's'} connected`
         : 'Accounts not available';
 
+    const periodOptions = [
+        { value: 'current_month', label: 'Current Month' },
+        { value: 'last_month', label: 'Last Month' },
+        { value: 'last_3_months', label: 'Last 3 Months' },
+        { value: 'last_6_months', label: 'Last 6 Months' },
+        { value: 'current_year', label: 'Current Year' },
+        { value: 'last_year', label: 'Last Year' }
+    ];
+
+    const filteredSnapshot = useMemo(() => {
+        if (!Array.isArray(financialSnapshot)) return [];
+        const now = new Date();
+        const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
+        const endOfMonth = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        let start;
+        let end;
+        switch (selectedPeriod) {
+            case 'current_month': {
+                start = startOfMonth(now);
+                end = endOfMonth(now);
+                break;
+            }
+            case 'last_month': {
+                const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                start = startOfMonth(lastMonth);
+                end = endOfMonth(lastMonth);
+                break;
+            }
+            case 'last_3_months': {
+                start = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 2, 1));
+                end = endOfMonth(now);
+                break;
+            }
+            case 'last_6_months': {
+                start = startOfMonth(new Date(now.getFullYear(), now.getMonth() - 5, 1));
+                end = endOfMonth(now);
+                break;
+            }
+            case 'current_year': {
+                start = new Date(now.getFullYear(), 0, 1);
+                end = endOfMonth(now);
+                break;
+            }
+            case 'last_year': {
+                start = new Date(now.getFullYear() - 1, 0, 1);
+                end = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+                break;
+            }
+            default: {
+                start = startOfMonth(now);
+                end = endOfMonth(now);
+            }
+        }
+
+        const startMs = start.getTime();
+        const endMs = end.getTime();
+        return financialSnapshot.filter((row) => {
+            const ts = typeof row?.timestamp === 'number' ? row.timestamp : NaN;
+            return Number.isFinite(ts) && ts >= startMs && ts <= endMs;
+        });
+    }, [financialSnapshot, selectedPeriod]);
+
+    const selectedPeriodLabel =
+        periodOptions.find((option) => option.value === selectedPeriod)?.label ?? 'Selected Period';
+
     return (
         <>
-            <div className="p-6 bg-indigo-50 rounded-xl mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center border border-indigo-200">
-                <div>
-                    <h2 className="text-xl font-semibold text-gray-800">Bank Feed Status</h2>
-                    <div className="flex items-center gap-2">
-                        <p className="text-sm text-gray-600">Last Synced: {lastSyncLabel} ({connectedLabel})</p>
-                        {isQuickBooksLinked && <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">via QuickBooks</span>}
+            <div className="p-6 bg-indigo-50 rounded-xl mb-8 border border-indigo-200">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 className="text-xl font-semibold text-gray-800">Bank Feed Status</h2>
+                        <div className="flex items-center gap-2 mb-2">
+                            <p className="text-sm text-gray-600">Last Synced: {lastSyncLabel} ({connectedLabel})</p>
+                            {isQuickBooksLinked && <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">via YourLegal</span>}
+                        </div>
+                        {companyName && (
+                            <p className="text-sm font-medium text-gray-800">Company: {companyName}</p>
+                        )}
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex flex-col">
+                            <label className="text-xs font-medium text-gray-600 mb-1">Period</label>
+                            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                                <SelectTrigger className="w-40">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {periodOptions.map(option => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => onNavigate?.('bookkeeping/transactions')}
+                            className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition"
+                        >
+                            View Transactions
+                        </button>
                     </div>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => onNavigate?.('bookkeeping/transactions')}
-                    className="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition mt-3 sm:mt-0"
-                >
-                    View Transactions
-                </button>
             </div>
             <FinancialSnapshot
                 isQuickBooksLinked={isQuickBooksLinked}
-                data={financialSnapshot}
+                data={filteredSnapshot}
                 isLoading={isQuickBooksLoading}
                 lastSyncAt={lastSyncAt}
+                subtitle={`${selectedPeriodLabel} Performance`}
             />
         </>
     );
@@ -1293,6 +1409,7 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState('');
     const [dueDate, setDueDate] = useState('');
+    const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
     
     const safeAmount = (value) => {
         const n = Number(value);
@@ -1497,6 +1614,44 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
         }
     };
 
+    const handleDownloadInvoice = async (invoiceId) => {
+        if (!isQuickBooksLinked) {
+            toast({ variant: 'destructive', title: 'QuickBooks not connected.' });
+            return;
+        }
+        
+        try {
+            const response = await fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ 
+                    method: 'GET', 
+                    url: `invoice/${invoiceId}/pdf` 
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to download invoice from QuickBooks.');
+            }
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `invoice-${invoiceId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            toast({ title: 'Invoice downloaded successfully.' });
+        } catch (error: any) {
+            console.error(error);
+            toast({ variant: 'destructive', title: error?.message || 'Unable to download invoice.' });
+        }
+    };
+
     return (
         <div className="space-y-6">
             {isLoading && (
@@ -1530,13 +1685,25 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
               </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                    <h3 className="font-bold text-gray-700">Invoice History</h3>
-                    {isQuickBooksLinked && (
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <Image src="/logo.png" alt="Yourlegal" width={80} height={15} />
-                        </div>
-                    )}
+                <div className="p-4 border-b border-gray-100 bg-gray-50">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold text-gray-700">Invoice History</h3>
+                        {isQuickBooksLinked && (
+                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <Image src="/logo.png" alt="Yourlegal" width={80} height={15} />
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Search className="w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search by invoice #, client, or status..."
+                            value={invoiceSearchTerm}
+                            onChange={(e) => setInvoiceSearchTerm(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
                 </div>
                 <div className="overflow-x-auto">
                     {!invoices || invoices.length === 0 ? (
@@ -1544,7 +1711,24 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
                             <p className="text-gray-500">No invoices found.</p>
                         </div>
                     ) : (
-                    <table className="w-full text-sm text-left">
+                        <>
+                            {(() => {
+                                const filteredInvoices = invoices.filter((inv) =>
+                                    inv.DocNumber?.toLowerCase().includes(invoiceSearchTerm.toLowerCase()) ||
+                                    inv.CustomerRef?.name?.toLowerCase().includes(invoiceSearchTerm.toLowerCase()) ||
+                                    (inv.Balance === 0 ? 'Paid' : (inv?.DueDate && new Date(inv.DueDate) < new Date() ? 'Overdue' : 'Sent')).toLowerCase().includes(invoiceSearchTerm.toLowerCase())
+                                );
+
+                                if (filteredInvoices.length === 0) {
+                                    return (
+                                        <div className="text-center p-10 border-t">
+                                            <p className="text-gray-500">No invoices match your search.</p>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <table className="w-full text-sm text-left">
                         <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
                             <tr>
                                 <th className="px-6 py-3">Invoice #</th>
@@ -1557,7 +1741,7 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
                             </tr>
                         </thead>
                         <tbody>
-                            {invoices.map((inv) => (
+                            {filteredInvoices.map((inv) => (
                                 <tr key={inv.Id} className="bg-white border-b hover:bg-gray-50 transition">
                                     <td className="px-6 py-4 font-medium text-blue-600">{inv.DocNumber || inv.Id}</td>
                                     <td className="px-6 py-4 font-semibold text-gray-900">{inv.CustomerRef?.name}</td>
@@ -1576,14 +1760,21 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
                                         ${inv.TotalAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <button className="text-gray-400 hover:text-blue-600">
-                                            <ChevronRight className="w-4 h-4 mx-auto" />
+                                        <button 
+                                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                                            onClick={() => handleDownloadInvoice(inv.Id)}
+                                            title="Download Invoice"
+                                        >
+                                            <FileText className="w-4 h-4 mx-auto" />
                                         </button>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
-                    </table>
+                                    </table>
+                                );
+                            })()}
+                        </>
                     )}
                 </div>
             </div>
@@ -1652,6 +1843,8 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [newAccountName, setNewAccountName] = useState('');
     const [newAccountType, setNewAccountType] = useState('Expense');
+    const [accountSearchTerm, setAccountSearchTerm] = useState('');
+    const [accountTypeFilter, setAccountTypeFilter] = useState('');
 
     const accountTypes = ["Bank", "AccountsReceivable", "OtherCurrentAsset", "FixedAsset", "OtherAsset", "AccountsPayable", "CreditCard", "OtherCurrentLiability", "LongTermLiability", "OtherLiability", "Equity", "Income", "OtherIncome", "CostOfGoodsSold", "Expense", "OtherExpense"];
 
@@ -1757,6 +1950,31 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
             </Button>
 
              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="p-4 border-b border-gray-100 bg-gray-50 space-y-3">
+                    <div className="flex items-center gap-2">
+                        <Search className="w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search accounts by name..."
+                            value={accountSearchTerm}
+                            onChange={(e) => setAccountSearchTerm(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-gray-400" />
+                        <select
+                            value={accountTypeFilter}
+                            onChange={(e) => setAccountTypeFilter(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">All Account Types</option>
+                            {Array.from(new Set(accounts.map(a => a.AccountType))).sort().map(type => (
+                                <option key={type} value={type}>{type}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
                 <div className="overflow-x-auto">
                     {isLoading ? (
                          <div className="flex justify-center items-center p-10">
@@ -1774,7 +1992,24 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
                               </p>
                           </div>
                       ) : (
-                    <table className="w-full text-sm text-left">
+                        <>
+                            {(() => {
+                                const filteredAccounts = accounts.filter((account) =>
+                                    (account.Name?.toLowerCase().includes(accountSearchTerm.toLowerCase()) ||
+                                        account.AccountSubType?.toLowerCase().includes(accountSearchTerm.toLowerCase())) &&
+                                    (!accountTypeFilter || account.AccountType === accountTypeFilter)
+                                );
+
+                                if (filteredAccounts.length === 0) {
+                                    return (
+                                        <div className="text-center p-10">
+                                            <p className="text-gray-500">No accounts match your search or filter.</p>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <table className="w-full text-sm text-left">
                         <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
                             <tr>
                                 <th className="px-6 py-3">Account Name</th>
@@ -1784,7 +2019,7 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {accounts.map((account) => (
+                            {filteredAccounts.map((account) => (
                                 <tr key={account.Id} className="bg-white border-b hover:bg-gray-50 transition">
                                     <td className="px-6 py-4 font-medium text-gray-900">{account.Name}</td>
                                     <td className="px-6 py-4">
@@ -1797,7 +2032,10 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
                                 </tr>
                             ))}
                         </tbody>
-                    </table>
+                                    </table>
+                                );
+                            })()}
+                        </>
                     )}
                 </div>
             </div>
@@ -1844,6 +2082,101 @@ const BookkeepingReports = ({ isQuickBooksLinked, pnlData, balanceSheetData, cas
     const [showBalanceSheet, setShowBalanceSheet] = useState(false);
     const [showCashFlow, setShowCashFlow] = useState(false);
 
+    const extractReportRows = (row, level = 0) => {
+        const rows = [];
+        
+        if (!row) return rows;
+
+        // Add the section header if it exists
+        if (row.type === 'Section' && row.Header?.ColData?.[0]?.value) {
+            const headerText = row.Header.ColData[0].value;
+            rows.push({
+                category: '\t'.repeat(level) + headerText,
+                amount: ''
+            });
+        }
+
+        // Add data rows
+        if (row.type === 'Data' && row.ColData) {
+            rows.push({
+                category: '\t'.repeat(level) + (row.ColData[0]?.value || ''),
+                amount: row.ColData[1]?.value || ''
+            });
+        }
+
+        // Recursively add nested rows
+        if (row.Rows?.Row) {
+            row.Rows.Row.forEach(subRow => {
+                rows.push(...extractReportRows(subRow, level + 1));
+            });
+        }
+
+        // Add summary row
+        if (row.Summary?.ColData) {
+            rows.push({
+                category: '\t'.repeat(level) + (row.Summary.ColData[0]?.value || ''),
+                amount: row.Summary.ColData[1]?.value || ''
+            });
+        }
+
+        return rows;
+    };
+
+    const exportToCSV = (data, filename) => {
+        if (!data) return;
+
+        let csvRows = [];
+
+        // Handle QuickBooks report format
+        if (data?.Header && data?.Rows) {
+            // Add header information
+            if (data.Header?.ReportName) {
+                csvRows.push([data.Header.ReportName]);
+            }
+            if (data.Header?.StartPeriod && data.Header?.EndPeriod) {
+                csvRows.push([`Period: ${data.Header.StartPeriod} to ${data.Header.EndPeriod}`]);
+            }
+            csvRows.push([]); // Empty row
+            
+            // Add column headers
+            csvRows.push(['Category', 'Amount']);
+
+            // Extract and flatten report rows
+            if (data.Rows?.Row) {
+                data.Rows.Row.forEach(row => {
+                    const extractedRows = extractReportRows(row);
+                    csvRows.push(...extractedRows.map(r => [r.category, r.amount]));
+                });
+            }
+        } else if (Array.isArray(data)) {
+            // Fallback for simple array format
+            csvRows.push(['Category', 'Amount']);
+            data.forEach(item => {
+                csvRows.push([
+                    item.category || item.name || '',
+                    item.amount || item.value || 0
+                ]);
+            });
+        } else {
+            console.warn('Unable to export data - unsupported format');
+            return;
+        }
+
+        // Generate CSV content
+        const csvContent = csvRows
+            .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${filename}-${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    };
+
      if (isLoading) {
         return (
             <div className="flex justify-center items-center p-10 bg-white rounded-xl shadow-sm border border-gray-200">
@@ -1881,7 +2214,17 @@ const BookkeepingReports = ({ isQuickBooksLinked, pnlData, balanceSheetData, cas
             <Dialog open={showPnl} onOpenChange={setShowPnl}>
                 <DialogContent className="max-w-4xl">
                     <DialogHeader>
-                        <DialogTitle>Profit and Loss Statement</DialogTitle>
+                        <DialogTitle className="flex justify-between items-center">
+                            Profit and Loss Statement
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => exportToCSV(pnlData, 'profit-loss-statement')}
+                                disabled={!pnlData}
+                            >
+                                Export CSV
+                            </Button>
+                        </DialogTitle>
                         <DialogDescription>
                             Review your company's financial performance for the selected period.
                         </DialogDescription>
@@ -1894,7 +2237,17 @@ const BookkeepingReports = ({ isQuickBooksLinked, pnlData, balanceSheetData, cas
             <Dialog open={showBalanceSheet} onOpenChange={setShowBalanceSheet}>
                 <DialogContent className="max-w-4xl">
                     <DialogHeader>
-                        <DialogTitle>Balance Sheet</DialogTitle>
+                        <DialogTitle className="flex justify-between items-center">
+                            Balance Sheet
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => exportToCSV(balanceSheetData, 'balance-sheet')}
+                                disabled={!balanceSheetData}
+                            >
+                                Export CSV
+                            </Button>
+                        </DialogTitle>
                         <DialogDescription>
                             Review your company's assets, liabilities, and equity.
                         </DialogDescription>
@@ -1907,7 +2260,17 @@ const BookkeepingReports = ({ isQuickBooksLinked, pnlData, balanceSheetData, cas
             <Dialog open={showCashFlow} onOpenChange={setShowCashFlow}>
                 <DialogContent className="max-w-4xl">
                     <DialogHeader>
-                        <DialogTitle>Cash Flow Statement</DialogTitle>
+                        <DialogTitle className="flex justify-between items-center">
+                            Cash Flow Statement
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => exportToCSV(cashFlowData, 'cash-flow-statement')}
+                                disabled={!cashFlowData}
+                            >
+                                Export CSV
+                            </Button>
+                        </DialogTitle>
                         <DialogDescription>
                             Review cash inflows and outflows for the selected period.
                         </DialogDescription>
@@ -1923,6 +2286,10 @@ const BookkeepingReports = ({ isQuickBooksLinked, pnlData, balanceSheetData, cas
 
 
 const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
+    const [showInvoicesModal, setShowInvoicesModal] = useState(false);
+    const [showBillsModal, setShowBillsModal] = useState(false);
+    const [arSearchTerm, setArSearchTerm] = useState('');
+    const [apSearchTerm, setApSearchTerm] = useState('');
     const now = new Date();
     const safeAmount = (value) => {
         const n = Number(value);
@@ -1959,7 +2326,7 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
                     <p className="text-sm text-gray-600 mt-1">{arOverdue} overdue invoice{arOverdue === 1 ? '' : 's'}, {arPending} pending.</p>
                     <button
                         type="button"
-                        onClick={() => onNavigate?.('bookkeeping/invoicing')}
+                        onClick={() => setShowInvoicesModal(true)}
                         className="mt-3 text-xs text-green-600 font-medium hover:underline"
                     >
                         View Invoices
@@ -1971,13 +2338,203 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
                     <p className="text-sm text-gray-600 mt-1">{apOverdue} overdue bill{apOverdue === 1 ? '' : 's'}, {apPending} due soon.</p>
                     <button
                         type="button"
-                        onClick={() => onNavigate?.('bookkeeping/transactions')}
+                        onClick={() => setShowBillsModal(true)}
                         className="mt-3 text-xs text-red-600 font-medium hover:underline"
                     >
                         View Bills
                     </button>
                 </div>
             </div>
+
+            {/* Invoices Modal */}
+            <Dialog open={showInvoicesModal} onOpenChange={setShowInvoicesModal}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Accounts Receivable - Outstanding Invoices</DialogTitle>
+                        <DialogDescription>
+                            Showing {arInvoices.length} outstanding invoice{arInvoices.length === 1 ? '' : 's'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Search className="w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search by invoice #, customer, or status..."
+                            value={arSearchTerm}
+                            onChange={(e) => setArSearchTerm(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    {arInvoices.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b sticky top-0">
+                                    <tr>
+                                        <th className="px-6 py-3">Invoice #</th>
+                                        <th className="px-6 py-3">Customer</th>
+                                        <th className="px-6 py-3">Date</th>
+                                        <th className="px-6 py-3">Due Date</th>
+                                        <th className="px-6 py-3">Status</th>
+                                        <th className="px-6 py-3 text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {arInvoices.map((invoice) => (
+                                        <tr key={invoice.Id} className="bg-white border-b hover:bg-gray-50 transition">
+                                            <td className="px-6 py-4 font-medium text-blue-600">{invoice.DocNumber || invoice.Id}</td>
+                                            <td className="px-6 py-4 font-semibold text-gray-900">{invoice.CustomerRef?.name || 'N/A'}</td>
+                                            <td className="px-6 py-4 text-gray-500">{invoice.TxnDate}</td>
+                                            <td className="px-6 py-4 text-gray-500">{invoice.DueDate}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                                                    safeAmount(invoice?.Balance) === 0 ? 'bg-green-100 text-green-700' : 
+                                                    (invoice?.DueDate && new Date(invoice.DueDate) < now ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')
+                                                }`}>
+                                                    {safeAmount(invoice?.Balance) === 0 ? 'Paid' : (invoice?.DueDate && new Date(invoice.DueDate) < now ? 'Overdue' : 'Due')}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-bold text-gray-900">
+                                                ${safeAmount(invoice.TotalAmt).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">
+                            <p>No outstanding invoices</p>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Bills Modal */}
+            <Dialog open={showBillsModal} onOpenChange={setShowBillsModal}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Accounts Payable - Outstanding Bills</DialogTitle>
+                        <DialogDescription>
+                            Showing {apBills.length} outstanding bill{apBills.length === 1 ? '' : 's'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Search className="w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search by bill #, vendor, or status..."
+                            value={apSearchTerm}
+                            onChange={(e) => setApSearchTerm(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    {apBills.length > 0 ? (
+                        <>
+                            {(() => {
+                                const filteredApBills = apBills.filter((bill) =>
+                                    bill.DocNumber?.toLowerCase().includes(apSearchTerm.toLowerCase()) ||
+                                    bill.VendorRef?.name?.toLowerCase().includes(apSearchTerm.toLowerCase()) ||
+                                    (safeAmount(bill?.Balance) === 0 ? 'Paid' : (bill?.DueDate && new Date(bill.DueDate) < now ? 'Overdue' : 'Due')).toLowerCase().includes(apSearchTerm.toLowerCase())
+                                );
+
+                                if (filteredApBills.length === 0) {
+                                    return (
+                                        <div className="text-center py-8 text-gray-500">
+                                            <p>No bills match your search</p>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b sticky top-0">
+                                                <tr>
+                                                    <th className="px-6 py-3">Bill #</th>
+                                                    <th className="px-6 py-3">Vendor</th>
+                                                    <th className="px-6 py-3">Date</th>
+                                                    <th className="px-6 py-3">Due Date</th>
+                                                    <th className="px-6 py-3">Status</th>
+                                                    <th className="px-6 py-3 text-right">Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {filteredApBills.map((bill) => (
+                                                    <tr key={bill.Id} className="bg-white border-b hover:bg-gray-50 transition">
+                                                        <td className="px-6 py-4 font-medium text-blue-600">{bill.DocNumber || bill.Id}</td>
+                                                        <td className="px-6 py-4 font-semibold text-gray-900">{bill.VendorRef?.name || 'N/A'}</td>
+                                                        <td className="px-6 py-4 text-gray-500">{bill.TxnDate}</td>
+                                                        <td className="px-6 py-4 text-gray-500">{bill.DueDate}</td>
+                                                        <td className="px-6 py-4">
+                                                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                                                                bill.Balance === 0 ? 'bg-green-100 text-green-700' : 
+                                                                (bill?.DueDate && new Date(bill.DueDate) < now ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')
+                                                            }`}>
+                                                                {safeAmount(bill?.Balance) === 0 ? 'Paid' : (bill?.DueDate && new Date(bill.DueDate) < now ? 'Overdue' : 'Due')}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right font-bold text-gray-900">
+                                                            ${safeAmount(bill.TotalAmt).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            })()}
+                        </>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">
+                            <p>No outstanding bills</p>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+            
+            {/* Detailed AP Bills Table */}
+            {apBills.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 bg-gray-50">
+                        <h3 className="font-bold text-gray-700">Outstanding Bills (Payable Invoices)</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
+                                <tr>
+                                    <th className="px-6 py-3">Bill #</th>
+                                    <th className="px-6 py-3">Vendor</th>
+                                    <th className="px-6 py-3">Date</th>
+                                    <th className="px-6 py-3">Due Date</th>
+                                    <th className="px-6 py-3">Status</th>
+                                    <th className="px-6 py-3 text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {apBills.map((bill) => (
+                                    <tr key={bill.Id} className="bg-white border-b hover:bg-gray-50 transition">
+                                        <td className="px-6 py-4 font-medium text-blue-600">{bill.DocNumber || bill.Id}</td>
+                                        <td className="px-6 py-4 font-semibold text-gray-900">{bill.VendorRef?.name}</td>
+                                        <td className="px-6 py-4 text-gray-500">{bill.TxnDate}</td>
+                                        <td className="px-6 py-4 text-gray-500">{bill.DueDate}</td>
+                                        <td className="px-6 py-4">
+                                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                                                bill.Balance === 0 ? 'bg-green-100 text-green-700' : 
+                                                (bill?.DueDate && new Date(bill.DueDate) < now ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')
+                                            }`}>
+                                                {safeAmount(bill?.Balance) === 0 ? 'Paid' : (bill?.DueDate && new Date(bill.DueDate) < now ? 'Overdue' : 'Due')}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-bold text-gray-900">
+                                            ${safeAmount(bill.TotalAmt).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -1999,7 +2556,8 @@ const BookkeepingSection = ({
     bankAccountCount,
     lastSyncAt,
     financialSnapshot,
-    onQuickBooksRefresh
+    onQuickBooksRefresh,
+    companyName
 }) => {
     let content;
     let subtitle;
@@ -2043,6 +2601,7 @@ const BookkeepingSection = ({
                     financialSnapshot={financialSnapshot}
                     isQuickBooksLoading={isLoading}
                     onNavigate={onNavigate}
+                    companyName={companyName}
                 />
             );
             subtitle = 'An integrated overview of your business’s financial health and activity.';
@@ -2086,6 +2645,7 @@ const BookkeepingSection = ({
 
 const BankingSection = ({ isQuickBooksLinked, accounts, bills, invoices, transactions, lastSyncAt, onConnect, onDisconnect, onRefresh, isLoading }) => {
     const [txnPage, setTxnPage] = useState(1);
+    const [activeTab, setActiveTab] = useState('categorized');
     const pageSize = 10;
     const bankAccounts = (accounts || []).filter(account => account?.AccountType === 'Bank');
     const primaryAccount = bankAccounts[0];
@@ -2097,6 +2657,30 @@ const BankingSection = ({ isQuickBooksLinked, accounts, bills, invoices, transac
         const value = Number(account?.CurrentBalance ?? account?.Balance ?? 0);
         return sum + (Number.isFinite(value) ? value : 0);
     }, 0);
+
+    // Only include actual banking transactions, not invoices/bills
+    const bankingTransactions = (transactions || [])
+        .map((row) => ({
+            id: row?.id || `${row?.name}-${row?.date}-${row?.amount}`,
+            type: row?.type || 'Transaction',
+            counterparty: row?.name || 'N/A',
+            date: row?.date,
+            amount: Number(row?.amount ?? 0),
+            memo: row?.memo || '',
+            category: row?.category || null, // Assume transactions have a category field
+        }))
+        .filter((row) => Number.isFinite(row.amount));
+
+    // Categorize transactions
+    const categorizedTransactions = bankingTransactions.filter(txn => txn.category);
+    const uncategorizedTransactions = bankingTransactions.filter(txn => !txn.category);
+
+    const currentTransactions = activeTab === 'categorized' ? categorizedTransactions : uncategorizedTransactions;
+    const sortedTransactions = currentTransactions.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+
+    const totalPages = Math.max(1, Math.ceil(sortedTransactions.length / pageSize));
+    const safePage = Math.min(txnPage, totalPages);
+    const tableRows = sortedTransactions.slice((safePage - 1) * pageSize, safePage * pageSize);
 
     const quickBooksTransactions = [
         ...(invoices || []).map(invoice => ({
@@ -2114,9 +2698,7 @@ const BankingSection = ({ isQuickBooksLinked, accounts, bills, invoices, transac
         .sort((a, b) => new Date(b?.date || 0).getTime() - new Date(a?.date || 0).getTime());
     const recentDeposit = recentCredit[0]?.amount || 0;
 
-    const uncategorizedCount = (bills || []).filter(
-        bill => !bill?.APAccountRef?.name && !bill?.AccountRef?.name
-    ).length;
+    const uncategorizedCount = uncategorizedTransactions.length;
     const formatDate = (value) => {
         if (!value) return 'N/A';
         const parsed = new Date(value);
@@ -2131,39 +2713,6 @@ const BankingSection = ({ isQuickBooksLinked, accounts, bills, invoices, transac
         balance: Number(account?.CurrentBalance ?? account?.Balance ?? 0),
         currency: account?.CurrencyRef?.value || 'USD',
     }));
-    const activityRowsAll = [
-        ...(invoices || []).map((invoice) => ({
-            id: `invoice-${invoice?.Id}`,
-            type: 'Invoice',
-            counterparty: invoice?.CustomerRef?.name || 'Customer',
-            date: invoice?.TxnDate || invoice?.DueDate || invoice?.MetaData?.CreateTime,
-            amount: Number(invoice?.Balance ?? invoice?.TotalAmt ?? 0),
-        })),
-        ...(bills || []).map((bill) => ({
-            id: `bill-${bill?.Id}`,
-            type: 'Bill',
-            counterparty: bill?.VendorRef?.name || 'Vendor',
-            date: bill?.TxnDate || bill?.DueDate || bill?.MetaData?.CreateTime,
-            amount: -Number(bill?.Balance ?? bill?.TotalAmt ?? 0),
-        })),
-    ]
-        .filter((row) => Number.isFinite(row.amount))
-        .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-    const transactionRowsAll = (transactions || [])
-        .map((row) => ({
-            id: row?.id || `${row?.name}-${row?.date}-${row?.amount}`,
-            type: row?.type || 'Transaction',
-            counterparty: row?.name || 'N/A',
-            date: row?.date,
-            amount: Number(row?.amount ?? 0),
-            memo: row?.memo || '',
-        }))
-        .filter((row) => Number.isFinite(row.amount))
-        .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-    const tableRowsSource = transactionRowsAll.length > 0 ? transactionRowsAll : activityRowsAll;
-    const totalPages = Math.max(1, Math.ceil(tableRowsSource.length / pageSize));
-    const safePage = Math.min(txnPage, totalPages);
-    const tableRows = tableRowsSource.slice((safePage - 1) * pageSize, safePage * pageSize);
 
     return (
         <SectionWrapper title="Banking & Finance">
@@ -2250,21 +2799,36 @@ const BankingSection = ({ isQuickBooksLinked, accounts, bills, invoices, transac
                         <div className="mt-8 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border-b border-gray-100 bg-gray-50">
                                 <div>
-                                    <h4 className="text-sm font-semibold text-gray-700">All Transactions</h4>
-                                    <p className="text-xs text-gray-500">Full list from QuickBooks transaction report.</p>
+                                    <h4 className="text-sm font-semibold text-gray-700">Banking Transactions</h4>
+                                    <p className="text-xs text-gray-500">Categorized and uncategorized bank transactions.</p>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-gray-500">
-                                    <span>Showing</span>
-                                    <span className="font-semibold text-gray-700">
-                                        {tableRowsSource.length === 0 ? 0 : (safePage - 1) * pageSize + 1}
-                                        -
-                                        {Math.min(safePage * pageSize, tableRowsSource.length)}
-                                    </span>
-                                    <span>of {tableRowsSource.length}</span>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setActiveTab('categorized')}
+                                        className={`px-3 py-1 text-xs font-medium rounded-lg transition ${
+                                            activeTab === 'categorized' 
+                                                ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        Categorized ({categorizedTransactions.length})
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab('uncategorized')}
+                                        className={`px-3 py-1 text-xs font-medium rounded-lg transition ${
+                                            activeTab === 'uncategorized' 
+                                                ? 'bg-amber-100 text-amber-700 border border-amber-200' 
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        Uncategorized ({uncategorizedTransactions.length})
+                                    </button>
                                 </div>
                             </div>
-                            {tableRowsSource.length === 0 ? (
-                                <div className="p-6 text-sm text-gray-500">No transactions available.</div>
+                            {sortedTransactions.length === 0 ? (
+                                <div className="p-6 text-sm text-gray-500">
+                                    No {activeTab} transactions available.
+                                </div>
                             ) : (
                                 <>
                                     <div className="overflow-x-auto">
@@ -2801,19 +3365,217 @@ const DocumentsSection = () => (
     </SectionWrapper>
 );
 
-const SupportSection = ({ navigate }) => {
+const PLAN_ANNUAL_OVERRIDES = {
+    Micro: 499,
+    Vitals: 2388,
+    Elite: 3588,
+};
+
+const PLAN_ORDER_BY_COUNTRY = {
+    USA: ['Micro', 'Vitals', 'Elite'],
+    India: ['Startup', 'Compliance', 'Growth'],
+    UK: ['Formation', 'Compliance', 'AllInOne'],
+    UAE: ['Formation', 'Compliance', 'AllInOne'],
+    Singapore: ['Formation', 'Compliance', 'AllInOne'],
+    Australia: ['Formation', 'Compliance', 'AllInOne'],
+    Netherlands: ['Formation', 'Compliance', 'AllInOne'],
+    'Saudi Arabia': ['Formation', 'Compliance', 'AllInOne'],
+};
+
+const normalizePlanKey = (value) => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const CURRENCY_BY_COUNTRY = {
+    USA: 'USD',
+    UK: 'GBP',
+    UAE: 'AED',
+    Singapore: 'SGD',
+    India: 'INR',
+    Australia: 'AUD',
+    Netherlands: 'EUR',
+    'Saudi Arabia': 'SAR',
+};
+
+const LOCALE_BY_CURRENCY = {
+    USD: 'en-US',
+    GBP: 'en-GB',
+    AED: 'en-AE',
+    SGD: 'en-SG',
+    INR: 'en-IN',
+    AUD: 'en-AU',
+    EUR: 'en-NL',
+    SAR: 'en-SA',
+};
+
+const resolveCurrency = (country) => CURRENCY_BY_COUNTRY[country] || 'USD';
+
+const formatMoney = (amount, currency) => {
+    const locale = LOCALE_BY_CURRENCY[currency] || 'en-US';
+    try {
+        return new Intl.NumberFormat(locale, { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount);
+    } catch {
+        return `$${amount.toLocaleString()}`;
+    }
+};
+
+const resolvePlanAmount = (plan) => {
+    if (!plan) return 0;
+    const override = PLAN_ANNUAL_OVERRIDES[plan.name];
+    if (override) return override;
+    const base = resolveServicePrice(plan);
+    return Number.isFinite(base) ? base : 0;
+};
+
+const UpgradePlanPanel = ({ currentPlan, formation, plans, isLoadingPlans, plansError, currency, country }) => {
+    const [localError, setLocalError] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const planOrder = PLAN_ORDER_BY_COUNTRY[country] || [];
+    const planOrderKeys = planOrder.map(normalizePlanKey);
+    const currentKey = normalizePlanKey(currentPlan);
+    const currentIndex = currentKey ? planOrderKeys.indexOf(currentKey) : -1;
+
+    const sortedPlans = useMemo(() => {
+        const getIndex = (name) => {
+            const key = normalizePlanKey(name);
+            const idx = planOrderKeys.indexOf(key);
+            return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+        };
+        return [...(plans || [])].sort((a, b) => getIndex(a.name) - getIndex(b.name));
+    }, [plans, planOrderKeys]);
+
+    const handleUpgrade = async (plan) => {
+        const amount = resolvePlanAmount(plan);
+        if (!amount) {
+            setLocalError('Pricing unavailable for this plan. Please contact support.');
+            return;
+        }
+        setIsProcessing(true);
+        setLocalError('');
+        try {
+            const serviceType = plan.category || 'annual-compliance';
+            const response = await fetch(`${API_BASE_URL}/payment/create-checkout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    amount,
+                    plan: plan.name,
+                    country,
+                    state: formation?.state || 'Unknown',
+                    entityType: formation?.entityType || 'LLC',
+                    serviceType,
+                    serviceName: plan.name,
+                })
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok) {
+                throw new Error(data?.message || 'Payment error. Please try again.');
+            }
+            if (data?.url) {
+                window.location.href = data.url;
+                return;
+            }
+            throw new Error('Unable to start Stripe checkout.');
+        } catch (error) {
+            setLocalError(error instanceof Error ? error.message : 'Payment error. Please try again.');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const eligiblePlans = sortedPlans.filter((plan) => {
+        if (currentIndex === -1) return true;
+        const idx = planOrderKeys.indexOf(normalizePlanKey(plan.name));
+        return idx > currentIndex;
+    });
+
+    const hasAnyPlans = sortedPlans.length > 0;
+    const hasEligiblePlans = eligiblePlans.length > 0;
+    const errorMessage = localError || plansError;
+
+    return (
+        <div id="upgrade-plans" className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+            <div className="flex items-start justify-between gap-4 border-b pb-4 mb-4">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800">Upgrade Your Plan</h2>
+                    <p className="text-sm text-gray-500">Choose a higher tier to unlock more services and priority support.</p>
+                </div>
+                {currentPlan && (
+                    <span className="text-xs font-semibold bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full">
+                        Current: {currentPlan}
+                    </span>
+                )}
+            </div>
+
+            {errorMessage && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 mb-4">
+                    {errorMessage}
+                </div>
+            )}
+
+            {isLoadingPlans ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading plans...
+                </div>
+            ) : !hasAnyPlans ? (
+                <div className="text-sm text-gray-600">
+                    No upgrade plans are available for your region right now.
+                </div>
+            ) : !hasEligiblePlans ? (
+                <div className="text-sm text-gray-600">
+                    You already have the highest available plan. Contact support if you need a custom package.
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {eligiblePlans.map((plan) => {
+                        const amount = resolvePlanAmount(plan);
+                        const priceLabel = amount ? `${formatMoney(amount, currency)}/year` : 'Contact Support';
+                        return (
+                            <div key={plan._id || plan.id || plan.name} className="border border-gray-200 rounded-xl p-5 flex flex-col">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-lg font-semibold text-gray-800">{plan.name}</h3>
+                                    <span className="text-sm font-bold text-indigo-600">{priceLabel}</span>
+                                </div>
+                                <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
+                                <ul className="mt-4 space-y-2 text-sm text-gray-600">
+                                    {(plan.features || []).slice(0, 5).map((feature, idx) => (
+                                        <li key={`${plan.name}-feature-${idx}`} className="flex items-start gap-2">
+                                            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                                            <span>{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                <Button
+                                    onClick={() => handleUpgrade(plan)}
+                                    className="mt-5"
+                                    disabled={isProcessing || !amount}
+                                >
+                                    {isProcessing ? 'Redirecting...' : `Upgrade to ${plan.name}`}
+                                </Button>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const SupportSection = ({ formations }) => {
     const { user } = useAuth();
     const [subscription, setSubscription] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const upgradeRef = useRef(null);
+    const primaryFormation = useMemo(() => {
+        if (!formations || formations.length === 0) return null;
+        const sorted = [...formations].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        return sorted[0] || null;
+    }, [formations]);
 
-    const planPricing = {
-        'Micro': { monthly: 499, yearly: 499 },
-        'Vitals': { monthly: 199, yearly: 2388 },
-        'Elite': { monthly: 299, yearly: 3588 },
-        'Starter': { monthly: 99, yearly: 1188 },
-        'Growth': { monthly: 149, yearly: 1788 },
-        'Scale': { monthly: 249, yearly: 2988 }
-    };
+    const country = normalizeRegion(primaryFormation?.country) || normalizeRegion(user?.region) || 'USA';
+    const currency = resolveCurrency(country);
+    const [corePlans, setCorePlans] = useState([]);
+    const [isLoadingPlans, setIsLoadingPlans] = useState(false);
+    const [plansError, setPlansError] = useState('');
 
     useEffect(() => {
         const fetchSubscription = async () => {
@@ -2827,13 +3589,48 @@ const SupportSection = ({ navigate }) => {
                 }
             } catch (error) {
                 console.error('Failed to fetch subscription:', error);
-            } finally {
-                setLoading(false);
             }
         };
 
         fetchSubscription();
     }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+        const loadPlans = async () => {
+            setIsLoadingPlans(true);
+            setPlansError('');
+            try {
+                const response = await fetch(`${API_BASE_URL}/services?isActive=true&country=${encodeURIComponent(country)}`);
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !data?.success) {
+                    throw new Error(data?.message || 'Unable to load plans.');
+                }
+                const core = (data.services || []).filter((service) => service.uiType === 'core' && service.isActive);
+                if (isMounted) {
+                    setCorePlans(core);
+                }
+            } catch (error) {
+                if (isMounted) {
+                    setCorePlans([]);
+                    setPlansError(error instanceof Error ? error.message : 'Unable to load plans.');
+                }
+            } finally {
+                if (isMounted) setIsLoadingPlans(false);
+            }
+        };
+
+        loadPlans();
+        return () => {
+            isMounted = false;
+        };
+    }, [country]);
+
+    const currentPlanRecord = useMemo(() => {
+        if (!user?.servicePlan) return null;
+        const key = normalizePlanKey(user.servicePlan);
+        return (corePlans || []).find((plan) => normalizePlanKey(plan.name) === key) || null;
+    }, [corePlans, user?.servicePlan]);
 
     const getPlanDisplayInfo = () => {
         if (!user?.servicePlan) {
@@ -2845,8 +3642,8 @@ const SupportSection = ({ navigate }) => {
         }
 
         const plan = user.servicePlan;
-        const pricing = planPricing[plan] || { yearly: 0 };
-        const price = `$${pricing.yearly.toLocaleString()}/year`;
+        const amount = resolvePlanAmount(currentPlanRecord || { name: plan });
+        const price = amount ? `${formatMoney(amount, currency)}/year` : 'Contact Support';
 
         let renewal = 'N/A';
         if (subscription?.current_period_end) {
@@ -2889,8 +3686,24 @@ const SupportSection = ({ navigate }) => {
                                 <h3 className="text-2xl font-extrabold text-indigo-700">{planInfo.name}</h3>
                                 <p className="text-sm text-gray-600">({planInfo.price}) - {planInfo.renewal}</p>
                             </div>
-                            <Button onClick={() => navigate('pricing')} className="mt-4 sm:mt-0">Upgrade Plan</Button>
+                            <Button
+                                onClick={() => upgradeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                                className="mt-4 sm:mt-0"
+                            >
+                                Upgrade Plan
+                            </Button>
                         </div>
+                    </div>
+                    <div ref={upgradeRef}>
+                        <UpgradePlanPanel
+                            currentPlan={user?.servicePlan}
+                            formation={primaryFormation}
+                            plans={corePlans}
+                            isLoadingPlans={isLoadingPlans}
+                            plansError={plansError}
+                            currency={currency}
+                            country={country}
+                        />
                     </div>
                     {/* Contact Options */}
                     <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
@@ -2936,11 +3749,19 @@ const SupportSection = ({ navigate }) => {
 
 
 const SettingsSection = ({ onLogout, userId, user, isQuickBooksLinked, onQuickBooksConnect, onQuickBooksDisconnect }) => {
+  const { toast } = useToast();
+  const { checkAuth } = useAuth();
   const [profile, setProfile] = useState({
     firstName: user?.name?.split(' ')[0] || '',
     lastName: user?.name?.split(' ').slice(1).join(' ') || '',
     email: user?.email || ''
   });
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -2955,6 +3776,76 @@ const SettingsSection = ({ onLogout, userId, user, isQuickBooksLinked, onQuickBo
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
     setProfile(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleProfileSave = async () => {
+    setSavingProfile(true);
+    setProfileError(null);
+    const fullName = `${profile.firstName} ${profile.lastName}`.trim();
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: fullName,
+          email: profile.email
+        })
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || 'Unable to update profile.');
+      }
+
+      toast({
+        title: 'Profile updated',
+        description: data?.verificationRequired
+          ? 'Profile saved. Please verify your new email address.'
+          : 'Your profile information has been saved.',
+      });
+
+      await checkAuth();
+    } catch (error: any) {
+      setProfileError(error.message || 'Unable to update profile.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handlePasswordSave = async () => {
+    setSavingPassword(true);
+    setPasswordError(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me/password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        })
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || 'Unable to update password.');
+      }
+
+      toast({
+        title: 'Password updated',
+        description: 'Your password has been updated successfully.',
+      });
+
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (error: any) {
+      setPasswordError(error.message || 'Unable to update password.');
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   return (
@@ -2977,11 +3868,16 @@ const SettingsSection = ({ onLogout, userId, user, isQuickBooksLinked, onQuickBo
                 </div>
                 <div className="md:col-span-2">
                     <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" name="email" type="email" value={profile.email} disabled />
+                    <Input id="email" name="email" type="email" value={profile.email} onChange={handleProfileChange} />
                 </div>
             </div>
+            {profileError && (
+              <p className="mt-4 text-sm text-red-600">{profileError}</p>
+            )}
              <div className="mt-6 flex justify-end">
-                <Button>Save Changes</Button>
+                <Button onClick={handleProfileSave} disabled={savingProfile}>
+                  {savingProfile ? 'Saving...' : 'Save Changes'}
+                </Button>
             </div>
         </div>
 
@@ -2994,15 +3890,30 @@ const SettingsSection = ({ onLogout, userId, user, isQuickBooksLinked, onQuickBo
             <div className="space-y-4">
                 <div>
                     <Label htmlFor="currentPassword">Current Password</Label>
-                    <Input id="currentPassword" type="password" />
+                    <Input
+                      id="currentPassword"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                    />
                 </div>
                 <div>
                     <Label htmlFor="newPassword">New Password</Label>
-                    <Input id="newPassword" type="password" />
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
                 </div>
             </div>
+            {passwordError && (
+              <p className="mt-4 text-sm text-red-600">{passwordError}</p>
+            )}
              <div className="mt-6 flex justify-end">
-                <Button>Update Password</Button>
+                <Button onClick={handlePasswordSave} disabled={savingPassword || !currentPassword || !newPassword}>
+                  {savingPassword ? 'Updating...' : 'Update Password'}
+                </Button>
             </div>
         </div>
         
@@ -3060,6 +3971,7 @@ const initialComplianceItems = [
 
 export default function PortalPage({ onLogout }) {
     const { user } = useAuth();
+    const companyName = user?.companyName || 'Your Company';
     const [activePath, setActivePath] = useState('dashboard');
     const { toast } = useToast();
     const resolvedUserId = user?.id || user?._id;
@@ -3078,6 +3990,8 @@ export default function PortalPage({ onLogout }) {
     const [myDocuments, setMyDocuments] = useState([]);
     const [myFormations, setMyFormations] = useState([]);
     const [myOrders, setMyOrders] = useState([]);
+    const [complianceEvents, setComplianceEvents] = useState([]);
+    const [myTaxFilings, setMyTaxFilings] = useState([]);
     const [userDataLoading, setUserDataLoading] = useState(false);
 
     useEffect(() => {
@@ -3268,19 +4182,25 @@ export default function PortalPage({ onLogout }) {
         const loadUserData = async () => {
             setUserDataLoading(true);
             try {
-                const [docsRes, formationsRes, ordersRes] = await Promise.all([
+                const [docsRes, formationsRes, ordersRes, complianceRes, taxFilingsRes] = await Promise.all([
                     fetch(`${API_BASE_URL}/documents/me`, { credentials: 'include' }),
                     fetch(`${API_BASE_URL}/formations/me`, { credentials: 'include' }),
-                    fetch(`${API_BASE_URL}/orders/me`, { credentials: 'include' })
+                    fetch(`${API_BASE_URL}/orders/me`, { credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/compliance/events/me`, { credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/tax-filings/me`, { credentials: 'include' })
                 ]);
 
                 const docsData = await docsRes.json();
                 const formationsData = await formationsRes.json();
                 const ordersData = await ordersRes.json();
+                const complianceData = await complianceRes.json();
+                const taxFilingsData = await taxFilingsRes.json();
 
                 setMyDocuments(docsData?.documents || []);
                 setMyFormations(formationsData?.formations || []);
                 setMyOrders(ordersData?.orders || []);
+                setComplianceEvents(complianceData?.events || []);
+                setMyTaxFilings(taxFilingsData?.filings || []);
             } catch (error) {
                 console.error(error);
             } finally {
@@ -3370,7 +4290,8 @@ export default function PortalPage({ onLogout }) {
         if (!isQuickBooksLinked) return [];
         const now = new Date();
         const months = [];
-        for (let i = 3; i >= 0; i -= 1) {
+        const monthsToShow = 24;
+        for (let i = monthsToShow - 1; i >= 0; i -= 1) {
             months.push(new Date(now.getFullYear(), now.getMonth() - i, 1));
         }
 
@@ -3381,6 +4302,7 @@ export default function PortalPage({ onLogout }) {
                 month: d.toLocaleString('en-US', { month: 'short' }),
                 revenue: 0,
                 expense: 0,
+                timestamp: d.getTime(),
             });
         });
 
@@ -3416,22 +4338,49 @@ export default function PortalPage({ onLogout }) {
                 month: d.toLocaleString('en-US', { month: 'short' }),
                 revenue: 0,
                 expense: 0,
+                timestamp: d.getTime(),
             };
         });
     }, [isQuickBooksLinked, qbBills, qbInvoices]);
+
+    const financialSnapshotLast4 = useMemo(() => {
+        return (financialSnapshot || []).slice(-4);
+    }, [financialSnapshot]);
 
     const dashboardMetrics = useMemo(() => {
         const pendingDocs = (myDocuments || []).filter(doc => doc?.status === 'pending');
         const formationsNeedingDocs = (myFormations || []).filter(formation => formation?.status === 'documents_required');
         const formationsInProgress = (myFormations || []).filter(formation => ['pending', 'processing', 'filed'].includes(formation?.status));
         const activeOrders = (myOrders || []).filter(order => ['pending', 'confirmed', 'in_progress'].includes(order?.status));
+        const hasComplianceEvents = (complianceEvents || []).length > 0;
+        const complianceHasOverdue = (complianceEvents || []).some(event => event?.status === 'overdue');
+        const complianceHasRequests = (complianceEvents || []).some(event => event?.status === 'documents_requested');
+        const complianceHasInProgress = (complianceEvents || []).some(event => ['upcoming', 'in_progress'].includes(event?.status));
+        const complianceAllCompleted = hasComplianceEvents && (complianceEvents || []).every(event => ['completed', 'filed'].includes(event?.status));
 
         let complianceValue = 'All Clear';
         let complianceColor = 'text-emerald-500';
         let complianceBg = 'bg-emerald-50';
         let complianceTooltip = 'No pending compliance items detected.';
 
-        if (pendingDocs.length > 0 || formationsNeedingDocs.length > 0) {
+        if (hasComplianceEvents) {
+            if (complianceAllCompleted) {
+                complianceValue = 'All Clear';
+                complianceColor = 'text-emerald-500';
+                complianceBg = 'bg-emerald-50';
+                complianceTooltip = 'All compliance items are completed.';
+            } else if (complianceHasOverdue || complianceHasRequests) {
+                complianceValue = 'Action Required';
+                complianceColor = 'text-red-500';
+                complianceBg = 'bg-red-50';
+                complianceTooltip = 'Compliance items require your attention.';
+            } else if (complianceHasInProgress) {
+                complianceValue = 'In Progress';
+                complianceColor = 'text-amber-500';
+                complianceBg = 'bg-amber-50';
+                complianceTooltip = 'Compliance items are in progress.';
+            }
+        } else if (pendingDocs.length > 0 || formationsNeedingDocs.length > 0) {
             complianceValue = 'Action Required';
             complianceColor = 'text-red-500';
             complianceBg = 'bg-red-50';
@@ -3443,15 +4392,14 @@ export default function PortalPage({ onLogout }) {
             complianceTooltip = 'Formation tasks are currently in progress.';
         }
 
-        const upcomingDueDates = [
-            ...(qbInvoices || []).map(inv => inv?.DueDate).filter(Boolean),
-            ...(qbBills || []).map(bill => bill?.DueDate).filter(Boolean)
-        ]
-            .map(dateStr => new Date(dateStr))
-            .filter(date => !Number.isNaN(date.getTime()) && date >= new Date())
+        const now = new Date();
+        const upcomingTaxDeadlines = (myTaxFilings || [])
+            .filter(filing => filing?.dueDate && !['filed', 'rejected'].includes(filing?.status))
+            .map(filing => new Date(filing.dueDate))
+            .filter(date => !Number.isNaN(date.getTime()) && date >= now)
             .sort((a, b) => a.getTime() - b.getTime());
 
-        const nextDueDate = upcomingDueDates[0] || null;
+        const nextDueDate = upcomingTaxDeadlines[0] || null;
         const nextDueLabel = nextDueDate
             ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(nextDueDate)
             : 'Not available';
@@ -3484,7 +4432,7 @@ export default function PortalPage({ onLogout }) {
                 icon: Clock4,
                 color: nextDueDate ? "text-indigo-500" : "text-gray-400",
                 bgColor: nextDueDate ? "bg-indigo-50" : "bg-gray-100",
-                tooltip: nextDueDate ? "Next upcoming due date from QuickBooks bills/invoices." : "No upcoming deadlines available."
+                tooltip: nextDueDate ? "Next upcoming tax filing deadline." : "No upcoming tax deadlines available."
             },
             {
                 title: "Uncategorized Transactions",
@@ -3503,7 +4451,7 @@ export default function PortalPage({ onLogout }) {
                 tooltip: "Current balance across linked bank accounts."
             }
         ];
-    }, [myDocuments, myFormations, qbInvoices, qbBills, qbAccounts]);
+    }, [myDocuments, myFormations, myOrders, complianceEvents, myTaxFilings, qbAccounts]);
 
     const dashboardTasks = useMemo(() => {
         const tasks = [];
@@ -3523,7 +4471,8 @@ export default function PortalPage({ onLogout }) {
                 status: 'Action Required',
                 due: 'ASAP',
                 icon: Link,
-                priority: 'Critical'
+                priority: 'Critical',
+                actionPath: 'bookkeeping'
             });
         }
 
@@ -3534,7 +4483,8 @@ export default function PortalPage({ onLogout }) {
                 status: 'Pending',
                 due: 'ASAP',
                 icon: Upload,
-                priority: 'High'
+                priority: 'High',
+                actionPath: 'documents'
             });
         }
 
@@ -3545,7 +4495,8 @@ export default function PortalPage({ onLogout }) {
                 status: 'Action Required',
                 due: 'ASAP',
                 icon: FileText,
-                priority: 'High'
+                priority: 'High',
+                actionPath: 'documents'
             });
         }
 
@@ -3556,7 +4507,8 @@ export default function PortalPage({ onLogout }) {
                 status: 'In Progress',
                 due: 'In review',
                 icon: Briefcase,
-                priority: 'Medium'
+                priority: 'Medium',
+                actionPath: 'company'
             });
         }
 
@@ -3567,7 +4519,8 @@ export default function PortalPage({ onLogout }) {
                 status: 'Overdue',
                 due: 'Past due',
                 icon: DollarSign,
-                priority: 'High'
+                priority: 'High',
+                actionPath: 'bookkeeping/invoicing'
             });
         }
 
@@ -3578,7 +4531,8 @@ export default function PortalPage({ onLogout }) {
                 status: 'Overdue',
                 due: 'Past due',
                 icon: TrendingDown,
-                priority: 'High'
+                priority: 'High',
+                actionPath: 'bookkeeping/ar-ap'
             });
         }
 
@@ -3589,7 +4543,8 @@ export default function PortalPage({ onLogout }) {
                 status: 'In Progress',
                 due: 'Tracking',
                 icon: ShoppingCart,
-                priority: 'Medium'
+                priority: 'Medium',
+                actionPath: 'services'
             });
         }
 
@@ -3686,12 +4641,13 @@ export default function PortalPage({ onLogout }) {
                   lastSyncAt={qbLastSyncAt}
                   financialSnapshot={financialSnapshot}
                   onQuickBooksRefresh={loadQuickBooksData}
+                  companyName={companyName}
                 />
               );
           }
 
         switch (activePath) {
-            case 'dashboard': return <DashboardContent user={user} navigate={handleNavigation} isQuickBooksLinked={isQuickBooksLinked} financialSnapshot={financialSnapshot} isQuickBooksLoading={qbLoading} lastSyncAt={qbLastSyncAt} metrics={dashboardMetrics} tasks={dashboardTasks} isUserDataLoading={userDataLoading} />;
+            case 'dashboard': return <DashboardContent user={user} navigate={handleNavigation} isQuickBooksLinked={isQuickBooksLinked} financialSnapshot={financialSnapshotLast4} isQuickBooksLoading={qbLoading} lastSyncAt={qbLastSyncAt} metrics={dashboardMetrics} tasks={dashboardTasks} isUserDataLoading={userDataLoading} />;
             case 'company': return <CompanySection userId={resolvedUserId} formations={myFormations} documents={myDocuments} isLoading={userDataLoading} />;
             case 'services': return <ServicesSection orders={myOrders} userRegion={user?.region} />;
             case 'banking':
@@ -3714,8 +4670,8 @@ export default function PortalPage({ onLogout }) {
             case 'documents': return <DocumentsSection />;
             case 'compliance': return <ComplianceSection userId={resolvedUserId} />;
             case 'settings': return <SettingsSection onLogout={onLogout} userId={resolvedUserId} user={user} isQuickBooksLinked={isQuickBooksLinked} onQuickBooksConnect={handleQuickBooksConnect} onQuickBooksDisconnect={handleQuickBooksDisconnect} />;
-            case 'support': return <SupportSection navigate={handleNavigation} />;
-            default: return <DashboardContent user={user} navigate={handleNavigation} isQuickBooksLinked={isQuickBooksLinked} financialSnapshot={financialSnapshot} isQuickBooksLoading={qbLoading} lastSyncAt={qbLastSyncAt} metrics={dashboardMetrics} tasks={dashboardTasks} isUserDataLoading={userDataLoading} />;
+            case 'support': return <SupportSection formations={myFormations} />;
+            default: return <DashboardContent user={user} navigate={handleNavigation} isQuickBooksLinked={isQuickBooksLinked} financialSnapshot={financialSnapshotLast4} isQuickBooksLoading={qbLoading} lastSyncAt={qbLastSyncAt} metrics={dashboardMetrics} tasks={dashboardTasks} isUserDataLoading={userDataLoading} />;
         }
     };
 

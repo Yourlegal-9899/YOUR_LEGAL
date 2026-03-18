@@ -17,11 +17,14 @@ import { Label } from '@/components/ui/label';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { API_BASE_URL } from '@/lib/api-base';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
@@ -30,19 +33,46 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setInfo(null);
     try {
       const user = await login(email, password);
-
       if (user.role === 'admin') {
         router.replace('/admin');
-      } else if (!user.servicePlan && !user.bypassPlan) {
-        router.replace('/usa/pricing');
       } else {
         router.replace('/dashboard');
       }
     } catch (error: any) {
       setError(error.message || "Invalid email or password. Please try again.");
+      if (String(error.message || '').toLowerCase().includes('verify')) {
+        setInfo('Your email is not verified yet. You can resend the verification email.');
+      }
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError('Please enter your email first.');
+      return;
+    }
+    setResendLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || 'Unable to resend verification email.');
+      }
+      setInfo('Verification email sent. Please check your inbox.');
+    } catch (err: any) {
+      setError(err.message || 'Unable to resend verification email.');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -91,16 +121,42 @@ export default function LoginPage() {
               />
             </div>
             {error && <p className="text-red-500 text-sm font-medium text-center">{error}</p>}
+            {info && <p className="text-amber-600 text-sm font-medium text-center">{info}</p>}
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button className="w-full font-bold shadow-lg shadow-blue-200" type="submit" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign In
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full font-semibold"
+              onClick={() => {
+                window.location.href = `${API_BASE_URL}/auth/google`;
+              }}
+            >
+              Continue with Google
+            </Button>
+            {info && info.toLowerCase().includes('verify') ? (
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendLoading}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                {resendLoading ? 'Sending verification email...' : 'Resend verification email'}
+              </button>
+            ) : null}
             <p className="text-sm text-center text-gray-600">
               Don't have an account?{' '}
               <Link href="/signup" className="font-semibold text-blue-600 hover:underline">
                 Sign up
+              </Link>
+            </p>
+            <p className="text-sm text-center text-gray-600">
+              <Link href="/forgot-password" className="font-semibold text-blue-600 hover:underline">
+                Forgot password?
               </Link>
             </p>
           </CardFooter>

@@ -72,11 +72,24 @@ exports.getOnboardingSubmissions = async (req, res) => {
     if (status) query.status = status;
 
     const submissions = await OnboardingSubmission.find(query)
-      .populate('user', 'name email companyName')
+      .populate('user', 'name email companyName phone')
       .populate('formation', 'companyName status')
       .sort('-createdAt');
 
     res.json({ success: true, submissions });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getMyOnboardingStatus = async (req, res) => {
+  try {
+    const submission = await OnboardingSubmission.findOne({ user: req.user._id })
+      .sort('-createdAt')
+      .select('plan planState planEntityType planCountry entityType destination status createdAt')
+      .lean();
+
+    res.json({ success: true, submission: submission || null });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

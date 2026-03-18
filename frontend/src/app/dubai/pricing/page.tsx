@@ -267,7 +267,7 @@ export default function DubaiPricingPage() {
                             <PlanCard
                                 key={plan.title}
                                 {...plan}
-                                onSelect={() => router.push(`/onboarding?planName=${plan.title}&state=Dubai&entityType=FreeZone&country=UAE&amount=${plan.price}`)}
+                                onSelect={() => router.push(`/checkout?planName=${plan.title}&state=Dubai&entityType=FreeZone&country=UAE&amount=${plan.price}`)}
                             />
                         ))}
                     </div>

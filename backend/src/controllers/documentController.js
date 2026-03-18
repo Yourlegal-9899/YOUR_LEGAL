@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 const Document = require('../models/Document');
 const User = require('../models/User');
-const { getS3Object } = require('../utils/s3Client');
+const { getS3Object, deleteS3Object } = require('../utils/s3Client');
 const { MAX_FILE_BYTES, parseBase64File, storeDocument } = require('../utils/documentStorage');
+const TaxFiling = require('../models/TaxFiling');
 
 const toDocumentResponse = (doc, req) => {
   const host = req.get('host');
@@ -88,6 +89,10 @@ exports.uploadMyDocument = async (req, res) => {
       return res.status(400).json({ message: 'fileName, mimeType, and fileDataBase64 are required.' });
     }
 
+    if (!folder || !['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate'].includes(folder)) {
+      return res.status(400).json({ message: 'Valid folder is required (KYC, Compliance, Tax, Banking, Legal, Corporate).' });
+    }
+
     const buffer = parseBase64File(fileDataBase64);
     if (!buffer || buffer.length === 0) {
       return res.status(400).json({ message: 'Invalid file payload.' });
@@ -148,6 +153,10 @@ exports.uploadOfficialDocumentAsAdmin = async (req, res) => {
     }
     if (!fileName || !mimeType || !fileDataBase64) {
       return res.status(400).json({ message: 'fileName, mimeType, and fileDataBase64 are required.' });
+    }
+
+    if (!folder || !['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate', 'Incorporation'].includes(folder)) {
+      return res.status(400).json({ message: 'Valid folder is required (KYC, Compliance, Tax, Banking, Legal, Corporate, Incorporation).' });
     }
 
     const targetUser = await User.findById(userId).select('_id');
@@ -262,6 +271,47 @@ exports.downloadDocument = async (req, res) => {
     }
     res.setHeader('Content-Disposition', `${dispositionType}; filename="${safeName}"`);
     return s3Object.Body.pipe(res);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.deleteDocument = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    if (!validateObjectId(documentId)) {
+      return res.status(400).json({ message: 'Invalid document ID.' });
+    }
+
+    const doc = await Document.findById(documentId);
+    if (!doc) {
+      return res.status(404).json({ message: 'Document not found.' });
+    }
+
+    const isAdmin = req.user?.role === 'admin';
+    if (!isAdmin && String(doc.user) !== String(req.user._id)) {
+      return res.status(403).json({ message: 'Not authorized to delete this document.' });
+    }
+
+    if (!isAdmin && doc.source !== 'client_uploads') {
+      return res.status(403).json({ message: 'Only your uploaded documents can be deleted.' });
+    }
+
+    if (doc.taxFiling) {
+      await TaxFiling.updateOne({ _id: doc.taxFiling }, { $pull: { documents: doc._id } });
+    }
+
+    if (doc.storageProvider === 's3' && doc.s3Bucket && doc.s3Key) {
+      try {
+        await deleteS3Object({ bucket: doc.s3Bucket, key: doc.s3Key });
+      } catch (error) {
+        console.error('Failed to delete S3 object:', error?.message || error);
+      }
+    }
+
+    await Document.deleteOne({ _id: doc._id });
+
+    res.json({ success: true, message: 'Document deleted successfully.' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

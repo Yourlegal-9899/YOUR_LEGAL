@@ -199,7 +199,7 @@ export default function SingaporePricingPage() {
                             <PlanCard
                                 key={plan.title}
                                 {...plan}
-                                onSelect={() => router.push(`/onboarding?planName=${plan.title}&state=Singapore&entityType=PteLtd&country=Singapore&amount=${plan.price}`)}
+                                onSelect={() => router.push(`/checkout?planName=${plan.title}&state=Singapore&entityType=PteLtd&country=Singapore&amount=${plan.price}`)}
                             />
                         ))}
                     </div>

@@ -229,7 +229,7 @@ export default function IndiaPricingPage() {
                             <PlanCard
                                 key={plan.title}
                                 {...plan}
-                                onSelect={() => router.push(`/onboarding?planName=${plan.title}&state=India&entityType=PvtLtd&country=India&amount=${plan.price}`)}
+                                onSelect={() => router.push(`/checkout?planName=${plan.title}&state=India&entityType=PvtLtd&country=India&amount=${plan.price}`)}
                             />
                         ))}
                     </div>

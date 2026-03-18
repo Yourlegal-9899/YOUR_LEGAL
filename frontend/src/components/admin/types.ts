@@ -19,7 +19,8 @@ export type UserRegion =
   | "Singapore"
   | "India"
   | "Australia"
-  | "Netherlands";
+  | "Netherlands"
+  | "Saudi Arabia";
 
 export type ServicePlan = "Starter" | "Growth" | "Scale";
 

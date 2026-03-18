@@ -1,4 +1,4 @@
-import { Search, Folder, FolderOpen, FileText, ChevronRight, ChevronDown, Eye, Download, CheckCircle, XCircle } from "lucide-react";
+import { Search, Folder, FolderOpen, FileText, ChevronRight, ChevronDown, Eye, Download, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +41,7 @@ export function DocumentsView({ ctx }: { ctx: AdminViewContext }) {
     dt,
     openDocumentModalForClient,
     setDocumentState,
+    deleteDocumentById,
   } = ctx;
 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -51,8 +52,19 @@ export function DocumentsView({ ctx }: { ctx: AdminViewContext }) {
     const structure: FolderStructure = {};
 
     docs.forEach((doc) => {
-      const folder = doc.folder || (doc.source === "client_uploads" ? "KYC" : "Compliance");
-      const subfolder = doc.subfolder || doc.client;
+      let folder = doc.folder || (doc.source === "client_uploads" ? "KYC" : "Compliance");
+      let subfolder = doc.subfolder || doc.client;
+
+      // Special handling for Incorporation folder - group by document type
+      if (folder === 'Incorporation') {
+        subfolder = doc.documentType ? doc.documentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'General';
+      }
+
+      // Special handling for Compliance folder - group by date/year if available
+      if (folder === 'Compliance' && doc.documentType === 'prior_tax_return') {
+        const yearMatch = doc.document?.match(/\b(20\d{2})\b/);
+        subfolder = yearMatch ? `Tax Year ${yearMatch[1]}` : 'Tax Documents';
+      }
 
       if (!structure[folder]) {
         structure[folder] = {};
@@ -163,6 +175,9 @@ export function DocumentsView({ ctx }: { ctx: AdminViewContext }) {
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => setDocumentState(doc.id, "verified")}>Verify</Button>
                     <Button size="sm" variant="destructive" onClick={() => setDocumentState(doc.id, "rejected")}>Reject</Button>
+                    <Button size="sm" variant="destructive" onClick={() => deleteDocumentById?.(doc.id)}>
+                      <Trash2 className="w-4 h-4 mr-1" /> Delete
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -280,6 +295,10 @@ export function DocumentsView({ ctx }: { ctx: AdminViewContext }) {
                                 <Button size="sm" variant="outline" onClick={() => setDocumentState(doc.id, "rejected")}>
                                   <XCircle className="w-3 h-3 mr-1" />
                                   Reject
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => deleteDocumentById?.(doc.id)}>
+                                  <Trash2 className="w-3 h-3 mr-1" />
+                                  Delete
                                 </Button>
                               </div>
                             </div>

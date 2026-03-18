@@ -10,6 +10,7 @@ interface User {
   email: string;
   role: string;
   companyName?: string;
+  region?: string;
   servicePlan?: string;
   subscriptionStatus?: string;
   bypassPlan?: boolean;

@@ -103,6 +103,86 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+exports.getAdminUsers = async (req, res) => {
+  try {
+    const admins = await User.find({ role: 'admin' }).select('_id name email').sort('name');
+    res.json({ success: true, users: admins });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.updateUserProfile = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { name, email, phone, companyName, region } = req.body || {};
+
+    const user = await User.findById(userId).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const updates = {};
+    const unset = {};
+
+    if (name !== undefined) {
+      const trimmedName = String(name).trim();
+      if (!trimmedName) {
+        return res.status(400).json({ message: 'Name is required.' });
+      }
+      updates.name = trimmedName;
+    }
+
+    if (email !== undefined) {
+      const trimmedEmail = String(email).trim().toLowerCase();
+      if (!trimmedEmail) {
+        return res.status(400).json({ message: 'Email is required.' });
+      }
+      if (trimmedEmail !== user.email) {
+        const existing = await User.findOne({ email: trimmedEmail, _id: { $ne: userId } });
+        if (existing) {
+          return res.status(400).json({ message: 'Email is already in use.' });
+        }
+      }
+      updates.email = trimmedEmail;
+    }
+
+    if (phone !== undefined) {
+      updates.phone = String(phone).trim();
+    }
+
+    if (companyName !== undefined) {
+      updates.companyName = String(companyName).trim();
+    }
+
+    if (region !== undefined) {
+      const normalizedRegion = normalizeRegion(region);
+      if (normalizedRegion) {
+        updates.region = normalizedRegion;
+      } else {
+        unset.region = 1;
+      }
+    }
+
+    if (!Object.keys(updates).length && !Object.keys(unset).length) {
+      return res.status(400).json({ message: 'No valid fields to update.' });
+    }
+
+    const updatePayload = {};
+    if (Object.keys(updates).length) updatePayload.$set = updates;
+    if (Object.keys(unset).length) updatePayload.$unset = unset;
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updatePayload, {
+      new: true,
+      runValidators: true,
+    }).select('-password');
+
+    res.json({ success: true, user: updatedUser });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.updateUserStatus = async (req, res) => {
   try {
     const { userId, status } = req.body;
@@ -258,7 +338,8 @@ exports.createUserAsAdmin = async (req, res) => {
       region: regionValue,
       servicePlan: normalizedPlan,
       bypassPlan: true,
-      status: 'active'
+      status: 'active',
+      emailVerified: true
     });
 
     res.status(201).json({

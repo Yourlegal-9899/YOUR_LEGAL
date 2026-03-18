@@ -26,11 +26,13 @@ import {
   ChevronDown,
   Table,
   Grid3X3,
+  Trash2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_BASE_URL } from '@/lib/api-base';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface DocumentFile {
   id: string;
@@ -88,9 +90,21 @@ export function CompanyDocuments() {
   const [targetUserId, setTargetUserId] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'folders'>('folders');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['KYC', 'Compliance']));
+  const [selectedFolder, setSelectedFolder] = useState('KYC');
+  const [selectedSubfolder, setSelectedSubfolder] = useState('');
+  const [selectedDocumentType, setSelectedDocumentType] = useState('');
 
   const { user: authUser } = useAuth();
   const isAdmin = authUser?.role === 'admin';
+  const folderOptions = ['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate'];
+  const documentTypeOptions = {
+    'KYC': ['passport', 'proof_of_address', 'pan', 'aadhaar', 'photo'],
+    'Compliance': ['bank_statement', 'tax_id', 'prior_tax_return'],
+    'Tax': ['prior_tax_return', 'irs_documents', 'state_filings'],
+    'Banking': ['bank_account_documents', 'loan_documents'],
+    'Legal': ['contract', 'nda', 'ip_assignment', 'shareholder_agreement'],
+    'Corporate': ['bank_statement', 'tax_id', 'contract', 'other']
+  };
   const openDocument = useCallback(
     async (doc: DocumentFile, mode: 'view' | 'download') => {
       try {
@@ -210,8 +224,20 @@ export function CompanyDocuments() {
     const structure: { [key: string]: { [key: string]: DocumentFile[] } } = {};
 
     sourceDocs.forEach(doc => {
-      const folder = doc.folder || 'KYC';
-      const subfolder = doc.subfolder || 'General';
+      let folder = doc.folder || 'KYC';
+      let subfolder = doc.subfolder || 'General';
+
+      // Special handling for Incorporation folder - group by document type
+      if (folder === 'Incorporation') {
+        subfolder = doc.documentType ? doc.documentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'General';
+      }
+
+      // Special handling for Compliance folder - group by date/year if available
+      if (folder === 'Compliance' && doc.documentType === 'prior_tax_return') {
+        // Try to extract year from document name or use current year
+        const yearMatch = doc.name.match(/\b(20\d{2})\b/);
+        subfolder = yearMatch ? `Tax Year ${yearMatch[1]}` : 'Tax Documents';
+      }
 
       if (!structure[folder]) {
         structure[folder] = {};
@@ -238,6 +264,16 @@ export function CompanyDocuments() {
       return;
     }
 
+    if (!selectedFolder) {
+      setError('Please select a folder.');
+      return;
+    }
+
+    if (!selectedDocumentType) {
+      setError('Please select a document type.');
+      return;
+    }
+
     if (isAdmin && !targetUserId) {
       setError('Admins must specify a target user ID.');
       return;
@@ -252,9 +288,9 @@ export function CompanyDocuments() {
         fileName: file.name,
         mimeType: file.type || 'application/octet-stream',
         fileDataBase64,
-        folder: 'KYC', // Default folder for user uploads
-        subfolder: 'General', // Default subfolder
-        documentType: 'other', // Default document type
+        folder: selectedFolder,
+        subfolder: selectedSubfolder || undefined,
+        documentType: selectedDocumentType || undefined,
       };
 
       const endpoint = isAdmin
@@ -275,10 +311,12 @@ export function CompanyDocuments() {
 
       toast({
         title: 'Upload Complete',
-        description: `${file.name} has been uploaded successfully.`,
+        description: `${file.name} has been uploaded to ${selectedFolder} folder.`,
       });
 
       setFile(null);
+      setSelectedSubfolder('');
+      setSelectedDocumentType('');
       const fileInput = document.getElementById('file-upload') as HTMLInputElement | null;
       if (fileInput) fileInput.value = '';
 
@@ -297,6 +335,45 @@ export function CompanyDocuments() {
       });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleDelete = async (doc: DocumentFile) => {
+    const canDelete = isAdmin || doc.source === 'client_uploads';
+    if (!canDelete) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot delete',
+        description: 'Only your uploaded documents can be deleted.',
+      });
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete "${doc.name}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/${doc.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Unable to delete document.');
+      }
+
+      toast({ title: 'Document deleted', description: `"${doc.name}" has been removed.` });
+      if (isAdmin) {
+        await fetchDocuments(targetUserId);
+      } else {
+        await fetchDocuments();
+      }
+    } catch (deleteError: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete failed',
+        description: deleteError?.message || 'Unable to delete document.',
+      });
     }
   };
 
@@ -343,6 +420,11 @@ export function CompanyDocuments() {
           <Button variant="ghost" size="sm" onClick={() => openDocument(doc, 'download')}>
             <Download className="h-4 w-4" />
           </Button>
+          {(isAdmin || doc.source === 'client_uploads') && (
+            <Button variant="ghost" size="sm" onClick={() => handleDelete(doc)}>
+              <Trash2 className="h-4 w-4 text-red-500" />
+            </Button>
+          )}
         </div>
       </td>
     </tr>
@@ -418,6 +500,11 @@ export function CompanyDocuments() {
                                 <Button variant="ghost" size="sm" onClick={() => openDocument(doc, 'download')}>
                                   <Download className="h-4 w-4" />
                                 </Button>
+                                {(isAdmin || doc.source === 'client_uploads') && (
+                                  <Button variant="ghost" size="sm" onClick={() => handleDelete(doc)}>
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -451,7 +538,7 @@ export function CompanyDocuments() {
     return (
       <div className="space-y-6">
         {renderFolderSection('Client Uploaded Documents', clientDocs)}
-        {renderFolderSection('YourLegal Documents', legalDocs)}
+        {renderFolderSection('Admin Documents', legalDocs)}
       </div>
     );
   };
@@ -539,21 +626,102 @@ export function CompanyDocuments() {
                   className="bg-white"
                 />
               </div>
-              <div className="flex w-full items-center space-x-2">
-                <Input id="file-upload" type="file" onChange={handleFileChange} className="flex-1" disabled={isUploading || !targetUserId} />
-                <Button onClick={handleUpload} disabled={!file || isUploading || !targetUserId}>
-                  {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                  Upload to Client
-                </Button>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="lg:col-span-1">
+                  <Label className="text-sm font-medium">File</Label>
+                  <Input id="file-upload" type="file" onChange={handleFileChange} disabled={isUploading || !targetUserId} />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Folder</Label>
+                  <Select value={selectedFolder} onValueChange={setSelectedFolder}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select folder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {folderOptions.map((folder) => (
+                        <SelectItem key={folder} value={folder}>{folder}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Subfolder</Label>
+                  <Input
+                    placeholder="Optional subfolder"
+                    value={selectedSubfolder}
+                    onChange={(e) => setSelectedSubfolder(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Document Type</Label>
+                  <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(documentTypeOptions[selectedFolder as keyof typeof documentTypeOptions] || []).map((type) => (
+                        <SelectItem key={type} value={type}>{type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={handleUpload} disabled={!file || !selectedFolder || isUploading || !targetUserId} className="w-full">
+                    {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                    Upload to Client
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="flex w-full items-center space-x-2">
-              <Input id="file-upload" type="file" onChange={handleFileChange} className="flex-1" disabled={isUploading} />
-              <Button onClick={handleUpload} disabled={!file || isUploading}>
-                {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                Upload Document
-              </Button>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="lg:col-span-1">
+                <Label className="text-sm font-medium">File</Label>
+                <Input id="file-upload" type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" onChange={handleFileChange} disabled={isUploading} />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Folder</Label>
+                <Select value={selectedFolder} onValueChange={(value) => {
+                  setSelectedFolder(value);
+                  setSelectedDocumentType(''); // Reset document type when folder changes
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select folder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {folderOptions.map((folder) => (
+                      <SelectItem key={folder} value={folder}>{folder}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Subfolder</Label>
+                <Input
+                  placeholder="Optional subfolder"
+                  value={selectedSubfolder}
+                  onChange={(e) => setSelectedSubfolder(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Document Type</Label>
+                <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(documentTypeOptions[selectedFolder as keyof typeof documentTypeOptions] || []).map((type) => (
+                      <SelectItem key={type} value={type}>{type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button onClick={handleUpload} disabled={!file || !selectedFolder || !selectedDocumentType || isUploading} className="w-full">
+                  {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                  Upload Document
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -575,7 +743,7 @@ export function CompanyDocuments() {
           viewMode === 'table' ? (
             <div className="space-y-6">
               {renderTableSection('Client Uploaded Documents', documents.filter((doc) => doc.source === 'client_uploads'))}
-              {renderTableSection('YourLegal Documents', documents.filter((doc) => doc.source === 'legal_docs'))}
+              {renderTableSection('Admin Documents', documents.filter((doc) => doc.source === 'legal_docs'))}
             </div>
           ) : renderFolderView()
         ) : (

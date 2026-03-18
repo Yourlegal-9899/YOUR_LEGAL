@@ -271,7 +271,9 @@ const PricingSection = () => {
     }, []);
 
     const handleSelectPlan = (planName) => {
-        router.push(`/onboarding?planName=${planName}&state=${selectedState}&entityType=${selectedEntityType}&country=USA`);
+        const selectedPlan = plans.find((plan) => plan.title === planName);
+        const amountParam = selectedPlan?.price ? `&amount=${selectedPlan.price}` : '';
+        router.push(`/checkout?planName=${planName}&state=${selectedState}&entityType=${selectedEntityType}&country=USA${amountParam}`);
     };
 
     const planData = {

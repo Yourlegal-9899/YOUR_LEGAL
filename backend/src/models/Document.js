@@ -38,8 +38,8 @@ const documentSchema = new mongoose.Schema(
     // Folder structure fields
     folder: {
       type: String,
-      enum: ['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate'],
-      default: 'KYC',
+      enum: ['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate', 'Incorporation'],
+      required: true,
       index: true,
     },
     subfolder: {

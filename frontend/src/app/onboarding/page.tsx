@@ -33,7 +33,45 @@ function OnboardingPageContent() {
   const planState = searchParams.get("state") || "";
   const planEntityType = searchParams.get("entityType") || "";
   const planCountry = searchParams.get("country") || "USA";
-  const planAmount = searchParams.get("amount") || "";
+
+  const resolvePricingCountry = (value?: string) => {
+    if (!value) return "USA";
+    const normalized = String(value).trim();
+    if (!normalized) return "USA";
+    const map: Record<string, string> = {
+      US: "USA",
+      USA: "USA",
+      "United States": "USA",
+      UK: "UK",
+      "U.K.": "UK",
+      "United Kingdom": "UK",
+      UAE: "UAE",
+      Dubai: "UAE",
+      "United Arab Emirates": "UAE",
+      India: "India",
+      Singapore: "Singapore",
+      Australia: "Australia",
+      Netherlands: "Netherlands",
+      SaudiArabia: "Saudi Arabia",
+      "Saudi Arabia": "Saudi Arabia",
+    };
+    return map[normalized] || normalized || "USA";
+  };
+
+  const resolvePricingPath = (value?: string) => {
+    const country = resolvePricingCountry(value);
+    const pathMap: Record<string, string> = {
+      USA: "/usa/pricing",
+      UK: "/uk/pricing",
+      UAE: "/dubai/pricing",
+      India: "/in/pricing",
+      Singapore: "/singapore/pricing",
+      Australia: "/australia/pricing",
+      Netherlands: "/netherlands/pricing",
+      "Saudi Arabia": "/saudi-arabia/pricing",
+    };
+    return pathMap[country] || "/usa/pricing";
+  };
 
   const [currentStep, setCurrentStep] = useState(0);
   const resolvedDestination =
@@ -50,6 +88,7 @@ function OnboardingPageContent() {
   const [submitError, setSubmitError] = useState("");
   const [stepError, setStepError] = useState("");
   const [documentErrors, setDocumentErrors] = useState({});
+  const [planLookupDone, setPlanLookupDone] = useState(false);
 
   const [formData, setFormData] = useState({
     stakeholders: [
@@ -155,10 +194,60 @@ function OnboardingPageContent() {
       router.replace("/admin");
       return;
     }
-    if (!planName || !planState || !planEntityType) {
-      router.replace("/usa/pricing");
+
+    const hasPlanParams = Boolean(planName && planState && planEntityType);
+    const isPaid = Boolean(user.servicePlan || user.bypassPlan);
+
+    if (hasPlanParams && isPaid) {
+      return;
     }
-  }, [loading, user, planName, planState, planEntityType, router]);
+
+    if (planLookupDone) {
+      return;
+    }
+
+    const resolvePlanFromPayments = async () => {
+      setPlanLookupDone(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/payment/my-payments`, { credentials: "include" });
+        const data = await response.json().catch(() => null);
+        const payments = Array.isArray(data?.payments) ? data.payments : [];
+        const succeeded = payments.filter((payment) => payment?.status === "succeeded");
+        const latest =
+          succeeded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
+
+        if (latest) {
+          const planValue = latest.plan || latest.metadata?.serviceName || "";
+          const stateValue = latest.metadata?.state || "";
+          const entityValue = latest.metadata?.entityType || "";
+          const countryValue = latest.metadata?.country || "USA";
+          const amountValue = latest.amount;
+
+          if (planValue && stateValue && entityValue) {
+            const params = new URLSearchParams({
+              planName: planValue,
+              state: stateValue,
+              entityType: entityValue,
+              country: countryValue,
+            });
+            if (amountValue) {
+              params.set("amount", String(amountValue));
+            }
+            router.replace(`/onboarding?${params.toString()}`);
+            return;
+          }
+        }
+
+        router.replace(resolvePricingPath(user?.region));
+      } catch (error) {
+        router.replace(resolvePricingPath(user?.region));
+      }
+    };
+
+    if (!hasPlanParams || !isPaid) {
+      resolvePlanFromPayments();
+    }
+  }, [loading, user, planName, planState, planEntityType, planLookupDone, router]);
 
   const clearErrors = () => {
     if (stepError) setStepError("");
@@ -568,11 +657,7 @@ function OnboardingPageContent() {
       if (!response.ok || !data?.success) {
         throw new Error(data?.message || "Unable to submit onboarding.");
       }
-      router.push(
-        `/checkout?planName=${planName}&state=${planState}&entityType=${planEntityType}&country=${planCountry}${
-          planAmount ? `&amount=${planAmount}` : ""
-        }`
-      );
+      router.push('/dashboard');
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Unable to submit onboarding.");
     } finally {

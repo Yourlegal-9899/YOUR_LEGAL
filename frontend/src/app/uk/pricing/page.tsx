@@ -181,7 +181,7 @@ export default function UkPricingPage() {
                             <PlanCard
                                 key={plan.title}
                                 {...plan}
-                                onSelect={() => router.push(`/onboarding?planName=${plan.title}&state=UK&entityType=Limited&country=UK&amount=${plan.price}`)}
+                                onSelect={() => router.push(`/checkout?planName=${plan.title}&state=UK&entityType=Limited&country=UK&amount=${plan.price}`)}
                             />
                         ))}
                     </div>

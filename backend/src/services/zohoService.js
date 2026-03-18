@@ -63,6 +63,39 @@ const formatLead = (lead) => ({
   Created_Time: lead?.Created_Time || '',
 });
 
+const fetchLeadById = async (leadId) => {
+  if (!leadId) return null;
+  let accessToken = await getAccessToken();
+
+  const fetchFromZoho = async (token) =>
+    fetch(`${ZOHO_API_BASE_URL}/crm/v2/Leads/${encodeURIComponent(leadId)}`, {
+      headers: {
+        Authorization: `Zoho-oauthtoken ${token}`,
+      },
+    });
+
+  let response = await fetchFromZoho(accessToken);
+
+  if (response.status === 401) {
+    cachedAccessToken = null;
+    tokenExpiresAt = 0;
+    accessToken = await requestAccessToken();
+    response = await fetchFromZoho(accessToken);
+  }
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const error = new Error(data?.message || data?.error?.message || 'Zoho API request failed');
+    error.statusCode = response.status || 502;
+    error.details = data;
+    throw error;
+  }
+
+  const record = Array.isArray(data?.data) ? data.data[0] : null;
+  return record ? formatLead(record) : null;
+};
+
 const fetchLeads = async () => {
   let accessToken = await getAccessToken();
 
@@ -97,4 +130,5 @@ const fetchLeads = async () => {
 
 module.exports = {
   fetchLeads,
+  fetchLeadById,
 };

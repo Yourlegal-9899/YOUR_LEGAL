@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { API_BASE_URL } from "@/lib/api-base";
-import { Eye, Download } from "lucide-react";
+import { Eye, Download, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { AdminViewContext } from "./types";
 
@@ -24,11 +24,16 @@ export function ClientDocumentsModal({ ctx }: { ctx: AdminViewContext }) {
     adminUploadDocumentName,
     adminUploadDocumentCategory,
     setAdminUploadDocumentCategory,
+    adminUploadSubfolder,
+    setAdminUploadSubfolder,
+    adminUploadDocumentType,
+    setAdminUploadDocumentType,
     uploadDocumentForSelectedClient,
     adminUploadFile,
     adminUploadMessage,
     selectedClientUploadedDocuments,
     selectedClientAdminDocuments,
+    loadUserDocuments,
     documentStatusClass,
     dt,
   } = ctx;
@@ -83,6 +88,32 @@ export function ClientDocumentsModal({ ctx }: { ctx: AdminViewContext }) {
     }
   };
 
+  const deleteDocument = async (docId: string, docName: string) => {
+    if (!selectedClient) return;
+    const confirmed = window.confirm(`Delete "${docName}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/${docId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Unable to delete document.");
+      }
+
+      toast({ title: "Document deleted", description: `"${docName}" has been removed.` });
+      await loadUserDocuments?.(selectedClient.id, true);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: error?.message || "Unable to delete document.",
+      });
+    }
+  };
+
   return (
     <Dialog
       open={isUserDocumentModalOpen}
@@ -92,6 +123,8 @@ export function ClientDocumentsModal({ ctx }: { ctx: AdminViewContext }) {
           setAdminUploadFile(null);
           setAdminUploadFileInputKey((prev: number) => prev + 1);
           setAdminUploadDocumentName("");
+          setAdminUploadSubfolder("");
+          setAdminUploadDocumentType("");
           setAdminUploadMessage("");
         }
       }}
@@ -109,7 +142,7 @@ export function ClientDocumentsModal({ ctx }: { ctx: AdminViewContext }) {
         {selectedClient ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-3 rounded border p-3 lg:grid-cols-12">
-              <div className="lg:col-span-4">
+              <div className="lg:col-span-2">
                 <Input
                   key={adminUploadFileInputKey}
                   type="file"
@@ -117,24 +150,65 @@ export function ClientDocumentsModal({ ctx }: { ctx: AdminViewContext }) {
                   onChange={(e) => setAdminUploadFile(e.target.files?.[0] ?? null)}
                 />
               </div>
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-2">
                 <Input
                   placeholder="Document name (optional)"
                   value={adminUploadDocumentName}
                   onChange={(e) => setAdminUploadDocumentName(e.target.value)}
                 />
               </div>
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-2">
                 <Select
                   value={adminUploadDocumentCategory}
                   onValueChange={(value) => setAdminUploadDocumentCategory(value as any)}
                 >
-                  <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Folder" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="KYC">KYC</SelectItem>
                     <SelectItem value="Tax">Tax</SelectItem>
                     <SelectItem value="Compliance">Compliance</SelectItem>
                     <SelectItem value="Banking">Banking</SelectItem>
+                    <SelectItem value="Legal">Legal</SelectItem>
+                    <SelectItem value="Corporate">Corporate</SelectItem>
+                    <SelectItem value="Incorporation">Incorporation</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="lg:col-span-2">
+                <Input
+                  placeholder="Subfolder (optional)"
+                  value={adminUploadSubfolder || ''}
+                  onChange={(e) => setAdminUploadSubfolder(e.target.value)}
+                />
+              </div>
+              <div className="lg:col-span-2">
+                <Select
+                  value={adminUploadDocumentType || ''}
+                  onValueChange={(value) => setAdminUploadDocumentType(value)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Document Type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="passport">Passport</SelectItem>
+                    <SelectItem value="proof_of_address">Proof of Address</SelectItem>
+                    <SelectItem value="pan">PAN</SelectItem>
+                    <SelectItem value="aadhaar">Aadhaar</SelectItem>
+                    <SelectItem value="photo">Photo</SelectItem>
+                    <SelectItem value="bank_statement">Bank Statement</SelectItem>
+                    <SelectItem value="tax_id">Tax ID</SelectItem>
+                    <SelectItem value="prior_tax_return">Prior Tax Return</SelectItem>
+                    <SelectItem value="certificate_of_incorporation">Certificate of Incorporation</SelectItem>
+                    <SelectItem value="operating_agreement">Operating Agreement</SelectItem>
+                    <SelectItem value="bylaws">Bylaws</SelectItem>
+                    <SelectItem value="ein_confirmation">EIN Confirmation</SelectItem>
+                    <SelectItem value="irs_documents">IRS Documents</SelectItem>
+                    <SelectItem value="state_filings">State Filings</SelectItem>
+                    <SelectItem value="bank_account_documents">Bank Account Documents</SelectItem>
+                    <SelectItem value="loan_documents">Loan Documents</SelectItem>
+                    <SelectItem value="contract">Contract</SelectItem>
+                    <SelectItem value="nda">NDA</SelectItem>
+                    <SelectItem value="ip_assignment">IP Assignment</SelectItem>
+                    <SelectItem value="shareholder_agreement">Shareholder Agreement</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -194,6 +268,13 @@ export function ClientDocumentsModal({ ctx }: { ctx: AdminViewContext }) {
                             >
                               <Download className="mr-1 h-4 w-4" /> Download
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => deleteDocument(doc.id, doc.document)}
+                            >
+                              <Trash2 className="mr-1 h-4 w-4" /> Delete
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -208,7 +289,7 @@ export function ClientDocumentsModal({ ctx }: { ctx: AdminViewContext }) {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Admin Uploaded Files</CardTitle>
+                <CardTitle className="text-base">Admin Documents</CardTitle>
                 <CardDescription>Files uploaded to this client by admin</CardDescription>
               </CardHeader>
               <CardContent>
@@ -249,6 +330,13 @@ export function ClientDocumentsModal({ ctx }: { ctx: AdminViewContext }) {
                               onClick={() => openDocument(doc.id, doc.document, "download")}
                             >
                               <Download className="mr-1 h-4 w-4" /> Download
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => deleteDocument(doc.id, doc.document)}
+                            >
+                              <Trash2 className="mr-1 h-4 w-4" /> Delete
                             </Button>
                           </div>
                         </TableCell>

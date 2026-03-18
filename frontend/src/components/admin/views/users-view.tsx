@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,70 @@ export function UsersView({ ctx }: { ctx: AdminViewContext }) {
     selectedUserPayments,
     selectedUserDocuments,
     documentStatusClass,
+    updateUserProfile,
   } = ctx;
+
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    companyName: "",
+    region: "USA",
+  });
+  const [editMessage, setEditMessage] = useState<string | null>(null);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  useEffect(() => {
+    if (!selected) {
+      setEditForm({ name: "", email: "", phone: "", companyName: "", region: "USA" });
+      setEditMessage(null);
+      return;
+    }
+
+    setEditForm({
+      name: selected.name || "",
+      email: selected.email || "",
+      phone: selected.phone || "",
+      companyName: selected.companyName && selected.companyName !== "N/A" ? selected.companyName : "",
+      region: selected.region || "USA",
+    });
+    setEditMessage(null);
+  }, [selected?.id]);
+
+  const resetEditForm = () => {
+    if (!selected) return;
+    setEditForm({
+      name: selected.name || "",
+      email: selected.email || "",
+      phone: selected.phone || "",
+      companyName: selected.companyName && selected.companyName !== "N/A" ? selected.companyName : "",
+      region: selected.region || "USA",
+    });
+  };
+
+  const saveProfile = async () => {
+    if (!selected) {
+      setEditMessage("Select a user first.");
+      return;
+    }
+
+    setIsSavingProfile(true);
+    setEditMessage(null);
+    const result = await updateUserProfile(selected.id, {
+      name: editForm.name,
+      email: editForm.email,
+      phone: editForm.phone,
+      companyName: editForm.companyName,
+      region: editForm.region,
+    });
+
+    if (!result?.success) {
+      setEditMessage(result?.error || "Unable to update user profile.");
+    } else {
+      setEditMessage("Profile updated.");
+    }
+    setIsSavingProfile(false);
+  };
 
   return (
     <Card className="shadow-sm">
@@ -81,6 +145,7 @@ export function UsersView({ ctx }: { ctx: AdminViewContext }) {
                 <SelectItem value="India">India</SelectItem>
                 <SelectItem value="Australia">Australia</SelectItem>
                 <SelectItem value="Netherlands">Netherlands</SelectItem>
+                <SelectItem value="Saudi Arabia">Saudi Arabia</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -231,6 +296,7 @@ export function UsersView({ ctx }: { ctx: AdminViewContext }) {
                     <SelectItem value="India">India</SelectItem>
                     <SelectItem value="Australia">Australia</SelectItem>
                     <SelectItem value="Netherlands">Netherlands</SelectItem>
+                    <SelectItem value="Saudi Arabia">Saudi Arabia</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button size="sm" onClick={createAdminUser} disabled={isCreatingUser} className="bg-blue-600 hover:bg-blue-700">
@@ -249,9 +315,64 @@ export function UsersView({ ctx }: { ctx: AdminViewContext }) {
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">User Profile</p>
                     <p className="text-sm"><span className="font-medium">Name:</span> {selected.name}</p>
                     <p className="text-sm"><span className="font-medium">Email:</span> {selected.email}</p>
+                    <p className="text-sm"><span className="font-medium">Phone:</span> {selected.phone || "N/A"}</p>
+                    <p className="text-sm"><span className="font-medium">Company:</span> {selected.companyName || "N/A"}</p>
                     <p className="text-sm"><span className="font-medium">Country:</span> {selected.region || "N/A"}</p>
                     <p className="text-sm"><span className="font-medium">Signup date:</span> {d(selected.createdAt || selected.lastActivityAt)}</p>
                     <p className="text-sm"><span className="font-medium">Plan:</span> {selected.servicePlan || "N/A"}</p>
+                  </div>
+
+                  <div className="rounded-xl border p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Edit Profile</p>
+                      <Button size="sm" variant="outline" onClick={resetEditForm} disabled={!selected}>
+                        Reset
+                      </Button>
+                    </div>
+                    <Input
+                      placeholder="Full name"
+                      value={editForm.name}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Email address"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Phone"
+                      value={editForm.phone}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, phone: e.target.value }))}
+                    />
+                    <Input
+                      placeholder="Company name"
+                      value={editForm.companyName}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, companyName: e.target.value }))}
+                    />
+                    <Select
+                      value={editForm.region}
+                      onValueChange={(value) => setEditForm((prev) => ({ ...prev, region: value }))}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Region" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USA">USA</SelectItem>
+                        <SelectItem value="UK">UK</SelectItem>
+                        <SelectItem value="UAE">UAE</SelectItem>
+                        <SelectItem value="Singapore">Singapore</SelectItem>
+                        <SelectItem value="India">India</SelectItem>
+                        <SelectItem value="Australia">Australia</SelectItem>
+                        <SelectItem value="Netherlands">Netherlands</SelectItem>
+                        <SelectItem value="Saudi Arabia">Saudi Arabia</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" onClick={saveProfile} disabled={isSavingProfile}>
+                      {isSavingProfile ? "Saving..." : "Save Changes"}
+                    </Button>
+                    {editMessage ? (
+                      <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                        {editMessage}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="rounded-xl border p-3">

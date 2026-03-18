@@ -192,7 +192,7 @@ export default function AustraliaPricingPage() {
                             <PlanCard
                                 key={plan.title}
                                 {...plan}
-                                onSelect={() => router.push(`/onboarding?planName=${plan.title}&state=Australia&entityType=PtyLtd&country=Australia&amount=${plan.price}`)}
+                                onSelect={() => router.push(`/checkout?planName=${plan.title}&state=Australia&entityType=PtyLtd&country=Australia&amount=${plan.price}`)}
                             />
                         ))}
                     </div>

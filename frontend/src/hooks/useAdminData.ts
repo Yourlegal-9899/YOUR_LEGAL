@@ -413,6 +413,15 @@ export function useAdminData() {
     }
   }, []);
 
+  const updateUser = useCallback(async (userId: string, userData: any) => {
+    try {
+      const data = await adminAPI.updateUser(userId, userData);
+      return { success: true, user: data.user };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }, []);
+
   return {
     // Data
     activityLogs,
@@ -471,5 +480,6 @@ export function useAdminData() {
     sendEmail,
     createFormationFromOnboarding,
     createUser,
+    updateUser,
   };
 }

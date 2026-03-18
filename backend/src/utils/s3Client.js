@@ -1,4 +1,4 @@
-const { S3Client, PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const getS3Config = () => {
   const bucket = process.env.AWS_S3_BUCKET;
@@ -54,8 +54,19 @@ const getS3Object = async ({ bucket, key }) => {
   );
 };
 
+const deleteS3Object = async ({ bucket, key }) => {
+  const client = createClient();
+  return client.send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    })
+  );
+};
+
 module.exports = {
   getS3Config,
   uploadToS3,
   getS3Object,
+  deleteS3Object,
 };

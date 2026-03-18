@@ -13,11 +13,13 @@ const makeApiCall = async (accessToken, realmId, url, method = 'GET', body = nul
     ? 'https://sandbox-quickbooks.api.intuit.com'
     : 'https://quickbooks.api.intuit.com';
   
+  const isPdfRequest = url.includes('/pdf');
+  
   const options = {
     method,
     headers: {
       'Authorization': `Bearer ${accessToken}`,
-      'Accept': 'application/json',
+      'Accept': isPdfRequest ? 'application/pdf' : 'application/json',
     },
   };
 
@@ -27,6 +29,12 @@ const makeApiCall = async (accessToken, realmId, url, method = 'GET', body = nul
   }
 
   const response = await fetch(`${baseUrl}/v3/company/${realmId}/${url}`, options);
+  
+  if (isPdfRequest) {
+    const buffer = await response.arrayBuffer();
+    return { status: response.status, data: buffer, contentType: 'application/pdf' };
+  }
+  
   const data = await response.json().catch(() => null);
   return { status: response.status, data };
 };
@@ -254,7 +262,12 @@ exports.proxyRequest = async (req, res) => {
       return res.status(401).json({ message: 'QuickBooks authorization expired. Please reconnect.' });
     }
     
-    res.status(result.status || 200).json(result.data);
+    if (result.contentType === 'application/pdf') {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.status(result.status || 200).send(Buffer.from(result.data));
+    } else {
+      res.status(result.status || 200).json(result.data);
+    }
   } catch (error) {
     console.error('Proxy request error:', error);
     res.status(500).json({ message: error.message });
