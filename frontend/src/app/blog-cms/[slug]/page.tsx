@@ -47,7 +47,7 @@ export default async function BlogDetailPage({ params }: { params: { slug: strin
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <Link href="/blog" className="text-sm font-semibold text-gray-600 hover:text-gray-900">
-              &larr; Back to Blog
+              {"\u2190"} Back to Blog
             </Link>
           </div>
 
