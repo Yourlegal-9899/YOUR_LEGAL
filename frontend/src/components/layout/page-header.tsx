@@ -27,7 +27,7 @@ export const NavHeader = ({ onLoginClick, onSignupClick }: NavHeaderProps) => (
             <nav className="hidden md:flex items-center space-x-6 text-sm font-medium text-gray-600">
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="flex items-center gap-1 hover:text-blue-600 transition">
+                        <Button id="nav-about-trigger" variant="ghost" className="flex items-center gap-1 hover:text-blue-600 transition">
                             About <ChevronDown className="w-4 h-4" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -40,7 +40,7 @@ export const NavHeader = ({ onLoginClick, onSignupClick }: NavHeaderProps) => (
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="flex items-center gap-1 hover:text-blue-600 transition">
+                        <Button id="nav-services-trigger" variant="ghost" className="flex items-center gap-1 hover:text-blue-600 transition">
                             Services <ChevronDown className="w-4 h-4" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -53,7 +53,7 @@ export const NavHeader = ({ onLoginClick, onSignupClick }: NavHeaderProps) => (
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="flex items-center gap-1 hover:text-blue-600 transition">
+                        <Button id="nav-global-trigger" variant="ghost" className="flex items-center gap-1 hover:text-blue-600 transition">
                             Global <ChevronDown className="w-4 h-4" />
                         </Button>
                     </DropdownMenuTrigger>

@@ -18,6 +18,10 @@ const isEmailVerificationEnabled = () => {
   return isEmailServiceConfigured();
 };
 
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || ''));
+
 const buildVerificationToken = (user) => {
   const token = crypto.randomBytes(32).toString('hex');
   user.emailVerificationToken = crypto.createHash('sha256').update(token).digest('hex');
@@ -69,14 +73,19 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Name, email, phone, and password are required.' });
     }
 
-    const userExists = await User.findOne({ email });
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please provide a valid email address.' });
+    }
+
+    const userExists = await User.findOne({ email: normalizedEmail });
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
     const user = await User.create({
       name,
-      email,
+      email: normalizedEmail,
       password,
       companyName,
       region,
@@ -120,7 +129,12 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Please provide email and password' });
     }
 
-    const user = await User.findOne({ email }).select('+password');
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please provide a valid email address.' });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -190,11 +204,16 @@ exports.resendVerification = async (req, res) => {
       return res.status(400).json({ message: 'Email is required.' });
     }
 
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please provide a valid email address.' });
+    }
+
     if (!isEmailVerificationEnabled()) {
       return res.json({ success: true, message: 'Email verification is currently disabled.' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user || user.emailVerified) {
       return res.json({ success: true });
     }
@@ -216,11 +235,16 @@ exports.forgotPassword = async (req, res) => {
       return res.status(400).json({ message: 'Email is required.' });
     }
 
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please provide a valid email address.' });
+    }
+
     if (!isEmailServiceConfigured()) {
       return res.status(503).json({ message: 'Email service is not configured yet.' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
     if (user) {
       const resetToken = buildResetToken(user);
       await user.save();
@@ -418,6 +442,10 @@ exports.updateMe = async (req, res) => {
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
+      return res.status(400).json({ message: 'Please provide a valid email address.' });
     }
 
     if (trimmedEmail && trimmedEmail !== user.email) {
