@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { NavHeader } from "@/components/layout/page-header";
+import { NavHeaderClient } from "@/components/layout/nav-header-client";
 import { AppFooter } from "@/components/layout/page-footer";
 import { API_BASE_URL } from "@/lib/api-base";
 
@@ -41,7 +41,7 @@ export default async function BlogDetailPage({ params }: { params: { slug: strin
 
   return (
     <div className="min-h-screen bg-white font-inter">
-      <NavHeader onLoginClick={() => {}} onSignupClick={() => {}} />
+      <NavHeaderClient />
 
       <main className="py-16 sm:py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">

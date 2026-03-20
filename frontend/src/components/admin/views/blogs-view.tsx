@@ -294,10 +294,23 @@ export function BlogsView({ ctx }: { ctx: AdminViewContext }) {
   const handleImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const maxBytes = 3 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      setFormMessage("Image is too large. Please use an image under 3MB or paste a hosted URL.");
+      return;
+    }
 
-    const fileUrl = URL.createObjectURL(file);
-    setForm((prev) => ({ ...prev, image: fileUrl }));
-    setFormMessage(`Image file "${file.name}" selected.`);
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setForm((prev) => ({ ...prev, image: reader.result }));
+        setFormMessage(`Image "${file.name}" uploaded and embedded.`);
+        return;
+      }
+      setFormMessage("Unable to read image file.");
+    };
+    reader.onerror = () => setFormMessage("Unable to read image file.");
+    reader.readAsDataURL(file);
   };
 
   const applyEditorCommand = (command: "bold" | "italic" | "insertUnorderedList", value?: string) => {
@@ -320,10 +333,16 @@ export function BlogsView({ ctx }: { ctx: AdminViewContext }) {
       return;
     }
 
+    const imageValue = form.image.trim();
+    if (imageValue && /^(blob:|file:)/i.test(imageValue)) {
+      setFormMessage("The selected image is a local preview and will not load for visitors. Please upload again or paste a public URL.");
+      return;
+    }
+
     const payload = {
       title: form.title.trim(),
       slug: slugify(form.slug || form.title),
-      featuredImage: form.image.trim() || createPlaceholderImage(form.title),
+      featuredImage: imageValue || createPlaceholderImage(form.title),
       excerpt: form.shortDescription.trim(),
       content: form.fullContent,
       authorName: form.author.trim(),
