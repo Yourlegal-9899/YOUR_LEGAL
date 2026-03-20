@@ -38,7 +38,7 @@ const documentSchema = new mongoose.Schema(
     // Folder structure fields
     folder: {
       type: String,
-      enum: ['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate', 'Incorporation'],
+      enum: ['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate', 'Incorporation', 'Receipts'],
       required: true,
       index: true,
     },
@@ -56,6 +56,7 @@ const documentSchema = new mongoose.Schema(
         'ein_confirmation', 'irs_documents', 'state_filings',
         'bank_account_documents', 'loan_documents',
         'contract', 'nda', 'ip_assignment', 'shareholder_agreement',
+        'payment_receipt',
         'other'
       ],
       index: true,
@@ -66,9 +67,13 @@ const documentSchema = new mongoose.Schema(
     },
     storageProvider: {
       type: String,
-      enum: ['mongo', 's3'],
+      enum: ['mongo', 's3', 'external'],
       default: 'mongo',
       index: true,
+    },
+    externalUrl: {
+      type: String,
+      default: null,
     },
     s3Bucket: {
       type: String,

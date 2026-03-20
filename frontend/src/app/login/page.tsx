@@ -136,6 +136,7 @@ export default function LoginPage() {
                 window.location.href = `${API_BASE_URL}/auth/google`;
               }}
             >
+              <Image src="/google-logo.svg" alt="Google" width={18} height={18} className="h-4 w-4" />
               Continue with Google
             </Button>
             {info && info.toLowerCase().includes('verify') ? (

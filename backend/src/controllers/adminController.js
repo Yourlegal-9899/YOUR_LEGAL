@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 const OnboardingSubmission = require('../models/OnboardingSubmission');
+const { syncUserToZohoSafely } = require('../services/zohoLeadSyncService');
 
 const MONTH_LABEL = new Intl.DateTimeFormat('en-US', { month: 'short' });
 
@@ -176,6 +177,8 @@ exports.updateUserProfile = async (req, res) => {
       new: true,
       runValidators: true,
     }).select('-password');
+
+    void syncUserToZohoSafely(updatedUser);
 
     res.json({ success: true, user: updatedUser });
   } catch (error) {

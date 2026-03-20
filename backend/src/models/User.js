@@ -68,7 +68,10 @@ const userSchema = new mongoose.Schema({
   },
   stripeCustomerId: String,
   subscriptionId: String,
-  subscriptionStatus: String
+  subscriptionStatus: String,
+  zohoLeadId: String,
+  zohoLastSyncedAt: Date,
+  zohoSyncError: String
 }, {
   timestamps: true
 });

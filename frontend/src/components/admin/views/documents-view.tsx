@@ -23,8 +23,8 @@ type DocumentItem = {
 };
 
 type FolderStructure = {
-  [folder: string]: {
-    [subfolder: string]: DocumentItem[];
+  [client: string]: {
+    [folder: string]: DocumentItem[];
   };
 };
 
@@ -47,32 +47,23 @@ export function DocumentsView({ ctx }: { ctx: AdminViewContext }) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'table' | 'folders'>('folders');
 
+  const buildFolderKey = (...parts: string[]) => parts.join("::");
+
   // Organize documents into folder structure
   const organizeDocumentsIntoFolders = (docs: any[]): FolderStructure => {
     const structure: FolderStructure = {};
 
     docs.forEach((doc) => {
-      let folder = doc.folder || (doc.source === "client_uploads" ? "KYC" : "Compliance");
-      let subfolder = doc.subfolder || doc.client;
+      const clientKey = doc.client || doc.company || "Unknown Client";
+      const folder = doc.folder || (doc.source === "client_uploads" ? "KYC" : "Compliance");
 
-      // Special handling for Incorporation folder - group by document type
-      if (folder === 'Incorporation') {
-        subfolder = doc.documentType ? doc.documentType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'General';
+      if (!structure[clientKey]) {
+        structure[clientKey] = {};
       }
-
-      // Special handling for Compliance folder - group by date/year if available
-      if (folder === 'Compliance' && doc.documentType === 'prior_tax_return') {
-        const yearMatch = doc.document?.match(/\b(20\d{2})\b/);
-        subfolder = yearMatch ? `Tax Year ${yearMatch[1]}` : 'Tax Documents';
+      if (!structure[clientKey][folder]) {
+        structure[clientKey][folder] = [];
       }
-
-      if (!structure[folder]) {
-        structure[folder] = {};
-      }
-      if (!structure[folder][subfolder]) {
-        structure[folder][subfolder] = [];
-      }
-      structure[folder][subfolder].push(doc);
+      structure[clientKey][folder].push(doc);
     });
 
     return structure;
@@ -222,48 +213,48 @@ export function DocumentsView({ ctx }: { ctx: AdminViewContext }) {
       {documentActionMessage ? <p className="text-xs text-emerald-700">{documentActionMessage}</p> : null}
 
       <div className="space-y-2">
-        {Object.entries(folderStructure).map(([folderName, subfolders]) => (
-          <div key={folderName} className="border rounded-lg overflow-hidden">
-            {/* Main Folder */}
+        {Object.entries(folderStructure).map(([clientName, folders]) => (
+          <div key={clientName} className="border rounded-lg overflow-hidden">
+            {/* Client */}
             <div
               className="bg-blue-50 px-4 py-3 cursor-pointer hover:bg-blue-100 transition-colors flex items-center"
-              onClick={() => toggleFolder(`folder-${folderName}`)}
+              onClick={() => toggleFolder(buildFolderKey("client", clientName))}
             >
-              {expandedFolders.has(`folder-${folderName}`) ? (
+              {expandedFolders.has(buildFolderKey("client", clientName)) ? (
                 <ChevronDown className="w-5 h-5 text-blue-600 mr-2" />
               ) : (
                 <ChevronRight className="w-5 h-5 text-blue-600 mr-2" />
               )}
-              {getFolderIcon(folderName, expandedFolders.has(`folder-${folderName}`))}
-              <span className="ml-2 font-medium text-blue-900">{folderName}</span>
+              <Folder className="w-5 h-5 text-blue-600" />
+              <span className="ml-2 font-medium text-blue-900">{clientName}</span>
               <Badge variant="secondary" className="ml-2">
-                {Object.values(subfolders).reduce((total, docs) => total + docs.length, 0)} documents
+                {Object.values(folders).reduce((total, docs) => total + docs.length, 0)} documents
               </Badge>
             </div>
 
-            {/* Subfolders */}
-            {expandedFolders.has(`folder-${folderName}`) && (
+            {/* Folders */}
+            {expandedFolders.has(buildFolderKey("client", clientName)) && (
               <div className="bg-gray-50">
-                {Object.entries(subfolders).map(([subfolderName, documents]) => (
-                  <div key={subfolderName}>
+                {Object.entries(folders).map(([folderName, documents]) => (
+                  <div key={folderName}>
                     <div
                       className="px-6 py-2 cursor-pointer hover:bg-gray-100 transition-colors flex items-center border-l-2 border-blue-200"
-                      onClick={() => toggleFolder(`subfolder-${folderName}-${subfolderName}`)}
+                      onClick={() => toggleFolder(buildFolderKey("client", clientName, "folder", folderName))}
                     >
-                      {expandedFolders.has(`subfolder-${folderName}-${subfolderName}`) ? (
+                      {expandedFolders.has(buildFolderKey("client", clientName, "folder", folderName)) ? (
                         <ChevronDown className="w-4 h-4 text-gray-600 mr-2" />
                       ) : (
                         <ChevronRight className="w-4 h-4 text-gray-600 mr-2" />
                       )}
                       <Folder className="w-4 h-4 text-gray-600 mr-2" />
-                      <span className="text-sm font-medium text-gray-800">{subfolderName}</span>
+                      <span className="text-sm font-medium text-gray-800">{folderName}</span>
                       <Badge variant="outline" className="ml-2 text-xs">
                         {documents.length} files
                       </Badge>
                     </div>
 
                     {/* Documents */}
-                    {expandedFolders.has(`subfolder-${folderName}-${subfolderName}`) && (
+                    {expandedFolders.has(buildFolderKey("client", clientName, "folder", folderName)) && (
                       <div className="bg-white border-t border-gray-200">
                         {documents.map((doc) => (
                           <div key={doc.id} className="px-8 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">

@@ -56,6 +56,7 @@ export function ComplianceView({ ctx }: { ctx: AdminViewContext }) {
   const [requestMessage, setRequestMessage] = useState("");
   const [eventStatusFilter, setEventStatusFilter] = useState("all");
   const [eventSort, setEventSort] = useState("due_asc");
+  const [companyFilter, setCompanyFilter] = useState("all");
 
   const [ruleForm, setRuleForm] = useState({
     name: "",
@@ -117,25 +118,53 @@ export function ComplianceView({ ctx }: { ctx: AdminViewContext }) {
     loadAll();
   }, []);
 
+  const resolveClientName = (event: any) =>
+    event.company?.companyName || event.user?.companyName || event.user?.name || "Unknown";
+
+  const resolveCompanyKey = (event: any) => {
+    if (event.company?._id) return String(event.company._id);
+    if (event.company) return String(event.company);
+    if (event.user?._id) return String(event.user._id);
+    if (event.user) return String(event.user);
+    return "";
+  };
+
+  const companyOptions = useMemo(() => {
+    const options = new Map<string, string>();
+    events.forEach((event) => {
+      const key = resolveCompanyKey(event);
+      const label = resolveClientName(event);
+      if (!key || !label) return;
+      if (!options.has(key)) {
+        options.set(key, label);
+      }
+    });
+    return Array.from(options.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [events]);
+
+  const companyFilteredEvents = useMemo(() => {
+    if (companyFilter === "all") return events;
+    return events.filter((event) => resolveCompanyKey(event) === companyFilter);
+  }, [events, companyFilter]);
+
   const complianceStats = useMemo(() => {
     const now = new Date();
-    const upcoming = events.filter((event) => new Date(event.dueDate) >= now && event.status !== "completed").length;
-    const dueThisWeek = events.filter((event) => {
+    const upcoming = companyFilteredEvents.filter((event) => new Date(event.dueDate) >= now && event.status !== "completed").length;
+    const dueThisWeek = companyFilteredEvents.filter((event) => {
       const diff = (new Date(event.dueDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
       return diff >= 0 && diff <= 7 && event.status !== "completed";
     }).length;
-    const overdue = events.filter((event) => event.status === "overdue").length;
-    const inProgress = events.filter((event) => event.status === "in_progress" || event.status === "documents_requested").length;
+    const overdue = companyFilteredEvents.filter((event) => event.status === "overdue").length;
+    const inProgress = companyFilteredEvents.filter((event) => event.status === "in_progress" || event.status === "documents_requested").length;
     return { upcoming, dueThisWeek, overdue, inProgress };
-  }, [events]);
+  }, [companyFilteredEvents]);
 
   const filteredEvents = useMemo(() => {
-    if (eventStatusFilter === "all") return events;
-    return events.filter((event) => event.status === eventStatusFilter);
-  }, [events, eventStatusFilter]);
-
-  const resolveClientName = (event: any) =>
-    event.company?.companyName || event.user?.companyName || event.user?.name || "Unknown";
+    if (eventStatusFilter === "all") return companyFilteredEvents;
+    return companyFilteredEvents.filter((event) => event.status === eventStatusFilter);
+  }, [companyFilteredEvents, eventStatusFilter]);
 
   const sortEventsList = (list: any[]) => {
     const cloned = [...list];
@@ -161,7 +190,7 @@ export function ComplianceView({ ctx }: { ctx: AdminViewContext }) {
   };
 
   const sortedEvents = useMemo(() => sortEventsList(filteredEvents), [filteredEvents, eventSort]);
-  const sortedOverviewEvents = useMemo(() => sortEventsList(events), [events, eventSort]);
+  const sortedOverviewEvents = useMemo(() => sortEventsList(companyFilteredEvents), [companyFilteredEvents, eventSort]);
 
   const resetRuleForm = () => {
     setEditingRuleId(null);
@@ -467,6 +496,15 @@ export function ComplianceView({ ctx }: { ctx: AdminViewContext }) {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-3">
+              <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                <SelectTrigger className="h-10 w-full sm:w-64"><SelectValue placeholder="All companies" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All companies</SelectItem>
+                  {companyOptions.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={eventSort} onValueChange={setEventSort}>
                 <SelectTrigger className="h-10 w-full sm:w-56"><SelectValue placeholder="Sort by" /></SelectTrigger>
                 <SelectContent>
@@ -715,6 +753,15 @@ export function ComplianceView({ ctx }: { ctx: AdminViewContext }) {
           <CardContent className="space-y-3">
             {eventMessage ? <div className="rounded border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{eventMessage}</div> : null}
             <div className="flex flex-wrap gap-3">
+              <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                <SelectTrigger className="h-10 w-full sm:w-64"><SelectValue placeholder="All companies" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All companies</SelectItem>
+                  {companyOptions.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={eventStatusFilter} onValueChange={setEventStatusFilter}>
                 <SelectTrigger className="h-10 w-full sm:w-56"><SelectValue placeholder="Filter status" /></SelectTrigger>
                 <SelectContent>

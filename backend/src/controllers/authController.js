@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('../models/User');
 const { sendZeptoMail } = require('../services/zeptoMailService');
+const { syncUserToZohoSafely } = require('../services/zohoLeadSyncService');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -104,12 +105,16 @@ exports.register = async (req, res) => {
         return res.status(500).json({ message: mailError.message || 'Unable to send verification email.' });
       }
 
+      await syncUserToZohoSafely(user);
+
       return res.status(201).json({
         success: true,
         message: 'Account created. Please verify your email to continue.',
         verificationRequired: true
       });
     }
+
+    await syncUserToZohoSafely(user);
 
     res.status(201).json({
       success: true,
@@ -404,6 +409,8 @@ exports.googleCallback = async (req, res) => {
       await user.save();
     }
 
+    void syncUserToZohoSafely(user);
+
     const token = generateToken(user._id);
     req.session.token = token;
     req.session.userId = user._id;
@@ -476,6 +483,8 @@ exports.updateMe = async (req, res) => {
     }
 
     await user.save();
+
+    void syncUserToZohoSafely(user);
 
     if (verificationRequired && verificationToken) {
       try {

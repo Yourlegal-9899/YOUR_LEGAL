@@ -152,6 +152,33 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!isStandardUser) return;
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    const paymentStatusParam = params.get('payment');
+    if (!sessionId || paymentStatusParam !== 'success') return;
+
+    const storageKey = `receipt_synced_${sessionId}`;
+    if (sessionStorage.getItem(storageKey)) return;
+    sessionStorage.setItem(storageKey, '1');
+
+    fetch(`${API_BASE_URL}/payment/receipt/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ sessionId }),
+    })
+      .catch(() => null)
+      .finally(() => {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete('session_id');
+        nextUrl.searchParams.delete('payment');
+        router.replace(`${nextUrl.pathname}${nextUrl.search}`);
+      });
+  }, [isStandardUser, router]);
+
+  useEffect(() => {
+    if (!isStandardUser) return;
     let isActive = true;
     setPaymentStatus((prev) => ({ ...prev, loading: true }));
     fetch(`${API_BASE_URL}/payment/my-payments`, { credentials: 'include' })

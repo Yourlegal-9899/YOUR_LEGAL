@@ -87,7 +87,7 @@ type AdminView =
   | "zoho-leads";
 type DocumentStatus = "pending" | "verified" | "rejected" | "missing";
 type DocumentSource = "client_uploads" | "legal_docs";
-type DocumentCategory = "KYC" | "Tax" | "Compliance" | "Banking" | "Legal" | "Corporate" | "Incorporation";
+type DocumentCategory = "KYC" | "Tax" | "Compliance" | "Banking" | "Legal" | "Corporate" | "Incorporation" | "Receipts";
 type ComplianceHealth = "overdue" | "due_7d" | "due_21d" | "on_track";
 type OrderStatus = "pending" | "in_progress" | "waiting_documents" | "completed" | "cancelled";
 type FormationStage = "name_check" | "filing_prep" | "state_filing" | "approved";
@@ -1540,6 +1540,8 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
             folder = 'Banking';
           } else if (['contract', 'nda', 'ip_assignment', 'shareholder_agreement'].includes(doc.documentType)) {
             folder = 'Legal';
+          } else if (['payment_receipt'].includes(doc.documentType)) {
+            folder = 'Receipts';
           }
         }
         if (!folder) {
@@ -1556,9 +1558,11 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
                 : value === "Legal"
                   ? "Legal"
                   : value === "Corporate"
-                    ? "Corporate"
-                    : value === "Incorporation"
-                      ? "Incorporation"
+                  ? "Corporate"
+                  : value === "Incorporation"
+                    ? "Incorporation"
+                    : value === "Receipts"
+                      ? "Receipts"
                       : "Compliance";
 
         return {

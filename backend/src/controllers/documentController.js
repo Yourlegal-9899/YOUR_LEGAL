@@ -18,7 +18,7 @@ const toDocumentResponse = (doc, req) => {
     size: doc.size,
     source: doc.source,
     status: doc.status,
-    folder: doc.folder,
+    folder: doc.documentType === 'payment_receipt' ? 'Receipts' : doc.folder,
     subfolder: doc.subfolder,
     documentType: doc.documentType,
     uploadedAt: doc.createdAt,
@@ -52,6 +52,7 @@ const allowedDocumentTypes = new Set([
   'nda',
   'ip_assignment',
   'shareholder_agreement',
+  'payment_receipt',
   'other',
 ]);
 
@@ -126,8 +127,8 @@ exports.uploadMyDocument = async (req, res) => {
       return res.status(400).json({ message: 'fileName, mimeType, and fileDataBase64 are required.' });
     }
 
-    if (!folder || !['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate'].includes(folder)) {
-      return res.status(400).json({ message: 'Valid folder is required (KYC, Compliance, Tax, Banking, Legal, Corporate).' });
+    if (!folder || !['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate', 'Receipts'].includes(folder)) {
+      return res.status(400).json({ message: 'Valid folder is required (KYC, Compliance, Tax, Banking, Legal, Corporate, Receipts).' });
     }
 
     const buffer = parseBase64File(fileDataBase64);
@@ -204,8 +205,8 @@ exports.uploadOfficialDocumentAsAdmin = async (req, res) => {
       return res.status(400).json({ message: 'fileName, mimeType, and fileDataBase64 are required.' });
     }
 
-    if (!folder || !['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate', 'Incorporation'].includes(folder)) {
-      return res.status(400).json({ message: 'Valid folder is required (KYC, Compliance, Tax, Banking, Legal, Corporate, Incorporation).' });
+    if (!folder || !['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate', 'Incorporation', 'Receipts'].includes(folder)) {
+      return res.status(400).json({ message: 'Valid folder is required (KYC, Compliance, Tax, Banking, Legal, Corporate, Incorporation, Receipts).' });
     }
 
     const targetUser = await User.findById(userId).select('_id');
@@ -309,6 +310,10 @@ exports.downloadDocument = async (req, res) => {
     const safeName = doc.originalName.replace(/"/g, '');
     const downloadFlag = String(req.query.download || '').toLowerCase();
     const dispositionType = downloadFlag === '1' || downloadFlag === 'true' ? 'attachment' : 'inline';
+
+    if (doc.externalUrl) {
+      return res.redirect(doc.externalUrl);
+    }
 
     if (doc.data && doc.data.length) {
       res.setHeader('Content-Type', doc.mimeType);

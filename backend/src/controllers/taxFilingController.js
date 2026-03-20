@@ -68,6 +68,7 @@ const allowedDocumentTypes = new Set([
   'nda',
   'ip_assignment',
   'shareholder_agreement',
+  'payment_receipt',
   'other',
 ]);
 

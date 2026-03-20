@@ -11,6 +11,8 @@ Your Zoho integration now has:
 4. ✅ **Search & Filter** - Find leads quickly
 5. ✅ **Stats Dashboard** - See lead metrics
 6. ✅ **Status Tracking** - Track lead progress
+7. ✅ **Portal Signup Push** - New portal users create/update Zoho Leads
+8. ✅ **Admin → Zoho Updates** - Status, assignment, and notes sync back
 
 ---
 
@@ -28,6 +30,31 @@ ZOHO_AUTO_SYNC=true
 ZOHO_CLIENT_ID=your_client_id
 ZOHO_CLIENT_SECRET=your_client_secret
 ZOHO_REFRESH_TOKEN=your_refresh_token
+```
+
+Optional two-way sync settings:
+
+```env
+# Lead source + status for portal signups
+ZOHO_PORTAL_LEAD_SOURCE=Portal Signup
+ZOHO_PORTAL_LEAD_STATUS=new
+
+# Optional: map admin assignments to a custom Zoho field
+# (set to the API name of your custom field)
+ZOHO_ASSIGN_FIELD_API_NAME=Assigned_To
+
+# Optional: use "email" (default) or "name" when syncing assignment
+ZOHO_ASSIGN_FIELD_VALUE=email
+
+# Optional: override Zoho lead status labels
+ZOHO_STATUS_NEW=Not Contacted
+ZOHO_STATUS_CONTACTED=Contacted
+ZOHO_STATUS_QUALIFIED=Qualified
+ZOHO_STATUS_CONVERTED=Converted
+ZOHO_STATUS_LOST=Lost Lead
+
+# Optional: default Company value if Zoho requires it
+ZOHO_DEFAULT_COMPANY=Individual
 ```
 
 ### Step 2: Restart Backend
@@ -61,6 +88,14 @@ Wait 30 min → Sync Again → Update DB → Repeat Forever
 ```
 Admin clicks "Sync Now" → Fetch from Zoho → 
 Update DB → Refresh UI → Show stats
+```
+
+### **Two-Way Sync Flow (New):**
+
+```
+Portal signup → Create/Update Zoho Lead → Upsert local lead
+Admin updates (status/assignment/notes) → Update Zoho → Save locally
+Zoho edits (webhook or scheduled sync) → Update local lead
 ```
 
 ### **What Gets Synced:**
@@ -307,7 +342,7 @@ If sync fails:
 
 2. **Lead Status Updates**
    - Allow admin to change lead status
-   - Sync back to Zoho
+   - Sync additional Zoho fields (optional custom fields)
 
 3. **Convert Lead to User**
    - Button to create user account from lead

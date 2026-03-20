@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
 const Order = require('../models/Order');
+const Document = require('../models/Document');
 
 const generateOrderNumber = () => {
   return 'ORD-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -24,6 +25,47 @@ const normalizePlanName = (value) => {
   if (key === 'growth') return 'Growth';
   if (key === 'scale') return 'Scale';
   return trimmed;
+};
+
+const fetchReceiptUrlForPaymentIntent = async (paymentIntentId) => {
+  if (!paymentIntentId) return null;
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+    expand: ['latest_charge', 'charges'],
+  });
+
+  let charge = paymentIntent?.charges?.data?.[0] || paymentIntent?.latest_charge;
+  if (typeof charge === 'string') {
+    charge = await stripe.charges.retrieve(charge);
+  }
+
+  return charge?.receipt_url || null;
+};
+
+const createReceiptDocument = async ({ userId, receiptUrl, paymentIntentId, paymentId }) => {
+  if (!userId || !receiptUrl) return;
+
+  const existing = await Document.findOne({ user: userId, externalUrl: receiptUrl }).select('_id').lean();
+  if (existing) return;
+
+  const now = new Date();
+  const dateLabel = now.toISOString().slice(0, 10);
+  const suffix = paymentIntentId || paymentId || 'payment';
+  const fileName = `Stripe Receipt ${dateLabel} ${suffix}`.trim();
+
+  await Document.create({
+    user: userId,
+    originalName: fileName,
+    mimeType: 'text/html',
+    size: Math.max(1, String(receiptUrl).length),
+    source: 'legal_docs',
+    status: 'verified',
+    folder: 'Receipts',
+    subfolder: 'Stripe',
+    documentType: 'payment_receipt',
+    uploadedBy: userId,
+    storageProvider: 'external',
+    externalUrl: receiptUrl,
+  });
 };
 
 exports.createPaymentIntent = async (req, res) => {
@@ -297,6 +339,18 @@ async function handleCheckoutComplete(session) {
     }
 
     if (payment) {
+      try {
+        const receiptUrl = await fetchReceiptUrlForPaymentIntent(session.payment_intent);
+        await createReceiptDocument({
+          userId,
+          receiptUrl,
+          paymentIntentId: session.payment_intent,
+          paymentId: payment._id,
+        });
+      } catch (receiptError) {
+        console.error('Failed to store Stripe receipt:', receiptError?.message || receiptError);
+      }
+
       const existingOrder = await Order.findOne({ payment: payment._id });
       if (existingOrder) {
         await Order.findByIdAndUpdate(existingOrder._id, { status: 'confirmed' });
@@ -369,6 +423,18 @@ async function handlePaymentSuccess(paymentIntent) {
       { payment: payment._id },
       { status: 'confirmed' }
     );
+
+    try {
+      const receiptUrl = await fetchReceiptUrlForPaymentIntent(paymentIntent.id);
+      await createReceiptDocument({
+        userId: payment.user,
+        receiptUrl,
+        paymentIntentId: paymentIntent.id,
+        paymentId: payment._id,
+      });
+    } catch (receiptError) {
+      console.error('Failed to store Stripe receipt:', receiptError?.message || receiptError);
+    }
   }
 }
 
@@ -422,6 +488,46 @@ const resolvePaymentIntentId = async (payment) => {
   }
 
   return paymentIntentId || null;
+};
+
+exports.syncPaymentReceipt = async (req, res) => {
+  try {
+    const { sessionId, paymentId } = req.body || {};
+    let payment = null;
+
+    if (paymentId && mongoose.Types.ObjectId.isValid(paymentId)) {
+      payment = await Payment.findOne({ _id: paymentId, user: req.user._id });
+    }
+
+    if (!payment && sessionId) {
+      payment = await Payment.findOne({ stripePaymentId: String(sessionId), user: req.user._id });
+    }
+
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found.' });
+    }
+
+    const paymentIntentId = await resolvePaymentIntentId(payment);
+    if (!paymentIntentId) {
+      return res.status(404).json({ message: 'Invoice not available for this payment.' });
+    }
+
+    const receiptUrl = await fetchReceiptUrlForPaymentIntent(paymentIntentId);
+    if (!receiptUrl) {
+      return res.status(404).json({ message: 'Invoice not available for this payment.' });
+    }
+
+    await createReceiptDocument({
+      userId: req.user._id,
+      receiptUrl,
+      paymentIntentId,
+      paymentId: payment._id,
+    });
+
+    res.json({ success: true, receiptUrl });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 exports.getPaymentReceipt = async (req, res) => {

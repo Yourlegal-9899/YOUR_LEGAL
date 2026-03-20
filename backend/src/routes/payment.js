@@ -5,7 +5,8 @@ const {
   handleWebhook, 
   getPayments, 
   getAllPayments,
-  getPaymentReceipt
+  getPaymentReceipt,
+  syncPaymentReceipt
 } = require('../controllers/paymentController');
 const {
   createSubscription,
@@ -20,6 +21,7 @@ router.post('/create-intent', protect, createPaymentIntent);
 router.post('/create-checkout', protect, createCheckoutSession);
 router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 router.get('/my-payments', protect, getPayments);
+router.post('/receipt/sync', protect, syncPaymentReceipt);
 router.get('/all', protect, authorize('admin'), getAllPayments);
 router.get('/:paymentId/receipt', protect, authorize('admin'), getPaymentReceipt);
 

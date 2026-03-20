@@ -69,6 +69,13 @@ export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
   const isStepCompleted = (progress: any, step: string) =>
     progress?.[step]?.status === "completed";
 
+  const formatCompletedDate = (value?: string | Date | null) => {
+    if (!value) return "";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toLocaleDateString();
+  };
+
   const renderProgressManager = (
     formationId: string,
     section: string,
@@ -78,6 +85,19 @@ export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
   ) => {
     const currentStep = resolveCurrentStep(progress, stepOrder);
     const allDone = stepOrder.every((step) => isStepCompleted(progress, step));
+    const completionChips = stepOrder
+      .map((step) => {
+        const completed = isStepCompleted(progress, step);
+        if (!completed) return null;
+        const completedAt = progress?.[step]?.completedAt;
+        const dateLabel = completedAt ? formatCompletedDate(completedAt) : "Completed";
+        return {
+          key: step,
+          label: stepLabels[step] || step,
+          dateLabel,
+        };
+      })
+      .filter(Boolean) as Array<{ key: string; label: string; dateLabel: string }>;
 
     return (
       <div className="space-y-2">
@@ -133,6 +153,18 @@ export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
             {allDone ? "All steps completed." : `Next: ${stepLabels[currentStep] || currentStep}`}
           </span>
         </div>
+        {completionChips.length ? (
+          <div className="flex flex-wrap gap-2 text-[10px] text-slate-500">
+            {completionChips.map((chip) => (
+              <span
+                key={chip.key}
+                className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5"
+              >
+                {chip.label}: {chip.dateLabel}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
     );
   };

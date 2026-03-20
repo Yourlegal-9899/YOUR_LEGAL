@@ -96,14 +96,15 @@ export function CompanyDocuments() {
 
   const { user: authUser } = useAuth();
   const isAdmin = authUser?.role === 'admin';
-  const folderOptions = ['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate'];
+  const folderOptions = ['KYC', 'Compliance', 'Tax', 'Banking', 'Legal', 'Corporate', 'Receipts'];
   const documentTypeOptions = {
     'KYC': ['passport', 'proof_of_address', 'pan', 'aadhaar', 'photo'],
     'Compliance': ['bank_statement', 'tax_id', 'prior_tax_return'],
     'Tax': ['prior_tax_return', 'irs_documents', 'state_filings'],
     'Banking': ['bank_account_documents', 'loan_documents'],
     'Legal': ['contract', 'nda', 'ip_assignment', 'shareholder_agreement'],
-    'Corporate': ['bank_statement', 'tax_id', 'contract', 'other']
+    'Corporate': ['bank_statement', 'tax_id', 'contract', 'other'],
+    'Receipts': ['payment_receipt', 'other']
   };
   const openDocument = useCallback(
     async (doc: DocumentFile, mode: 'view' | 'download') => {

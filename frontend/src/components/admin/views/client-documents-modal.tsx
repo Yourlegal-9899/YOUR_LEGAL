@@ -171,6 +171,7 @@ export function ClientDocumentsModal({ ctx }: { ctx: AdminViewContext }) {
                     <SelectItem value="Legal">Legal</SelectItem>
                     <SelectItem value="Corporate">Corporate</SelectItem>
                     <SelectItem value="Incorporation">Incorporation</SelectItem>
+                    <SelectItem value="Receipts">Receipts</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -208,6 +209,7 @@ export function ClientDocumentsModal({ ctx }: { ctx: AdminViewContext }) {
                     <SelectItem value="nda">NDA</SelectItem>
                     <SelectItem value="ip_assignment">IP Assignment</SelectItem>
                     <SelectItem value="shareholder_agreement">Shareholder Agreement</SelectItem>
+                    <SelectItem value="payment_receipt">Payment Receipt</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>

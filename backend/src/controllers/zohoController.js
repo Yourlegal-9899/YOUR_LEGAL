@@ -1,5 +1,7 @@
 const crypto = require('crypto');
-const { fetchLeads, fetchLeadById } = require('../services/zohoService');
+const { fetchLeads, fetchLeadById, updateLead, addNoteToLead } = require('../services/zohoService');
+const { upsertLeadFromZoho, syncPendingUsersToZoho } = require('../services/zohoLeadSyncService');
+const { mapLocalStatusToZoho } = require('../utils/zohoLeadMapper');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
 const { sendZeptoMail } = require('../services/zeptoMailService');
@@ -8,28 +10,6 @@ const { updateZohoSyncStatus, getZohoSyncStatus } = require('../utils/zohoSyncSt
 const VALID_STATUSES = new Set(['new', 'contacted', 'qualified', 'converted', 'lost']);
 
 const buildPassword = () => crypto.randomBytes(8).toString('hex');
-
-// Helper function to safely parse Zoho dates
-const parseZohoDate = (dateString) => {
-  if (!dateString) return null;
-  
-  try {
-    // Handle various Zoho date formats
-    // Zoho often returns dates like "2023-12-01T10:30:00+05:30" or "2023-12-01 10:30:00"
-    const date = new Date(dateString);
-    
-    // Check if the date is valid
-    if (isNaN(date.getTime())) {
-      console.warn(`Invalid date format from Zoho: ${dateString}`);
-      return null;
-    }
-    
-    return date;
-  } catch (error) {
-    console.warn(`Error parsing Zoho date: ${dateString}`, error);
-    return null;
-  }
-};
 
 // Helper function to safely parse query dates
 const parseQueryDate = (value) => {
@@ -65,32 +45,14 @@ const appendActivity = async (leadId, activity) => {
   });
 };
 
-const normalizeLeadData = (lead) => ({
-  zohoId: lead.id,
-  fullName: lead.Full_Name,
-  email: lead.Email,
-  phone: lead.Phone,
-  company: lead.Company,
-  leadSource: lead.Lead_Source,
-  zohoCreatedTime: parseZohoDate(lead.Created_Time),
-});
-
-const upsertLead = async (lead) => {
-  if (!lead?.id) return null;
-  const payload = {
-    ...normalizeLeadData(lead),
-    lastSyncedAt: new Date(),
-    lastSyncError: null,
-  };
-
-  const updated = await Lead.findOneAndUpdate(
-    { zohoId: lead.id },
-    { $set: payload, $setOnInsert: { status: 'new' } },
-    { upsert: true, new: true }
-  );
-
-  return updated;
+const resolveAssigneeValue = async (userId) => {
+  if (!userId) return null;
+  const user = await User.findById(userId).select('name email');
+  if (!user) return null;
+  const mode = String(process.env.ZOHO_ASSIGN_FIELD_VALUE || 'email').toLowerCase();
+  return mode === 'name' ? (user.name || user.email) : (user.email || user.name);
 };
+
 
 exports.syncZohoLeads = async (req, res) => {
   try {
@@ -101,10 +63,12 @@ exports.syncZohoLeads = async (req, res) => {
 
     for (const lead of zohoLeads) {
       const existingLead = await Lead.findOne({ zohoId: lead.id }).select('_id');
-      await upsertLead(lead);
+      await upsertLeadFromZoho(lead);
       if (existingLead) updatedCount++;
       else newCount++;
     }
+
+    const portalSync = await syncPendingUsersToZoho({ limit: 50 });
 
     await updateZohoSyncStatus({
       status: 'success',
@@ -114,7 +78,8 @@ exports.syncZohoLeads = async (req, res) => {
     res.json({ 
       success: true, 
       message: `Synced ${zohoLeads.length} leads (${newCount} new, ${updatedCount} updated)`,
-      stats: { total: zohoLeads.length, new: newCount, updated: updatedCount }
+      stats: { total: zohoLeads.length, new: newCount, updated: updatedCount },
+      portalSync
     });
   } catch (error) {
     console.error('Zoho leads sync failed:', error?.message || error);
@@ -254,6 +219,17 @@ exports.updateLeadStatus = async (req, res) => {
     const previousStatus = lead.status;
     lead.status = status;
 
+    if (!lead.zohoId) {
+      return res.status(400).json({ message: 'Lead is not linked to Zoho yet.' });
+    }
+
+    const zohoStatus = mapLocalStatusToZoho(status);
+    if (zohoStatus) {
+      await updateLead(lead.zohoId, { Lead_Status: zohoStatus });
+      lead.lastSyncedAt = new Date();
+      lead.lastSyncError = null;
+    }
+
     let conversion = null;
 
     if (status === 'converted' && !lead.convertedToUser) {
@@ -274,6 +250,9 @@ exports.updateLeadStatus = async (req, res) => {
           status: 'active',
           bypassPlan: true,
           emailVerified: true,
+          zohoLeadId: lead.zohoId,
+          zohoLastSyncedAt: new Date(),
+          zohoSyncError: null,
         });
 
         const loginUrl = `${process.env.FRONTEND_URL || ''}/login`;
@@ -291,6 +270,12 @@ exports.updateLeadStatus = async (req, res) => {
       }
 
       lead.convertedToUser = user._id;
+      if (!user.zohoLeadId || user.zohoLeadId !== lead.zohoId) {
+        user.zohoLeadId = lead.zohoId;
+        user.zohoLastSyncedAt = new Date();
+        user.zohoSyncError = null;
+        await user.save();
+      }
       conversion = conversion || { userId: user._id };
       await appendActivity(lead._id, {
         type: 'conversion',
@@ -324,6 +309,17 @@ exports.assignLead = async (req, res) => {
       return res.status(404).json({ message: 'Lead not found.' });
     }
 
+    const assignmentField = process.env.ZOHO_ASSIGN_FIELD_API_NAME;
+    if (assignmentField) {
+      if (!lead.zohoId) {
+        return res.status(400).json({ message: 'Lead is not linked to Zoho yet.' });
+      }
+      const assignmentValue = await resolveAssigneeValue(assignedTo);
+      await updateLead(lead.zohoId, { [assignmentField]: assignmentValue || null });
+      lead.lastSyncedAt = new Date();
+      lead.lastSyncError = null;
+    }
+
     const previousAssignee = lead.assignedTo ? String(lead.assignedTo) : null;
     lead.assignedTo = assignedTo || null;
     lead.assignedBy = req.user?._id;
@@ -354,6 +350,19 @@ exports.addLeadNote = async (req, res) => {
     if (!lead) {
       return res.status(404).json({ message: 'Lead not found.' });
     }
+
+    if (!lead.zohoId) {
+      return res.status(400).json({ message: 'Lead is not linked to Zoho yet.' });
+    }
+
+    const authorLabel = req.user?.name || req.user?.email || 'Admin';
+    await addNoteToLead({
+      leadId: lead.zohoId,
+      title: `Admin Note (${authorLabel})`,
+      content: String(body).trim(),
+    });
+    lead.lastSyncedAt = new Date();
+    lead.lastSyncError = null;
 
     lead.comments.push({
       body: String(body).trim(),
@@ -395,11 +404,15 @@ exports.handleZohoWebhook = async (req, res) => {
         leadsToUpsert.push({
           id: lead.id,
           Full_Name: lead.Full_Name,
+          First_Name: lead.First_Name,
+          Last_Name: lead.Last_Name,
           Email: lead.Email,
           Phone: lead.Phone,
           Company: lead.Company,
           Lead_Source: lead.Lead_Source,
+          Lead_Status: lead.Lead_Status,
           Created_Time: lead.Created_Time,
+          Modified_Time: lead.Modified_Time,
         });
       }
     }
@@ -413,7 +426,7 @@ exports.handleZohoWebhook = async (req, res) => {
 
     const upserted = [];
     for (const lead of leadsToUpsert) {
-      const updated = await upsertLead(lead);
+      const updated = await upsertLeadFromZoho(lead);
       if (updated) upserted.push(updated);
     }
 
