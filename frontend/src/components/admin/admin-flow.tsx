@@ -2264,8 +2264,18 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
     }
   };
 
-  const updateFormationProgress = async (formationId: string, section: string, step: string, status: string) => {
-    const result = await adminData.updateFormationProgress(formationId, { section, step, status });
+  const updateFormationProgress = async (
+    formationId: string,
+    section: string,
+    step: string,
+    status: string,
+    completedAt?: string
+  ) => {
+    const payload: Record<string, any> = { section, step, status };
+    if (completedAt) {
+      payload.completedAt = completedAt;
+    }
+    const result = await adminData.updateFormationProgress(formationId, payload);
     if (result.success) {
       addActivity(`Formation ${formationId} progress updated`);
     }

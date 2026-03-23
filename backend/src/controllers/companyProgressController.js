@@ -54,7 +54,7 @@ exports.updateCompanyProgress = async (req, res) => {
       return res.status(403).json({ message: 'Admin access required.' });
     }
 
-    const { section, step, status } = req.body || {};
+    const { section, step, status, completedAt } = req.body || {};
     if (!section || !step || !status) {
       return res.status(400).json({ message: 'section, step, and status are required.' });
     }
@@ -83,6 +83,15 @@ exports.updateCompanyProgress = async (req, res) => {
       return res.status(400).json({ message: 'Step not found in order.' });
     }
 
+    let completionDate = null;
+    if (status === 'completed' && completedAt !== undefined && completedAt !== null && completedAt !== '') {
+      const parsedDate = new Date(completedAt);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return res.status(400).json({ message: 'completedAt must be a valid date.' });
+      }
+      completionDate = parsedDate;
+    }
+
     if (status === 'completed') {
       // Mark all previous steps as completed
       for (let i = 0; i <= stepIndex; i++) {
@@ -91,10 +100,12 @@ exports.updateCompanyProgress = async (req, res) => {
           const stepData = progressSection[currentStep];
           if (stepData.status !== 'completed') {
             stepData.status = 'completed';
-            stepData.completedAt = new Date();
-          } else if (!stepData.completedAt) {
+            if (completionDate) {
+              stepData.completedAt = completionDate;
+            }
+          } else if (!stepData.completedAt && completionDate) {
             // Preserve existing completion dates; backfill only when missing.
-            stepData.completedAt = new Date();
+            stepData.completedAt = completionDate;
           }
         }
       }

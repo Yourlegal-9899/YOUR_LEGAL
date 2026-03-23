@@ -23,6 +23,7 @@ export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
   } = ctx;
   const [einDrafts, setEinDrafts] = useState<Record<string, string>>({});
   const [editFormation, setEditFormation] = useState<any | null>(null);
+  const [progressDateDrafts, setProgressDateDrafts] = useState<Record<string, string>>({});
   const [detailsDraft, setDetailsDraft] = useState({
     companyName: "",
     state: "",
@@ -39,6 +40,11 @@ export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
 
   const getEinValue = (formation: any) =>
     einDrafts[formation.id] ?? formation.ein ?? "";
+
+  const getProgressDateKey = (formationId: string, section: string) =>
+    `${formationId}:${section}`;
+  const getProgressDateValue = (formationId: string, section: string) =>
+    progressDateDrafts[getProgressDateKey(formationId, section)] ?? "";
 
   const formationStepOrder = ["nameCheck", "filingPrep", "stateFiling", "approved"];
   const einStepOrder = ["ss4Application", "irsSubmission", "processing", "allotment"];
@@ -85,6 +91,8 @@ export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
   ) => {
     const currentStep = resolveCurrentStep(progress, stepOrder);
     const allDone = stepOrder.every((step) => isStepCompleted(progress, step));
+    const dateKey = getProgressDateKey(formationId, section);
+    const dateValue = getProgressDateValue(formationId, section);
     const completionChips = stepOrder
       .map((step) => {
         const completed = isStepCompleted(progress, step);
@@ -133,7 +141,12 @@ export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
               if (e.target.value) {
                 const [action, step] = e.target.value.split(":");
                 const status = action === "complete" ? "completed" : "pending";
-                handleProgressUpdate(formationId, section, step, status);
+                if (status === "completed" && !dateValue) {
+                  window.alert("Select a completion date first.");
+                  e.currentTarget.value = "";
+                  return;
+                }
+                handleProgressUpdate(formationId, section, step, status, status === "completed" ? dateValue : undefined);
                 e.currentTarget.value = "";
               }
             }}
@@ -149,6 +162,14 @@ export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
               );
             })}
           </select>
+          <input
+            type="date"
+            className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+            value={dateValue}
+            onChange={(e) =>
+              setProgressDateDrafts((prev) => ({ ...prev, [dateKey]: e.target.value }))
+            }
+          />
           <span className="text-[11px] text-muted-foreground">
             {allDone ? "All steps completed." : `Next: ${stepLabels[currentStep] || currentStep}`}
           </span>
@@ -169,9 +190,15 @@ export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
     );
   };
 
-  const handleProgressUpdate = async (formationId: string, section: string, step: string, status: string = "completed") => {
+  const handleProgressUpdate = async (
+    formationId: string,
+    section: string,
+    step: string,
+    status: string = "completed",
+    completedAt?: string
+  ) => {
     if (!updateFormationProgress) return;
-    await updateFormationProgress(formationId, section, step, status);
+    await updateFormationProgress(formationId, section, step, status, completedAt);
   };
 
   const openEditDetails = (formation: any) => {
