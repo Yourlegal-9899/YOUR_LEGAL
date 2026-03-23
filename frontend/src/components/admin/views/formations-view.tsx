@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { AdminViewContext } from "./types";
+import { useToast } from "@/hooks/use-toast";
 
 export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
   const {
@@ -21,6 +22,7 @@ export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
     updateFormationProgress,
     updateFormationDetails,
   } = ctx;
+  const { toast } = useToast();
   const [einDrafts, setEinDrafts] = useState<Record<string, string>>({});
   const [editFormation, setEditFormation] = useState<any | null>(null);
   const [progressDateDrafts, setProgressDateDrafts] = useState<Record<string, string>>({});
@@ -142,7 +144,7 @@ export function FormationsView({ ctx }: { ctx: AdminViewContext }) {
                 const [action, step] = e.target.value.split(":");
                 const status = action === "complete" ? "completed" : "pending";
                 if (status === "completed" && !dateValue) {
-                  window.alert("Select a completion date first.");
+                  toast({ variant: "destructive", title: "Select a completion date first." });
                   e.currentTarget.value = "";
                   return;
                 }
