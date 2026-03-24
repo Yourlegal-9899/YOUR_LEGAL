@@ -7,33 +7,69 @@ import {
     Building, Sparkles, Users, Settings, FileText, Upload, LayoutGrid, Shield, Briefcase, PiggyBank,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
 import { NavHeader } from '@/components/layout/page-header';
 import { AppFooter } from '@/components/layout/page-footer';
 import Link from 'next/link';
 
-const FaqSection = () => (
-    <section className="bg-gray-50 p-8 rounded-lg border border-gray-200 mt-20">
-        <h2 className="text-3xl font-bold text-gray-800 mb-6">Frequently Asked Questions</h2>
-        <div className="space-y-6">
-            <div>
-                <h3 className="font-semibold text-lg text-gray-900">What is YourLegal?</h3>
-                <p className="text-gray-600 mt-1">YourLegal is an all-in-one platform for global entrepreneurs to form, manage, and maintain compliance for their businesses in the USA and other major hubs. It combines technology automation with human expertise to handle company formation, registered agent services, bookkeeping, and tax filings, simplifying complex administrative tasks for non-resident founders.</p>
+const FaqSection = () => {
+    const faqs = [
+        {
+            q: "What is YourLegal?",
+            a: "YourLegal is an all-in-one platform for global entrepreneurs to form, manage, and maintain compliance for their businesses in the USA and other major hubs. It combines technology automation with human expertise to handle company formation, registered agent services, bookkeeping, and tax filings, simplifying complex administrative tasks for non-resident founders.",
+        },
+        {
+            q: "What does YourLegal do?",
+            a: "YourLegal provides a comprehensive suite of services to help international founders launch and operate businesses. This includes company formation (LLC & C-Corp), registered agent services, automated and human-led bookkeeping, federal and state tax filings, and ongoing compliance management through a unified digital platform.",
+        },
+        {
+            q: "Who is this for?",
+            a: "The platform is designed for global entrepreneurs, non-resident founders, digital nomads, and investors who need a reliable, remote-first solution to manage their business entities in jurisdictions like the USA, UK, UAE, and Singapore.",
+        },
+        {
+            q: "Which countries are covered?",
+            a: "YourLegal supports business operations in key global hubs, including the United States (Delaware, Wyoming), United Arab Emirates, United Kingdom, Singapore, India, Australia, and the Netherlands.",
+        },
+    ];
+
+    return (
+        <section className="mt-20">
+            <div className="rounded-3xl border border-gray-200 bg-gray-50 p-8 sm:p-10 shadow-sm">
+                <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="max-w-xl">
+                        <h2 className="text-3xl font-bold text-gray-900">Frequently Asked Questions</h2>
+                        <p className="mt-3 text-sm text-gray-600">
+                            Quick answers to the most common questions about YourLegal’s platform and global coverage.
+                        </p>
+                    </div>
+                    <div className="flex-1">
+                        <Accordion type="single" collapsible className="space-y-4">
+                            {faqs.map((faq, index) => (
+                                <AccordionItem
+                                    key={faq.q}
+                                    value={`faq-${index}`}
+                                    className="rounded-2xl border border-gray-200 bg-white px-4 shadow-sm"
+                                >
+                                    <AccordionTrigger className="text-left text-base font-semibold text-gray-900">
+                                        {faq.q}
+                                    </AccordionTrigger>
+                                    <AccordionContent className="text-sm text-gray-600 leading-relaxed">
+                                        {faq.a}
+                                    </AccordionContent>
+                                </AccordionItem>
+                            ))}
+                        </Accordion>
+                    </div>
+                </div>
             </div>
-            <div>
-                <h3 className="font-semibold text-lg text-gray-900">What does YourLegal do?</h3>
-                <p className="text-gray-600 mt-1">YourLegal provides a comprehensive suite of services to help international founders launch and operate businesses. This includes company formation (LLC & C-Corp), registered agent services, automated and human-led bookkeeping, federal and state tax filings, and ongoing compliance management through a unified digital platform.</p>
-            </div>
-            <div>
-                <h3 className="font-semibold text-lg text-gray-900">Who is this for?</h3>
-                <p className="text-gray-600 mt-1">The platform is designed for global entrepreneurs, non-resident founders, digital nomads, and investors who need a reliable, remote-first solution to manage their business entities in jurisdictions like the USA, UK, UAE, and Singapore.</p>
-            </div>
-            <div>
-                <h3 className="font-semibold text-lg text-gray-900">Which countries are covered?</h3>
-                <p className="text-gray-600 mt-1">YourLegal supports business operations in key global hubs, including the United States (Delaware, Wyoming), United Arab Emirates, United Kingdom, Singapore, India, Australia, and the Netherlands.</p>
-            </div>
-        </div>
-    </section>
-);
+        </section>
+    );
+};
 
 const AllInOneSection = () => {
     const features = [

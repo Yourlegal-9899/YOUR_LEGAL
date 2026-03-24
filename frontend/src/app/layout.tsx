@@ -1,4 +1,5 @@
 import type {Metadata} from 'next';
+import Script from 'next/script';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -67,6 +68,14 @@ export default function RootLayout({
           </AuthProvider>
         </FirebaseClientProvider>
         <Toaster />
+        <Script id="zoho-salesiq-init" strategy="afterInteractive">
+          {`window.$zoho=window.$zoho||{};$zoho.salesiq=$zoho.salesiq||{ready:function(){}};`}
+        </Script>
+        <Script
+          id="zsiqscript"
+          src="https://salesiq.zohopublic.com/widget?wc=siq13df686271189514772566934b81611fc6e6a543d94e608f31bb19265ee9b474"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );

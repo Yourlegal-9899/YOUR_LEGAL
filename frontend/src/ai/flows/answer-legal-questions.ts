@@ -76,7 +76,7 @@ Add-on services (available in all supported countries; prices shown in USD in co
 Policies:
 - 30-day money-back guarantee on YourLegal service fees.
 - State filing fees and third-party fees are non-refundable once submitted/paid.
-- Refunds are processed to the original payment method within 5-10 business days; request via contactus@yourlegal.in.
+- Refunds are processed to the original payment method within 5-10 business days; request via hello@yourlegal.io.
 - Registered Agent service is included in formation plans (first year).
 - You can upgrade from Micro to Vitals or Elite from the dashboard.
 - Peace-of-mind guarantee: accurate state and IRS filings; if YourLegal makes an error, it covers the costs.
@@ -84,6 +84,7 @@ Policies:
 
 const AnswerLegalQuestionsInputSchema = z.object({
   question: z.string().describe('The legal question to be answered.'),
+  liveData: z.string().optional().describe('Live, user-specific data fetched from the platform APIs.'),
 });
 export type AnswerLegalQuestionsInput = z.infer<typeof AnswerLegalQuestionsInputSchema>;
 
@@ -113,11 +114,15 @@ const answerLegalQuestionsPrompt = ai.definePrompt({
   tools: [getLegalPrecedence],
   system: `You are the YourLegal AI assistant for the YourLegal platform. Answer only questions related to the YourLegal project, product, and workflows.
 You can help with topics like: onboarding, company formation, EIN application, initial compliance, formation progress, documents, admin vs. user flows, Company & Legal page, Taxes & Filings, subscriptions/payments, notifications, support, and QuickBooks integration.
+Use any provided LIVE DATA to answer questions about compliance dates, tax deadlines, bookkeeping, QuickBooks balances, invoices, bills, and reports. If LIVE DATA is missing or indicates a service is not connected, say that the data is not available and explain how to connect the service in the YourLegal dashboard.
 If a question is not about the YourLegal platform or asks for general legal advice, respond briefly that you can only help with the YourLegal platform and ask the user to rephrase with platform context. Do not provide legal advice.
 Do not use tools for legal precedence; this assistant does not have access to real legal databases. End every response with a short disclaimer that you are not providing legal advice and the user should consult a lawyer.
 
 ${YOURLEGAL_KB}`,
-  prompt: `Question: {{{question}}}`, // removed the conditional logic here since the tool will handle if legal precedence is needed.
+  prompt: `Question: {{{question}}}
+
+LIVE DATA (if available, may be empty):
+{{{liveData}}}`, // removed the conditional logic here since the tool will handle if legal precedence is needed.
 });
 
 const answerLegalQuestionsFlow = ai.defineFlow(

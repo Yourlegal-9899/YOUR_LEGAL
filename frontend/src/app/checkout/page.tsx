@@ -73,7 +73,8 @@ function CheckoutPageContent() {
         );
     }
     
-    const selectedPlan = planData[planName] || { title: planName, price: parseInt(amount) || 0 };
+    const parsedAmount = amount ? Number(amount) : NaN;
+    const selectedPlan = planData[planName] || { title: planName, price: Number.isFinite(parsedAmount) ? parsedAmount : 0 };
     
     selectedPlan.features = selectedPlan.features || {
         list: ['Company Formation', 'Registered Agent Service', 'Portal Access', 'Document Storage']
@@ -82,7 +83,11 @@ function CheckoutPageContent() {
     const entityStateKey = `${state} ${entityType}`;
     const stateFeeData = stateFees[entityStateKey] || { initial: 0, annual: 0 };
     
-    const ourFees = amount ? parseInt(amount) : selectedPlan.price;
+    const rawFees = Number.isFinite(parsedAmount) ? parsedAmount : selectedPlan.price;
+    const annualizedFees = (planName === 'Vitals' || planName === 'Elite') && rawFees && rawFees < selectedPlan.price
+        ? selectedPlan.price
+        : rawFees;
+    const ourFees = annualizedFees;
     const stateFormationFee = stateFeeData.initial || 0;
     const annualStateFee = stateFeeData.annual || 0;
     

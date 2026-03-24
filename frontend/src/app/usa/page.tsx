@@ -404,7 +404,7 @@ export default function UsaPage() {
                     </p>
                     <div className="flex justify-center mb-6">
                         <Image
-                            src="/partners/mercury-logo.svg"
+                            src="/mercury_logo.svg"
                             alt="Mercury logo"
                             width={180}
                             height={48}

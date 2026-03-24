@@ -61,6 +61,7 @@ const QUICKBOOKS_API_BASE = `${API_BASE_URL}/quickbooks`;
 // Enhanced Navigation Items with nesting for Bookkeeping
 const navItems = [
     { name: 'Dashboard', icon: LayoutGrid, path: 'dashboard' },
+    { name: 'AI Assistant', icon: Bot, path: 'ai-assistant' },
     { name: 'Company & Legal', icon: Building, path: 'company' },
     { name: 'Services & Add-ons', icon: ShoppingCart, path: 'services' }, // New Services Tab
     { 
@@ -322,7 +323,7 @@ const DashboardContent = ({ user, navigate, isQuickBooksLinked, financialSnapsho
             ))}
         </div>
 
-        {/* Main Content: Tasks, Financials, and Chatbot */}
+        {/* Main Content: Tasks and Financials */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             {/* Urgent Tasks & Compliance */}
@@ -362,10 +363,18 @@ const DashboardContent = ({ user, navigate, isQuickBooksLinked, financialSnapsho
 
             </div>
 
-            {/* Chatbot */}
-            <div className="lg:col-span-1 h-full flex flex-col">
-                <EnhancedChatbot />
-                <div className="mt-6 p-4 bg-white rounded-xl shadow-md border border-gray-100">
+            {/* Right Rail */}
+            <div className="lg:col-span-1 h-full flex flex-col space-y-6">
+                <div className="p-4 bg-white rounded-xl shadow-md border border-gray-100">
+                    <h4 className="text-md font-semibold text-gray-700 flex items-center mb-2">
+                        <Bot className="w-4 h-4 mr-2 text-blue-600" /> YourLegal AI Assistant
+                    </h4>
+                    <p className="text-sm text-gray-500">Ask legal, tax, and compliance questions anytime.</p>
+                    <Button onClick={() => navigate('ai-assistant')} className="mt-3 w-full">
+                        Open AI Assistant
+                    </Button>
+                </div>
+                <div className="p-4 bg-white rounded-xl shadow-md border border-gray-100">
                     <h4 className="text-md font-semibold text-gray-700 flex items-center mb-2">
                         <Globe className="w-4 h-4 mr-2 text-blue-600" /> Global Founder Resources
                     </h4>
@@ -385,6 +394,19 @@ const SectionWrapper = ({ title, children }) => (
         <h1 className="text-3xl font-bold text-gray-900 border-b pb-4">{title}</h1>
         {children}
     </div>
+);
+
+const AiAssistantSection = () => (
+    <SectionWrapper title="YourLegal AI Assistant">
+        <div className="max-w-4xl">
+            <p className="text-sm text-gray-600">
+                Chat with your dedicated AI assistant for legal, tax, and compliance guidance tailored to your company.
+            </p>
+        </div>
+        <div className="max-w-4xl">
+            <EnhancedChatbot />
+        </div>
+    </SectionWrapper>
 );
 
 // --- New/Updated Sections ---
@@ -4461,7 +4483,19 @@ export default function PortalPage({ onLogout }) {
         const tasks = [];
         const rejectedDocs = (myDocuments || []).filter(doc => doc?.status === 'rejected');
         const formationsNeedingDocs = (myFormations || []).filter(formation => formation?.status === 'documents_required');
-        const formationsInProgress = (myFormations || []).filter(formation => ['pending', 'processing', 'filed'].includes(formation?.status));
+        const formationStepOrder = ['nameCheck', 'filingPrep', 'stateFiling', 'approved'];
+        const isFormationProgressCompleted = (formation) => {
+            const progress = formation?.formationProgress;
+            if (progress && typeof progress === 'object') {
+                return formationStepOrder.every((step) => progress?.[step]?.status === 'completed');
+            }
+            return ['approved', 'completed'].includes(formation?.status);
+        };
+        const formationsInProgress = (myFormations || []).filter((formation) => {
+            const statusInProgress = ['pending', 'processing', 'filed'].includes(formation?.status);
+            if (!statusInProgress) return false;
+            return !isFormationProgressCompleted(formation);
+        });
         const activeOrders = (myOrders || []).filter(order => ['pending', 'confirmed', 'in_progress'].includes(order?.status));
         const complianceDocRequests = (complianceEvents || []).filter(event => event?.status === 'documents_requested');
 
@@ -4682,6 +4716,7 @@ export default function PortalPage({ onLogout }) {
                         isLoading={qbLoading}
                     />
                 );
+            case 'ai-assistant': return <AiAssistantSection />;
             case 'consultation': return <ConsultationSection />;
             case 'taxes': return <TaxesSection />;
             case 'documents': return <DocumentsSection />;

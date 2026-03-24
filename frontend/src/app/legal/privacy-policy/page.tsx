@@ -76,7 +76,7 @@ export default function PrivacyPolicyPage() {
                 <p>We do not sell, trade, or otherwise transfer to outside parties your personally identifiable information, except to trusted third parties who assist us in operating our website, conducting our business, or servicing you, so long as those parties agree to keep this information confidential.</p>
                 
                 <h2 className="text-2xl font-bold">5. Your Rights</h2>
-                <p>Depending on your location, you may have certain rights regarding your personal information, such as the right to access, correct, or delete your data. Please contact us at contactus@yourlegal.in to make a request.</p>
+                <p>Depending on your location, you may have certain rights regarding your personal information, such as the right to access, correct, or delete your data. Please contact us at hello@yourlegal.io to make a request.</p>
 
                 <h2 className="text-2xl font-bold">6. Changes to This Policy</h2>
                 <p>We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.</p>

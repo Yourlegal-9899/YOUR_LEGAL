@@ -11,9 +11,9 @@ export const AppFooter = () => (
                      <Image src="/logo.png" alt="YourLegal Logo" width={150} height={35} />
                     <p className="text-sm text-gray-400 mt-4">The financial and legal infrastructure for global entrepreneurship.</p>
                     <div className="mt-4 text-sm text-gray-400 space-y-1">
-                        <p><a href="mailto:contactus@yourlegal.in" className="hover:text-white">contactus@yourlegal.in</a></p>
+                        <p><a href="mailto:hello@yourlegal.io" className="hover:text-white">hello@yourlegal.io</a></p>
                         <p><a href="tel:5859001116" className="hover:text-white">(585)-900-1116</a></p>
-                        <p className="mt-2">30 N Gould St, Sheridan,<br/>Wyoming 82801, US</p>
+                        {/* <p className="mt-2">30 N Gould St, Sheridan,<br/>Wyoming 82801, US</p> */}
                     </div>
                 </div>
                 <div>
@@ -54,7 +54,7 @@ export const AppFooter = () => (
             </div>
 
             <div className="mt-12 pt-6 border-t border-gray-800 text-center">
-                <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} YourLegal Inc. All rights reserved.</p>
+                <p className="text-sm text-gray-500">&copy; 2016-2026 YourLegal LLC. All rights reserved.</p>
             </div>
         </div>
     </footer>

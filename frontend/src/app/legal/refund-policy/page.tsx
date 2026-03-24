@@ -77,7 +77,7 @@ export default function RefundPolicyPage() {
                 </ul>
                 
                 <h2 className="text-2xl font-bold">How to Request a Refund</h2>
-                <p>To request a refund, please contact our support team at contactus@yourlegal.in with your order number and the reason for your request. Refunds will be processed to the original method of payment within 5-10 business days.</p>
+                <p>To request a refund, please contact our support team at hello@yourlegal.io with your order number and the reason for your request. Refunds will be processed to the original method of payment within 5-10 business days.</p>
             </article>
             </div>
         </div>
