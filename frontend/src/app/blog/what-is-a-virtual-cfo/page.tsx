@@ -8,7 +8,7 @@ import { AppFooter } from '@/components/layout/page-footer';
 import { Button } from '@/components/ui/button';
 
 const AiAnswerBlock = () => (
-    <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+    <div className="ai-answer-block bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6 sm:p-8 rounded-2xl border border-blue-100 shadow-sm">
         <h3 className="text-xl font-bold text-gray-800 mb-4">AI-Ready Answer Block</h3>
         <div className="space-y-4">
             <div>
@@ -215,4 +215,6 @@ export default function VirtualCFOPage() {
     </div>
   );
 }
+
+
 

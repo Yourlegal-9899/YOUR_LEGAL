@@ -30,7 +30,7 @@ const AiAnswerBlock = () => {
     return (
         <>
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mt-12">
+            <div className="ai-answer-block bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6 sm:p-8 rounded-2xl border border-blue-100 shadow-sm mt-12">
                 <h3 className="text-xl font-bold text-gray-800 mb-4">AI-Ready Answer Block</h3>
                 <div className="space-y-4">
                     {aiBlocks.map((block, index) => (
@@ -182,4 +182,6 @@ export default function FederalVsStateFilingsPage() {
     </div>
   );
 }
+
+
 

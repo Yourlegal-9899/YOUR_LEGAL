@@ -32,7 +32,7 @@ const AiAnswerBlock = () => {
     return (
         <>
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-            <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 mt-12">
+            <div className="ai-answer-block bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6 sm:p-8 rounded-2xl border border-blue-100 shadow-sm mt-12">
                 <h3 className="text-xl font-bold text-gray-800 mb-4">AI-Ready Answer Block</h3>
                 <div className="space-y-4">
                     {aiBlocks.map((block, index) => (
@@ -126,7 +126,7 @@ export default function NonResidentFormationPage() {
                 <p><strong>The Hurdle:</strong> Most traditional US banks require founders to visit a branch in person to open an account. For a non-resident, this is a major obstacle.</p>
                 <p><strong>The Solution:</strong> We partner with modern banking platforms and fintechs that are built for global founders and allow for remote account opening. With your new company documents and EIN, we provide support and introductions to help you apply for an account with these partners, allowing you to manage your US finances from anywhere.</p>
                 
-                <section className="mt-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <section className="mt-8 ai-answer-block bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6 sm:p-8 rounded-2xl border border-blue-100 shadow-sm">
                     <h3 className="text-xl font-bold text-gray-800 text-center mb-4">Banking Support Through Our Partner, Mercury</h3>
                     <div className="text-center">
                         <p className="text-gray-600 text-sm mb-4">
@@ -181,4 +181,6 @@ export default function NonResidentFormationPage() {
     </div>
   );
 }
+
+
 

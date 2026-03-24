@@ -67,6 +67,29 @@ body {
   }
 }
 
+@layer components {
+  .ai-answer-block {
+    @apply relative overflow-hidden;
+  }
+
+  .ai-answer-block .space-y-4 > div {
+    @apply bg-white/80 border border-white/80 rounded-xl p-4 shadow-sm;
+  }
+
+  .ai-answer-block h4 {
+    @apply text-sm font-semibold text-gray-800;
+  }
+
+  .ai-answer-block p,
+  .ai-answer-block li {
+    @apply text-sm text-gray-600 leading-relaxed;
+  }
+
+  .ai-answer-block ul {
+    @apply mt-2;
+  }
+}
+
 /* For 3D Flip Animation */
 @keyframes flip-in {
   from {
