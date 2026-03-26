@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 const FaqSection = () => {
     const faqItems = [
         { title: "How can I contact YourLegal for sales inquiries?", content: "To contact YourLegal for sales inquiries, partnerships, or questions about custom plans, you can schedule a call directly with their team or fill out the contact form on their website." },
-        { title: "How can I get technical or billing support?", content: "For technical or billing support, customers should visit the Help Center or email the support team at support@yourlegal.in." }
+        { title: "How can I get technical or billing support?", content: "For technical or billing support, customers should visit the Help Center or email the support team at hello@yourlegal.io." }
     ];
 
     return (

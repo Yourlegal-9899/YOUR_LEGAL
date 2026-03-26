@@ -24,7 +24,7 @@ function OrganizationSchema() {
     "contactPoint": {
       "@type": "ContactPoint",
       "contactType": "Customer Service",
-      "email": "support@yourlegal.in"
+      "email": "hello@yourlegal.io"
     }
   };
   return (

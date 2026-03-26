@@ -3690,7 +3690,7 @@ const SupportSection = ({ formations }) => {
     const faqs = [
         { q: "How do I upgrade my plan?", a: "You can upgrade your plan at any time from the 'Billing' section of your settings, or by clicking the 'Upgrade Plan' button on this page." },
         { q: "Where can I find my formation documents?", a: "Your official formation documents, like the Articles of Organization and EIN letter, are available for download in the 'Documents' section of your portal." },
-        { q: "How do I contact support for a technical issue?", a: "For technical support, please email us at support@yourlegal.in or use the live chat feature in your portal. For legal or tax questions, please book a consultation." }
+        { q: "How do I contact support for a technical issue?", a: "For technical support, please email us at hello@yourlegal.io or use the live chat feature in your portal. For legal or tax questions, please book a consultation." }
     ];
 
     return (
@@ -3735,10 +3735,10 @@ const SupportSection = ({ formations }) => {
                           Get Assistance
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <a href="mailto:support@yourlegal.in" className="p-6 bg-gray-50 hover:bg-gray-100 rounded-xl transition border border-gray-200 text-center">
+                            <a href="mailto:hello@yourlegal.io" className="p-6 bg-gray-50 hover:bg-gray-100 rounded-xl transition border border-gray-200 text-center">
                                 <MailQuestion className="w-10 h-10 mx-auto text-blue-600 mb-2"/>
                                 <h4 className="font-bold text-gray-800">Email Support</h4>
-                                <p className="text-sm text-gray-500">support@yourlegal.in</p>
+                                <p className="text-sm text-gray-500">hello@yourlegal.io</p>
                             </a>
                             <a href="https://outlook.office365.com/book/YOURLEGAL1@yourlegal.in/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer" className="p-6 bg-gray-50 hover:bg-gray-100 rounded-xl transition border border-gray-200 text-center">
                                 <Video className="w-10 h-10 mx-auto text-blue-600 mb-2"/>
