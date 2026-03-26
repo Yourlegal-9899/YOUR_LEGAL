@@ -150,6 +150,7 @@ exports.createCheckoutSession = async (req, res) => {
       mode: 'payment',
       customer: req.user.stripeCustomerId,
       payment_method_types: ['card'],
+      allow_promotion_codes: true,
       line_items: [
         {
           quantity: 1,
