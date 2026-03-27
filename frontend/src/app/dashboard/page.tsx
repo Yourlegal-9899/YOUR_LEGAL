@@ -1223,13 +1223,25 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading }) => 
     const [maxAmount, setMaxAmount] = useState('');
     const normalizedTransactions = useMemo(() => {
         return (transactions || []).map((tx) => {
-            const description = tx?.Line?.[0]?.Description || tx?.Description || tx?.PrivateNote || 'N/A';
-            const vendor = tx?.VendorRef?.name || tx?.CustomerRef?.name || tx?.EntityRef?.name || 'N/A';
-            const amount = Number(tx?.TotalAmt ?? tx?.Amount ?? 0);
-            const dateValue = tx?.TxnDate || tx?.DueDate || tx?.MetaData?.CreateTime || '';
+            const description =
+                tx?.Line?.[0]?.Description ||
+                tx?.Description ||
+                tx?.PrivateNote ||
+                tx?.memo ||
+                tx?.Memo ||
+                tx?.type ||
+                'N/A';
+            const vendor =
+                tx?.VendorRef?.name ||
+                tx?.CustomerRef?.name ||
+                tx?.EntityRef?.name ||
+                tx?.name ||
+                'N/A';
+            const amount = Number(tx?.TotalAmt ?? tx?.Amount ?? tx?.amount ?? 0);
+            const dateValue = tx?.TxnDate || tx?.DueDate || tx?.MetaData?.CreateTime || tx?.date || '';
             const date = typeof dateValue === 'string' ? dateValue.slice(0, 10) : '';
             return {
-                id: tx?.Id || `${description}-${date}-${amount}`,
+                id: tx?.Id || tx?.id || `${description}-${date}-${amount}`,
                 description,
                 vendor,
                 amount: Number.isFinite(amount) ? amount : 0,
@@ -1249,7 +1261,7 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading }) => 
             return null;
         })();
 
-        return normalizedTransactions.filter((tx) => {
+        const filtered = normalizedTransactions.filter((tx) => {
             if (term) {
                 const haystack = `${tx.description} ${tx.vendor}`.toLowerCase();
                 if (!haystack.includes(term)) return false;
@@ -1262,6 +1274,9 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading }) => 
             if (max !== null && Number.isFinite(max) && tx.amount > max) return false;
             return true;
         });
+
+        filtered.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+        return filtered;
     }, [normalizedTransactions, searchTerm, dateRange, minAmount, maxAmount]);
 
     const handleExportCsv = () => {
@@ -2569,6 +2584,7 @@ const BookkeepingSection = ({
     userId,
     onQuickBooksConnect,
     bills,
+    transactions,
     invoices,
     pnlData,
     balanceSheetData,
@@ -2595,7 +2611,7 @@ const BookkeepingSection = ({
             subtitle = 'Generate key financial reports for planning and compliance.';
             break;
         case 'bookkeeping/transactions':
-             content = <RecentTransactions isQuickBooksLinked={isQuickBooksLinked} transactions={bills || []} isLoading={isLoading} />;
+             content = <RecentTransactions isQuickBooksLinked={isQuickBooksLinked} transactions={transactions || []} isLoading={isLoading} />;
             subtitle = 'Monitor and categorize your recent banking activity.';
             break;
         case 'bookkeeping/invoicing':
@@ -2672,6 +2688,18 @@ const BankingSection = ({ isQuickBooksLinked, accounts, bills, invoices, transac
     const pageSize = 10;
     const bankAccounts = (accounts || []).filter(account => account?.AccountType === 'Bank');
     const primaryAccount = bankAccounts[0];
+    const bankAccountNameSet = new Set(
+        bankAccounts
+            .map(account => account?.Name || account?.FullyQualifiedName)
+            .filter(Boolean)
+            .map(name => String(name))
+    );
+    const bankAccountIdSet = new Set(
+        bankAccounts
+            .map(account => account?.Id)
+            .filter(Boolean)
+            .map(id => String(id))
+    );
     const lastSyncLabel = lastSyncAt
         ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(lastSyncAt)
         : 'Not synced yet';
@@ -2682,7 +2710,16 @@ const BankingSection = ({ isQuickBooksLinked, accounts, bills, invoices, transac
     }, 0);
 
     // Only include actual banking transactions, not invoices/bills
-    const bankingTransactions = (transactions || [])
+    const bankingSourceTransactions = (transactions || []).filter((row) => {
+        if (!bankAccountNameSet.size && !bankAccountIdSet.size) return true;
+        const accountName = row?.account || row?.Account || row?.accountName;
+        const accountId = row?.accountId || row?.AccountId;
+        if (accountId && bankAccountIdSet.has(String(accountId))) return true;
+        if (accountName && bankAccountNameSet.has(String(accountName))) return true;
+        return false;
+    });
+
+    const bankingTransactions = bankingSourceTransactions
         .map((row) => ({
             id: row?.id || `${row?.name}-${row?.date}-${row?.amount}`,
             type: row?.type || 'Transaction',
@@ -4050,6 +4087,7 @@ export default function PortalPage({ onLogout }) {
         const columns = report?.Columns?.Column || [];
         const titles = columns.map((col: any) => col?.ColTitle || col?.Name || '');
         const rows = extractReportRows(report?.Rows?.Row || []);
+        const accountColIndex = titles.findIndex((title: string) => /account/i.test(title || ''));
 
         return rows
             .map((colData: any[], index: number) => {
@@ -4089,6 +4127,14 @@ export default function PortalPage({ onLogout }) {
                     record['Account'] ||
                     'N/A';
                 const memo = record['Memo/Description'] || record.Memo || record.Description || '';
+                const accountCell = accountColIndex >= 0 ? colData[accountColIndex] : null;
+                const account =
+                    accountCell?.value ||
+                    record.Account ||
+                    record['Account'] ||
+                    record['Account Name'] ||
+                    '';
+                const accountId = accountCell?.id || '';
 
                 return {
                     id: `txn-${index}-${date}-${amount}`,
@@ -4097,6 +4143,8 @@ export default function PortalPage({ onLogout }) {
                     name,
                     memo,
                     amount: Number.isFinite(amount) ? amount : 0,
+                    account: account || undefined,
+                    accountId: accountId || undefined,
                 };
             })
             .filter((row) => row.date || row.name || row.amount);
@@ -4681,6 +4729,7 @@ export default function PortalPage({ onLogout }) {
                   userId={resolvedUserId}
                   onQuickBooksConnect={handleQuickBooksConnect}
                   bills={qbBills}
+                  transactions={qbTransactions}
                   invoices={qbInvoices}
                   pnlData={qbPnlData}
                   balanceSheetData={qbBalanceSheetData}
