@@ -1215,12 +1215,12 @@ const BookkeepingOverview = ({ isQuickBooksLinked, lastSyncAt, bankAccountCount,
 
 // --- New Components for Bookkeeping ---
 
-const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading }) => {
+const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading, dateRange, onDateRangeChange }) => {
     const [showFilters, setShowFilters] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [dateRange, setDateRange] = useState('all');
     const [minAmount, setMinAmount] = useState('');
     const [maxAmount, setMaxAmount] = useState('');
+    const effectiveDateRange = dateRange || 'all';
     const normalizedTransactions = useMemo(() => {
         return (transactions || []).map((tx) => {
             const description =
@@ -1255,9 +1255,9 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading }) => 
         const max = maxAmount === '' ? null : Number(maxAmount);
         const now = new Date();
         const rangeStart = (() => {
-            if (dateRange === '30d') return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
-            if (dateRange === '90d') return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90);
-            if (dateRange === '365d') return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 365);
+            if (effectiveDateRange === '30d') return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+            if (effectiveDateRange === '90d') return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 90);
+            if (effectiveDateRange === '365d') return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 365);
             return null;
         })();
 
@@ -1277,7 +1277,7 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading }) => 
 
         filtered.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
         return filtered;
-    }, [normalizedTransactions, searchTerm, dateRange, minAmount, maxAmount]);
+    }, [normalizedTransactions, searchTerm, effectiveDateRange, minAmount, maxAmount]);
 
     const handleExportCsv = () => {
         if (!filteredTransactions.length) return;
@@ -1362,8 +1362,8 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading }) => 
                             <div>
                                 <Label className="text-xs text-gray-500">Date Range</Label>
                                 <select
-                                    value={dateRange}
-                                    onChange={(e) => setDateRange(e.target.value)}
+                                    value={effectiveDateRange}
+                                    onChange={(e) => onDateRangeChange?.(e.target.value)}
                                     className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 >
                                     <option value="all">All time</option>
@@ -2596,7 +2596,9 @@ const BookkeepingSection = ({
     lastSyncAt,
     financialSnapshot,
     onQuickBooksRefresh,
-    companyName
+    companyName,
+    transactionsRange,
+    onTransactionsRangeChange
 }) => {
     let content;
     let subtitle;
@@ -2611,7 +2613,15 @@ const BookkeepingSection = ({
             subtitle = 'Generate key financial reports for planning and compliance.';
             break;
         case 'bookkeeping/transactions':
-             content = <RecentTransactions isQuickBooksLinked={isQuickBooksLinked} transactions={transactions || []} isLoading={isLoading} />;
+             content = (
+                <RecentTransactions
+                    isQuickBooksLinked={isQuickBooksLinked}
+                    transactions={transactions || []}
+                    isLoading={isLoading}
+                    dateRange={transactionsRange}
+                    onDateRangeChange={onTransactionsRangeChange}
+                />
+             );
             subtitle = 'Monitor and categorize your recent banking activity.';
             break;
         case 'bookkeeping/invoicing':
@@ -4040,6 +4050,7 @@ export default function PortalPage({ onLogout }) {
     const [qbBills, setQbBills] = useState([]);
     const [qbInvoices, setQbInvoices] = useState([]);
     const [qbTransactions, setQbTransactions] = useState([]);
+    const [qbTransactionRange, setQbTransactionRange] = useState('90d');
     const [qbPnlData, setQbPnlData] = useState(null);
     const [qbBalanceSheetData, setQbBalanceSheetData] = useState(null);
     const [qbCashFlowData, setQbCashFlowData] = useState(null);
@@ -4150,11 +4161,35 @@ export default function PortalPage({ onLogout }) {
             .filter((row) => row.date || row.name || row.amount);
     };
 
+    const formatQbDate = (value: Date) => {
+        const year = value.getFullYear();
+        const month = String(value.getMonth() + 1).padStart(2, '0');
+        const day = String(value.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const buildTransactionListUrl = (range: string) => {
+        const base = 'reports/TransactionList';
+        const now = new Date();
+        const endDate = formatQbDate(now);
+        const daysByRange: Record<string, number> = { '30d': 30, '90d': 90, '365d': 365 };
+
+        if (range === 'all') {
+            return `${base}?start_date=2000-01-01&end_date=${endDate}`;
+        }
+
+        const days = daysByRange[range] || 90;
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days + 1);
+        const startDate = formatQbDate(start);
+        return `${base}?start_date=${startDate}&end_date=${endDate}`;
+    };
+
     const loadQuickBooksData = useCallback(async () => {
         if (!isQuickBooksLinked || !user) return;
         setQbLoading(true);
         setQbError(null);
         try {
+            const transactionListUrl = buildTransactionListUrl(qbTransactionRange);
             const [billsRes, invoicesRes, pnlRes, balanceSheetRes, cashFlowRes, accountsRes, transactionsRes] = await Promise.all([
                 fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
                     method: 'POST',
@@ -4196,7 +4231,7 @@ export default function PortalPage({ onLogout }) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ method: 'GET', url: 'reports/TransactionList' })
+                    body: JSON.stringify({ method: 'GET', url: transactionListUrl })
                 })
             ]);
 
@@ -4222,7 +4257,7 @@ export default function PortalPage({ onLogout }) {
         } finally {
             setQbLoading(false);
         }
-    }, [isQuickBooksLinked, user]);
+    }, [isQuickBooksLinked, user, qbTransactionRange]);
 
     useEffect(() => {
         if (!isQuickBooksLinked || !user) {
@@ -4742,6 +4777,8 @@ export default function PortalPage({ onLogout }) {
                   financialSnapshot={financialSnapshot}
                   onQuickBooksRefresh={loadQuickBooksData}
                   companyName={companyName}
+                  transactionsRange={qbTransactionRange}
+                  onTransactionsRangeChange={setQbTransactionRange}
                 />
               );
           }
