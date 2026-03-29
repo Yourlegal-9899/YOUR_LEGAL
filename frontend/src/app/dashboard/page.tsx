@@ -4094,6 +4094,18 @@ export default function PortalPage({ onLogout }) {
         return acc;
     };
 
+    const parseMoney = (value: any) => {
+        if (value === null || value === undefined) return 0;
+        if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+        const raw = String(value).trim();
+        if (!raw) return 0;
+        const isNegative = raw.startsWith('(') && raw.endsWith(')');
+        const cleaned = raw.replace(/[^\d.-]/g, '');
+        const num = Number(cleaned);
+        if (!Number.isFinite(num)) return 0;
+        return isNegative ? -Math.abs(num) : num;
+    };
+
     const parseTransactionReport = (report: any) => {
         const columns = report?.Columns?.Column || [];
         const titles = columns.map((col: any) => col?.ColTitle || col?.Name || '');
@@ -4109,14 +4121,19 @@ export default function PortalPage({ onLogout }) {
 
                 const rawDebit = record.Debit || record['Debit'];
                 const rawCredit = record.Credit || record['Credit'];
-                const rawAmount = record.Amount || record['Amount'] || record['Amount (Currency)'];
+                const rawAmount =
+                    record.Amount ||
+                    record['Amount'] ||
+                    record['Amount (Currency)'] ||
+                    record['Amount (Base Currency)'] ||
+                    record['Amount (Base)'];
 
-                const debit = rawDebit ? Number(String(rawDebit).replace(/,/g, '')) : 0;
-                const credit = rawCredit ? Number(String(rawCredit).replace(/,/g, '')) : 0;
-                let amount = rawAmount ? Number(String(rawAmount).replace(/,/g, '')) : 0;
+                const debit = parseMoney(rawDebit);
+                const credit = parseMoney(rawCredit);
+                let amount = parseMoney(rawAmount);
 
-                if (Number.isFinite(credit) || Number.isFinite(debit)) {
-                    amount = (Number.isFinite(credit) ? credit : 0) - (Number.isFinite(debit) ? debit : 0);
+                if (credit !== 0 || debit !== 0) {
+                    amount = credit - debit;
                 }
 
                 const date =
@@ -4146,6 +4163,7 @@ export default function PortalPage({ onLogout }) {
                     record['Account Name'] ||
                     '';
                 const accountId = accountCell?.id || '';
+                const category = account || record.Category || record['Category'] || '';
 
                 return {
                     id: `txn-${index}-${date}-${amount}`,
@@ -4156,6 +4174,7 @@ export default function PortalPage({ onLogout }) {
                     amount: Number.isFinite(amount) ? amount : 0,
                     account: account || undefined,
                     accountId: accountId || undefined,
+                    category: category || undefined,
                 };
             })
             .filter((row) => row.date || row.name || row.amount);
