@@ -66,7 +66,30 @@ const parseQuickBooksErrorMessage = (payload: any, fallback: string) => {
     return qbError?.Detail || qbError?.Message || payload?.message || fallback;
 };
 
+const parseQuickBooksAmount = (value: any) => {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    const raw = String(value).trim();
+    if (!raw) return 0;
+
+    const isNegative = raw.startsWith('(') && raw.endsWith(')');
+    const cleaned = raw.replace(/[^\d.-]/g, '');
+    const parsed = Number(cleaned);
+    if (!Number.isFinite(parsed)) return 0;
+    return isNegative ? -Math.abs(parsed) : parsed;
+};
+
 const buildQuickBooksQueryUrl = (query: string) => `query?query=${encodeURIComponent(query)}`;
+
+const buildQuickBooksUrlWithParams = (url: string, params: Record<string, string | number>) => {
+    const [path, rawQuery = ''] = String(url || '').split('?');
+    const searchParams = new URLSearchParams(rawQuery);
+    Object.entries(params).forEach(([key, value]) => {
+        searchParams.set(key, String(value));
+    });
+    const query = searchParams.toString();
+    return query ? `${path}?${query}` : path;
+};
 
 const fetchQuickBooksProxyJson = async ({ method = 'GET', url, data }: { method?: string; url: string; data?: any }) => {
     const response = await fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
@@ -126,6 +149,81 @@ const fetchQuickBooksQueryAll = async ({
     }
 
     return results;
+};
+
+const fetchQuickBooksReportAll = async ({
+    reportUrl,
+    pageSize = QUICKBOOKS_QUERY_PAGE_SIZE,
+    maxPages = QUICKBOOKS_MAX_QUERY_PAGES,
+}: {
+    reportUrl: string;
+    pageSize?: number;
+    maxPages?: number;
+}) => {
+    let combined: any = null;
+    let startPosition = 1;
+    let previousSignature = '';
+
+    for (let page = 0; page < maxPages; page += 1) {
+        const url = buildQuickBooksUrlWithParams(reportUrl, {
+            start_position: startPosition,
+            max_results: pageSize,
+        });
+        const payload = await fetchQuickBooksProxyJson({ method: 'GET', url });
+        const rows = Array.isArray(payload?.Rows?.Row) ? payload.Rows.Row : [];
+
+        const firstKey =
+            rows[0]?.Header?.ColData?.[0]?.value ||
+            rows[0]?.ColData?.[0]?.value ||
+            '';
+        const lastKey =
+            rows[rows.length - 1]?.Summary?.ColData?.[0]?.value ||
+            rows[rows.length - 1]?.Header?.ColData?.[0]?.value ||
+            rows[rows.length - 1]?.ColData?.[0]?.value ||
+            '';
+        const signature = `${rows.length}|${firstKey}|${lastKey}`;
+
+        if (!rows.length) {
+            if (!combined) combined = payload;
+            break;
+        }
+
+        if (page > 0 && signature === previousSignature) {
+            break;
+        }
+        previousSignature = signature;
+
+        if (!combined) {
+            combined = payload;
+        } else {
+            const existingRows = Array.isArray(combined?.Rows?.Row) ? combined.Rows.Row : [];
+            combined = {
+                ...combined,
+                Rows: {
+                    ...(combined.Rows || {}),
+                    Row: [...existingRows, ...rows],
+                },
+            };
+        }
+
+        const headerOptions = Array.isArray(payload?.Header?.Option) ? payload.Header.Option : [];
+        const optionMaxResults = Number(
+            headerOptions.find((opt: any) => String(opt?.Name || '').toLowerCase() === 'maxresults')?.Value
+        );
+        const optionNumRows = Number(
+            headerOptions.find((opt: any) => String(opt?.Name || '').toLowerCase() === 'numrows')?.Value
+        );
+        const effectiveBatchSize = Number.isFinite(optionMaxResults) && optionMaxResults > 0
+            ? optionMaxResults
+            : rows.length;
+
+        const combinedRowCount = Array.isArray(combined?.Rows?.Row) ? combined.Rows.Row.length : rows.length;
+        if (Number.isFinite(optionNumRows) && optionNumRows > 0 && combinedRowCount >= optionNumRows) break;
+
+        startPosition += Math.max(effectiveBatchSize, 1);
+    }
+
+    return combined;
 };
 
 // Enhanced Navigation Items with nesting for Bookkeeping
@@ -1313,7 +1411,7 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading, dateR
                 tx?.EntityRef?.name ||
                 tx?.name ||
                 'N/A';
-            const amount = Number(tx?.TotalAmt ?? tx?.Amount ?? tx?.amount ?? 0);
+            const amount = parseQuickBooksAmount(tx?.TotalAmt ?? tx?.Amount ?? tx?.amount ?? 0);
             const dateValue = tx?.TxnDate || tx?.DueDate || tx?.MetaData?.CreateTime || tx?.date || '';
             const date = typeof dateValue === 'string' ? dateValue.slice(0, 10) : '';
             const type = tx?.type || tx?.TxnType || tx?.transactionType || 'Transaction';
@@ -1652,8 +1750,7 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
     const [invoicePage, setInvoicePage] = useState(1);
     
     const safeAmount = (value) => {
-        const n = Number(value);
-        return Number.isFinite(n) ? n : 0;
+        return parseQuickBooksAmount(value);
     };
     const resolveInvoiceStatus = (inv) => {
         if (safeAmount(inv?.Balance) === 0) return 'paid';
@@ -2415,7 +2512,20 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
                                     </td>
                                     <td className="px-6 py-4 text-gray-500">{account.AccountSubType}</td>
                                     <td className={`px-6 py-4 text-right font-medium ${account.Classification === 'Asset' ? 'text-green-600' : 'text-gray-800'}`}>
-                                        {account.CurrentBalance != null ? `$${account.CurrentBalance.toFixed(2)}` : 'N/A'}
+                                        {(() => {
+                                            const rawBalance =
+                                                account?.CurrentBalance ??
+                                                account?.CurrentBalanceWithSubAccounts ??
+                                                account?.Balance;
+                                            if (rawBalance === null || rawBalance === undefined || rawBalance === '') {
+                                                return 'N/A';
+                                            }
+                                            const parsedBalance = parseQuickBooksAmount(rawBalance);
+                                            return `$${parsedBalance.toLocaleString(undefined, {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                            })}`;
+                                        })()}
                                     </td>
                                 </tr>
                             ))}
@@ -2488,6 +2598,12 @@ const BookkeepingReports = ({ isQuickBooksLinked, pnlData, balanceSheetData, cas
     const [showPnl, setShowPnl] = useState(false);
     const [showBalanceSheet, setShowBalanceSheet] = useState(false);
     const [showCashFlow, setShowCashFlow] = useState(false);
+    const [pnlPage, setPnlPage] = useState(1);
+    const [balanceSheetPage, setBalanceSheetPage] = useState(1);
+    const [cashFlowPage, setCashFlowPage] = useState(1);
+    const [pnlPageSize, setPnlPageSize] = useState(String(QUICKBOOKS_TABLE_PAGE_SIZES[0]));
+    const [balanceSheetPageSize, setBalanceSheetPageSize] = useState(String(QUICKBOOKS_TABLE_PAGE_SIZES[0]));
+    const [cashFlowPageSize, setCashFlowPageSize] = useState(String(QUICKBOOKS_TABLE_PAGE_SIZES[0]));
 
     const extractReportRows = (row, level = 0) => {
         const rows = [];
@@ -2584,6 +2700,53 @@ const BookkeepingReports = ({ isQuickBooksLinked, pnlData, balanceSheetData, cas
         URL.revokeObjectURL(link.href);
     };
 
+    const getReportPagination = (data: any, page: number, pageSizeRaw: string) => {
+        const rows = Array.isArray(data?.Rows?.Row) ? data.Rows.Row : [];
+        const pageSize = Number(pageSizeRaw) > 0 ? Number(pageSizeRaw) : QUICKBOOKS_TABLE_PAGE_SIZES[0];
+        const totalRows = rows.length;
+        const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+        const currentPage = Math.min(Math.max(page, 1), totalPages);
+        const start = (currentPage - 1) * pageSize;
+        const end = Math.min(start + pageSize, totalRows);
+        const pagedRows = rows.slice(start, end);
+        const pagedData = data
+            ? {
+                  ...data,
+                  Rows: {
+                      ...(data.Rows || {}),
+                      Row: pagedRows,
+                  },
+              }
+            : data;
+
+        return { pagedData, totalRows, totalPages, currentPage, start, end, pageSize };
+    };
+
+    const pnlPagination = useMemo(
+        () => getReportPagination(pnlData, pnlPage, pnlPageSize),
+        [pnlData, pnlPage, pnlPageSize]
+    );
+    const balanceSheetPagination = useMemo(
+        () => getReportPagination(balanceSheetData, balanceSheetPage, balanceSheetPageSize),
+        [balanceSheetData, balanceSheetPage, balanceSheetPageSize]
+    );
+    const cashFlowPagination = useMemo(
+        () => getReportPagination(cashFlowData, cashFlowPage, cashFlowPageSize),
+        [cashFlowData, cashFlowPage, cashFlowPageSize]
+    );
+
+    useEffect(() => {
+        setPnlPage(1);
+    }, [pnlPageSize, pnlData]);
+
+    useEffect(() => {
+        setBalanceSheetPage(1);
+    }, [balanceSheetPageSize, balanceSheetData]);
+
+    useEffect(() => {
+        setCashFlowPage(1);
+    }, [cashFlowPageSize, cashFlowData]);
+
      if (isLoading) {
         return (
             <div className="flex justify-center items-center p-10 bg-white rounded-xl shadow-sm border border-gray-200">
@@ -2637,7 +2800,42 @@ const BookkeepingReports = ({ isQuickBooksLinked, pnlData, balanceSheetData, cas
                         </DialogDescription>
                     </DialogHeader>
                     <div className="max-h-[70vh] overflow-y-auto pr-4">
-                        <ProfitAndLossReport data={pnlData} />
+                        {pnlData && (
+                            <div className="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <p className="text-xs text-gray-500">
+                                    Showing {pnlPagination.totalRows ? `${pnlPagination.start + 1}-${pnlPagination.end}` : '0'} of {pnlPagination.totalRows} top-level rows
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <select
+                                        value={pnlPageSize}
+                                        onChange={(e) => setPnlPageSize(e.target.value)}
+                                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                                    >
+                                        {QUICKBOOKS_TABLE_PAGE_SIZES.map((size) => (
+                                            <option key={size} value={String(size)}>{size} / page</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPnlPage((prev) => Math.max(1, prev - 1))}
+                                        disabled={pnlPagination.currentPage <= 1}
+                                        className="px-2 py-1 text-xs border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Prev
+                                    </button>
+                                    <span className="text-xs text-gray-600">Page {pnlPagination.currentPage} of {pnlPagination.totalPages}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPnlPage((prev) => Math.min(pnlPagination.totalPages, prev + 1))}
+                                        disabled={pnlPagination.currentPage >= pnlPagination.totalPages}
+                                        className="px-2 py-1 text-xs border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        <ProfitAndLossReport data={pnlPagination.pagedData || pnlData} />
                     </div>
                 </DialogContent>
             </Dialog>
@@ -2660,7 +2858,42 @@ const BookkeepingReports = ({ isQuickBooksLinked, pnlData, balanceSheetData, cas
                         </DialogDescription>
                     </DialogHeader>
                     <div className="max-h-[70vh] overflow-y-auto pr-4">
-                        <ProfitAndLossReport data={balanceSheetData} />
+                        {balanceSheetData && (
+                            <div className="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <p className="text-xs text-gray-500">
+                                    Showing {balanceSheetPagination.totalRows ? `${balanceSheetPagination.start + 1}-${balanceSheetPagination.end}` : '0'} of {balanceSheetPagination.totalRows} top-level rows
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <select
+                                        value={balanceSheetPageSize}
+                                        onChange={(e) => setBalanceSheetPageSize(e.target.value)}
+                                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                                    >
+                                        {QUICKBOOKS_TABLE_PAGE_SIZES.map((size) => (
+                                            <option key={size} value={String(size)}>{size} / page</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => setBalanceSheetPage((prev) => Math.max(1, prev - 1))}
+                                        disabled={balanceSheetPagination.currentPage <= 1}
+                                        className="px-2 py-1 text-xs border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Prev
+                                    </button>
+                                    <span className="text-xs text-gray-600">Page {balanceSheetPagination.currentPage} of {balanceSheetPagination.totalPages}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setBalanceSheetPage((prev) => Math.min(balanceSheetPagination.totalPages, prev + 1))}
+                                        disabled={balanceSheetPagination.currentPage >= balanceSheetPagination.totalPages}
+                                        className="px-2 py-1 text-xs border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        <ProfitAndLossReport data={balanceSheetPagination.pagedData || balanceSheetData} />
                     </div>
                 </DialogContent>
             </Dialog>
@@ -2683,7 +2916,42 @@ const BookkeepingReports = ({ isQuickBooksLinked, pnlData, balanceSheetData, cas
                         </DialogDescription>
                     </DialogHeader>
                     <div className="max-h-[70vh] overflow-y-auto pr-4">
-                        <ProfitAndLossReport data={cashFlowData} />
+                        {cashFlowData && (
+                            <div className="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <p className="text-xs text-gray-500">
+                                    Showing {cashFlowPagination.totalRows ? `${cashFlowPagination.start + 1}-${cashFlowPagination.end}` : '0'} of {cashFlowPagination.totalRows} top-level rows
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <select
+                                        value={cashFlowPageSize}
+                                        onChange={(e) => setCashFlowPageSize(e.target.value)}
+                                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                                    >
+                                        {QUICKBOOKS_TABLE_PAGE_SIZES.map((size) => (
+                                            <option key={size} value={String(size)}>{size} / page</option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCashFlowPage((prev) => Math.max(1, prev - 1))}
+                                        disabled={cashFlowPagination.currentPage <= 1}
+                                        className="px-2 py-1 text-xs border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Prev
+                                    </button>
+                                    <span className="text-xs text-gray-600">Page {cashFlowPagination.currentPage} of {cashFlowPagination.totalPages}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCashFlowPage((prev) => Math.min(cashFlowPagination.totalPages, prev + 1))}
+                                        disabled={cashFlowPagination.currentPage >= cashFlowPagination.totalPages}
+                                        className="px-2 py-1 text-xs border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        <ProfitAndLossReport data={cashFlowPagination.pagedData || cashFlowData} />
                     </div>
                 </DialogContent>
             </Dialog>
@@ -2697,10 +2965,15 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
     const [showBillsModal, setShowBillsModal] = useState(false);
     const [arSearchTerm, setArSearchTerm] = useState('');
     const [apSearchTerm, setApSearchTerm] = useState('');
+    const [arModalPageSize, setArModalPageSize] = useState(String(QUICKBOOKS_TABLE_PAGE_SIZES[0]));
+    const [apModalPageSize, setApModalPageSize] = useState(String(QUICKBOOKS_TABLE_PAGE_SIZES[0]));
+    const [apTablePageSize, setApTablePageSize] = useState(String(QUICKBOOKS_TABLE_PAGE_SIZES[0]));
+    const [arModalPage, setArModalPage] = useState(1);
+    const [apModalPage, setApModalPage] = useState(1);
+    const [apTablePage, setApTablePage] = useState(1);
     const now = new Date();
     const safeAmount = (value) => {
-        const n = Number(value);
-        return Number.isFinite(n) ? n : 0;
+        return parseQuickBooksAmount(value);
     };
 
     const arInvoices = (invoices || []).filter(inv => safeAmount(inv?.Balance ?? inv?.TotalAmt) > 0);
@@ -2712,6 +2985,74 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
     const apTotal = apBills.reduce((sum, bill) => sum + safeAmount(bill?.Balance ?? bill?.TotalAmt), 0);
     const apOverdue = apBills.filter(bill => bill?.DueDate && new Date(bill.DueDate) < now).length;
     const apPending = apBills.filter(bill => !bill?.DueDate || new Date(bill.DueDate) >= now).length;
+
+    const filteredArInvoices = useMemo(() => {
+        const search = arSearchTerm.trim().toLowerCase();
+        if (!search) return arInvoices;
+
+        return arInvoices.filter((invoice) => {
+            const status = safeAmount(invoice?.Balance) === 0
+                ? 'paid'
+                : (invoice?.DueDate && new Date(invoice.DueDate) < now ? 'overdue' : 'due');
+            return (
+                String(invoice?.DocNumber || invoice?.Id || '').toLowerCase().includes(search) ||
+                String(invoice?.CustomerRef?.name || '').toLowerCase().includes(search) ||
+                status.includes(search)
+            );
+        });
+    }, [arInvoices, arSearchTerm, now]);
+
+    const filteredApBills = useMemo(() => {
+        const search = apSearchTerm.trim().toLowerCase();
+        if (!search) return apBills;
+
+        return apBills.filter((bill) => {
+            const status = safeAmount(bill?.Balance) === 0
+                ? 'paid'
+                : (bill?.DueDate && new Date(bill.DueDate) < now ? 'overdue' : 'due');
+            return (
+                String(bill?.DocNumber || bill?.Id || '').toLowerCase().includes(search) ||
+                String(bill?.VendorRef?.name || '').toLowerCase().includes(search) ||
+                status.includes(search)
+            );
+        });
+    }, [apBills, apSearchTerm, now]);
+
+    const resolvedArModalPageSize = Number(arModalPageSize) > 0 ? Number(arModalPageSize) : QUICKBOOKS_TABLE_PAGE_SIZES[0];
+    const resolvedApModalPageSize = Number(apModalPageSize) > 0 ? Number(apModalPageSize) : QUICKBOOKS_TABLE_PAGE_SIZES[0];
+    const resolvedApTablePageSize = Number(apTablePageSize) > 0 ? Number(apTablePageSize) : QUICKBOOKS_TABLE_PAGE_SIZES[0];
+
+    const arModalTotalPages = Math.max(1, Math.ceil(filteredArInvoices.length / resolvedArModalPageSize));
+    const apModalTotalPages = Math.max(1, Math.ceil(filteredApBills.length / resolvedApModalPageSize));
+    const apTableTotalPages = Math.max(1, Math.ceil(apBills.length / resolvedApTablePageSize));
+
+    const paginatedArInvoices = filteredArInvoices.slice((arModalPage - 1) * resolvedArModalPageSize, arModalPage * resolvedArModalPageSize);
+    const paginatedApBills = filteredApBills.slice((apModalPage - 1) * resolvedApModalPageSize, apModalPage * resolvedApModalPageSize);
+    const paginatedApTableBills = apBills.slice((apTablePage - 1) * resolvedApTablePageSize, apTablePage * resolvedApTablePageSize);
+
+    useEffect(() => {
+        setArModalPage(1);
+    }, [arSearchTerm, arModalPageSize, showInvoicesModal]);
+
+    useEffect(() => {
+        setApModalPage(1);
+    }, [apSearchTerm, apModalPageSize, showBillsModal]);
+
+    useEffect(() => {
+        setApTablePage(1);
+    }, [apTablePageSize, apBills.length]);
+
+    useEffect(() => {
+        setArModalPage((prev) => Math.min(prev, arModalTotalPages));
+    }, [arModalTotalPages]);
+
+    useEffect(() => {
+        setApModalPage((prev) => Math.min(prev, apModalTotalPages));
+    }, [apModalTotalPages]);
+
+    useEffect(() => {
+        setApTablePage((prev) => Math.min(prev, apTableTotalPages));
+    }, [apTableTotalPages]);
 
     return (
         <div className="space-y-4">
@@ -2759,7 +3100,7 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
                     <DialogHeader>
                         <DialogTitle>Accounts Receivable - Outstanding Invoices</DialogTitle>
                         <DialogDescription>
-                            Showing {arInvoices.length} outstanding invoice{arInvoices.length === 1 ? '' : 's'}
+                            Showing {filteredArInvoices.length} filtered invoice{filteredArInvoices.length === 1 ? '' : 's'} ({arInvoices.length} total outstanding)
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex items-center gap-2 mb-4">
@@ -2772,7 +3113,7 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
                             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
-                    {arInvoices.length > 0 ? (
+                    {filteredArInvoices.length > 0 ? (
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
                                 <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b sticky top-0">
@@ -2786,7 +3127,7 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {arInvoices.map((invoice) => (
+                                    {paginatedArInvoices.map((invoice) => (
                                         <tr key={invoice.Id} className="bg-white border-b hover:bg-gray-50 transition">
                                             <td className="px-6 py-4 font-medium text-blue-600">{invoice.DocNumber || invoice.Id}</td>
                                             <td className="px-6 py-4 font-semibold text-gray-900">{invoice.CustomerRef?.name || 'N/A'}</td>
@@ -2801,16 +3142,49 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right font-bold text-gray-900">
-                                                ${safeAmount(invoice.TotalAmt).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                                ${safeAmount(invoice.TotalAmt ?? invoice.Balance).toLocaleString(undefined, {minimumFractionDigits: 2})}
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border-t border-gray-100 bg-white">
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span>Rows per page</span>
+                                    <select
+                                        value={arModalPageSize}
+                                        onChange={(e) => setArModalPageSize(e.target.value)}
+                                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                                    >
+                                        {QUICKBOOKS_TABLE_PAGE_SIZES.map((size) => (
+                                            <option key={size} value={String(size)}>{size}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setArModalPage((prev) => Math.max(1, prev - 1))}
+                                        disabled={arModalPage <= 1}
+                                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Previous
+                                    </button>
+                                    <span className="text-sm text-gray-600">Page {arModalPage} of {arModalTotalPages}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setArModalPage((prev) => Math.min(arModalTotalPages, prev + 1))}
+                                        disabled={arModalPage >= arModalTotalPages}
+                                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     ) : (
                         <div className="text-center py-8 text-gray-500">
-                            <p>No outstanding invoices</p>
+                            <p>No invoices match your search.</p>
                         </div>
                     )}
                 </DialogContent>
@@ -2822,7 +3196,7 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
                     <DialogHeader>
                         <DialogTitle>Accounts Payable - Outstanding Bills</DialogTitle>
                         <DialogDescription>
-                            Showing {apBills.length} outstanding bill{apBills.length === 1 ? '' : 's'}
+                            Showing {filteredApBills.length} filtered bill{filteredApBills.length === 1 ? '' : 's'} ({apBills.length} total outstanding)
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex items-center gap-2 mb-4">
@@ -2835,65 +3209,78 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
                             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
-                    {apBills.length > 0 ? (
-                        <>
-                            {(() => {
-                                const filteredApBills = apBills.filter((bill) =>
-                                    bill.DocNumber?.toLowerCase().includes(apSearchTerm.toLowerCase()) ||
-                                    bill.VendorRef?.name?.toLowerCase().includes(apSearchTerm.toLowerCase()) ||
-                                    (safeAmount(bill?.Balance) === 0 ? 'Paid' : (bill?.DueDate && new Date(bill.DueDate) < now ? 'Overdue' : 'Due')).toLowerCase().includes(apSearchTerm.toLowerCase())
-                                );
-
-                                if (filteredApBills.length === 0) {
-                                    return (
-                                        <div className="text-center py-8 text-gray-500">
-                                            <p>No bills match your search</p>
-                                        </div>
-                                    );
-                                }
-
-                                return (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm text-left">
-                                            <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b sticky top-0">
-                                                <tr>
-                                                    <th className="px-6 py-3">Bill #</th>
-                                                    <th className="px-6 py-3">Vendor</th>
-                                                    <th className="px-6 py-3">Date</th>
-                                                    <th className="px-6 py-3">Due Date</th>
-                                                    <th className="px-6 py-3">Status</th>
-                                                    <th className="px-6 py-3 text-right">Amount</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {filteredApBills.map((bill) => (
-                                                    <tr key={bill.Id} className="bg-white border-b hover:bg-gray-50 transition">
-                                                        <td className="px-6 py-4 font-medium text-blue-600">{bill.DocNumber || bill.Id}</td>
-                                                        <td className="px-6 py-4 font-semibold text-gray-900">{bill.VendorRef?.name || 'N/A'}</td>
-                                                        <td className="px-6 py-4 text-gray-500">{bill.TxnDate}</td>
-                                                        <td className="px-6 py-4 text-gray-500">{bill.DueDate}</td>
-                                                        <td className="px-6 py-4">
-                                                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                                                                bill.Balance === 0 ? 'bg-green-100 text-green-700' : 
-                                                                (bill?.DueDate && new Date(bill.DueDate) < now ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')
-                                                            }`}>
-                                                                {safeAmount(bill?.Balance) === 0 ? 'Paid' : (bill?.DueDate && new Date(bill.DueDate) < now ? 'Overdue' : 'Due')}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-right font-bold text-gray-900">
-                                                            ${safeAmount(bill.TotalAmt).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                );
-                            })()}
-                        </>
+                    {filteredApBills.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b sticky top-0">
+                                    <tr>
+                                        <th className="px-6 py-3">Bill #</th>
+                                        <th className="px-6 py-3">Vendor</th>
+                                        <th className="px-6 py-3">Date</th>
+                                        <th className="px-6 py-3">Due Date</th>
+                                        <th className="px-6 py-3">Status</th>
+                                        <th className="px-6 py-3 text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {paginatedApBills.map((bill) => (
+                                        <tr key={bill.Id} className="bg-white border-b hover:bg-gray-50 transition">
+                                            <td className="px-6 py-4 font-medium text-blue-600">{bill.DocNumber || bill.Id}</td>
+                                            <td className="px-6 py-4 font-semibold text-gray-900">{bill.VendorRef?.name || 'N/A'}</td>
+                                            <td className="px-6 py-4 text-gray-500">{bill.TxnDate}</td>
+                                            <td className="px-6 py-4 text-gray-500">{bill.DueDate}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                                                    safeAmount(bill?.Balance) === 0 ? 'bg-green-100 text-green-700' :
+                                                    (bill?.DueDate && new Date(bill.DueDate) < now ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')
+                                                }`}>
+                                                    {safeAmount(bill?.Balance) === 0 ? 'Paid' : (bill?.DueDate && new Date(bill.DueDate) < now ? 'Overdue' : 'Due')}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-bold text-gray-900">
+                                                ${safeAmount(bill.TotalAmt ?? bill.Balance).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border-t border-gray-100 bg-white">
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span>Rows per page</span>
+                                    <select
+                                        value={apModalPageSize}
+                                        onChange={(e) => setApModalPageSize(e.target.value)}
+                                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                                    >
+                                        {QUICKBOOKS_TABLE_PAGE_SIZES.map((size) => (
+                                            <option key={size} value={String(size)}>{size}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setApModalPage((prev) => Math.max(1, prev - 1))}
+                                        disabled={apModalPage <= 1}
+                                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Previous
+                                    </button>
+                                    <span className="text-sm text-gray-600">Page {apModalPage} of {apModalTotalPages}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setApModalPage((prev) => Math.min(apModalTotalPages, prev + 1))}
+                                        disabled={apModalPage >= apModalTotalPages}
+                                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     ) : (
                         <div className="text-center py-8 text-gray-500">
-                            <p>No outstanding bills</p>
+                            <p>No bills match your search.</p>
                         </div>
                     )}
                 </DialogContent>
@@ -2904,6 +3291,23 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className="p-4 border-b border-gray-100 bg-gray-50">
                         <h3 className="font-bold text-gray-700">Outstanding Bills (Payable Invoices)</h3>
+                    </div>
+                    <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100 bg-gray-50/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <span>
+                            Showing {apBills.length ? `${(apTablePage - 1) * resolvedApTablePageSize + 1}-${Math.min(apTablePage * resolvedApTablePageSize, apBills.length)}` : '0'} of {apBills.length} bills
+                        </span>
+                        <span className="flex items-center gap-2">
+                            <span>Rows per page</span>
+                            <select
+                                value={apTablePageSize}
+                                onChange={(e) => setApTablePageSize(e.target.value)}
+                                className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                            >
+                                {QUICKBOOKS_TABLE_PAGE_SIZES.map((size) => (
+                                    <option key={size} value={String(size)}>{size}</option>
+                                ))}
+                            </select>
+                        </span>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
@@ -2918,7 +3322,7 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {apBills.map((bill) => (
+                                {paginatedApTableBills.map((bill) => (
                                     <tr key={bill.Id} className="bg-white border-b hover:bg-gray-50 transition">
                                         <td className="px-6 py-4 font-medium text-blue-600">{bill.DocNumber || bill.Id}</td>
                                         <td className="px-6 py-4 font-semibold text-gray-900">{bill.VendorRef?.name}</td>
@@ -2926,19 +3330,38 @@ const ARAPSection = ({ isQuickBooksLinked, invoices, bills, onNavigate }) => {
                                         <td className="px-6 py-4 text-gray-500">{bill.DueDate}</td>
                                         <td className="px-6 py-4">
                                             <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                                                bill.Balance === 0 ? 'bg-green-100 text-green-700' : 
+                                                safeAmount(bill?.Balance) === 0 ? 'bg-green-100 text-green-700' : 
                                                 (bill?.DueDate && new Date(bill.DueDate) < now ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700')
                                             }`}>
                                                 {safeAmount(bill?.Balance) === 0 ? 'Paid' : (bill?.DueDate && new Date(bill.DueDate) < now ? 'Overdue' : 'Due')}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right font-bold text-gray-900">
-                                            ${safeAmount(bill.TotalAmt).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                            ${safeAmount(bill.TotalAmt ?? bill.Balance).toLocaleString(undefined, {minimumFractionDigits: 2})}
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                    <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-100 bg-white">
+                        <button
+                            type="button"
+                            onClick={() => setApTablePage((prev) => Math.max(1, prev - 1))}
+                            disabled={apTablePage <= 1}
+                            className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                            Previous
+                        </button>
+                        <span className="text-sm text-gray-600">Page {apTablePage} of {apTableTotalPages}</span>
+                        <button
+                            type="button"
+                            onClick={() => setApTablePage((prev) => Math.min(apTableTotalPages, prev + 1))}
+                            disabled={apTablePage >= apTableTotalPages}
+                            className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             )}
@@ -3084,7 +3507,7 @@ const BankingSection = ({ isQuickBooksLinked, accounts, bills, invoices, transac
         : 'Not synced yet';
 
     const totalCash = bankAccounts.reduce((sum, account) => {
-        const value = Number(account?.CurrentBalance ?? account?.Balance ?? 0);
+        const value = parseQuickBooksAmount(account?.CurrentBalance ?? account?.Balance ?? 0);
         return sum + (Number.isFinite(value) ? value : 0);
     }, 0);
 
@@ -3104,7 +3527,7 @@ const BankingSection = ({ isQuickBooksLinked, accounts, bills, invoices, transac
             type: row?.type || 'Transaction',
             counterparty: row?.name || 'N/A',
             date: row?.date,
-            amount: Number(row?.amount ?? 0),
+            amount: parseQuickBooksAmount(row?.amount ?? 0),
             memo: row?.memo || '',
             category: row?.category || null, // Assume transactions have a category field
         }))
@@ -3123,17 +3546,17 @@ const BankingSection = ({ isQuickBooksLinked, accounts, bills, invoices, transac
 
     const quickBooksTransactions = [
         ...(invoices || []).map(invoice => ({
-            amount: Number(invoice?.Balance ?? invoice?.TotalAmt ?? 0),
+            amount: parseQuickBooksAmount(invoice?.Balance ?? invoice?.TotalAmt ?? 0),
             date: invoice?.TxnDate || invoice?.DueDate || invoice?.MetaData?.CreateTime,
         })),
         ...(bills || []).map(bill => ({
-            amount: -Number(bill?.Balance ?? bill?.TotalAmt ?? 0),
+            amount: -parseQuickBooksAmount(bill?.Balance ?? bill?.TotalAmt ?? 0),
             date: bill?.TxnDate || bill?.DueDate || bill?.MetaData?.CreateTime,
         })),
     ];
 
     const recentCredit = quickBooksTransactions
-        .filter(txn => Number(txn?.amount) > 0)
+        .filter(txn => parseQuickBooksAmount(txn?.amount) > 0)
         .sort((a, b) => new Date(b?.date || 0).getTime() - new Date(a?.date || 0).getTime());
     const recentDeposit = recentCredit[0]?.amount || 0;
 
@@ -3149,7 +3572,7 @@ const BankingSection = ({ isQuickBooksLinked, accounts, bills, invoices, transac
         name: account?.Name || account?.FullyQualifiedName || 'Bank Account',
         type: account?.AccountSubType || account?.AccountType || 'Bank',
         number: account?.AcctNum || account?.AccountAlias || 'N/A',
-        balance: Number(account?.CurrentBalance ?? account?.Balance ?? 0),
+        balance: parseQuickBooksAmount(account?.CurrentBalance ?? account?.Balance ?? 0),
         currency: account?.CurrencyRef?.value || 'USD',
     }));
 
@@ -4581,11 +5004,11 @@ export default function PortalPage({ onLogout }) {
             const [allBills, allInvoices, pnlData, balanceSheetData, cashFlowData, allAccounts, transactionsData] = await Promise.all([
                 fetchQuickBooksQueryAll({ entityName: 'Bill', baseQuery: 'select * from Bill' }),
                 fetchQuickBooksQueryAll({ entityName: 'Invoice', baseQuery: 'select * from Invoice' }),
-                fetchQuickBooksProxyJson({ method: 'GET', url: 'reports/ProfitAndLoss' }),
-                fetchQuickBooksProxyJson({ method: 'GET', url: 'reports/BalanceSheet' }),
-                fetchQuickBooksProxyJson({ method: 'GET', url: 'reports/CashFlow' }),
+                fetchQuickBooksReportAll({ reportUrl: 'reports/ProfitAndLoss' }),
+                fetchQuickBooksReportAll({ reportUrl: 'reports/BalanceSheet' }),
+                fetchQuickBooksReportAll({ reportUrl: 'reports/CashFlow' }),
                 fetchQuickBooksQueryAll({ entityName: 'Account', baseQuery: 'select * from Account' }),
-                fetchQuickBooksProxyJson({ method: 'GET', url: transactionListUrl })
+                fetchQuickBooksReportAll({ reportUrl: transactionListUrl })
             ]);
 
             setQbBills(allBills || []);
@@ -4758,8 +5181,7 @@ export default function PortalPage({ onLogout }) {
         });
 
         const safeAmount = (value) => {
-            const n = Number(value);
-            return Number.isFinite(n) ? n : 0;
+            return parseQuickBooksAmount(value);
         };
 
         const addAmount = (dateStr, amount, field) => {
@@ -4867,7 +5289,7 @@ export default function PortalPage({ onLogout }) {
         const totalCash = (qbAccounts || [])
             .filter(account => account?.AccountType === 'Bank')
             .reduce((sum, account) => {
-                const value = Number(account?.CurrentBalance ?? account?.CurrentBalanceWithSubAccounts ?? 0);
+                const value = parseQuickBooksAmount(account?.CurrentBalance ?? account?.CurrentBalanceWithSubAccounts ?? 0);
                 return sum + (Number.isFinite(value) ? value : 0);
             }, 0);
 
@@ -4928,8 +5350,8 @@ export default function PortalPage({ onLogout }) {
         const complianceDocRequests = (complianceEvents || []).filter(event => event?.status === 'documents_requested');
 
         const now = new Date();
-        const overdueInvoices = (qbInvoices || []).filter(inv => inv?.Balance > 0 && inv?.DueDate && new Date(inv.DueDate) < now);
-        const overdueBills = (qbBills || []).filter(bill => bill?.Balance > 0 && bill?.DueDate && new Date(bill.DueDate) < now);
+        const overdueInvoices = (qbInvoices || []).filter(inv => parseQuickBooksAmount(inv?.Balance) > 0 && inv?.DueDate && new Date(inv.DueDate) < now);
+        const overdueBills = (qbBills || []).filter(bill => parseQuickBooksAmount(bill?.Balance) > 0 && bill?.DueDate && new Date(bill.DueDate) < now);
 
         if (!isQuickBooksLinked) {
             tasks.push({
