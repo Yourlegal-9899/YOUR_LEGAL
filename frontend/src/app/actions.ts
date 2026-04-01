@@ -2,6 +2,7 @@
 'use server';
 
 import { answerLegalQuestions } from '@/ai/flows/answer-legal-questions';
+import { FRONTEND_AUTH_TOKEN_COOKIE } from '@/lib/auth-cookie';
 import { API_BASE_URL } from '@/lib/api-base';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
@@ -20,19 +21,38 @@ export type ChatState = {
   loading: boolean;
 };
 
-const buildCookieHeader = () => {
-  const all = cookies().getAll();
+const buildCookieHeader = async () => {
+  const cookieStore = await cookies();
+  const all = cookieStore.getAll();
   if (!all.length) return '';
   return all.map(({ name, value }) => `${name}=${value}`).join('; ');
 };
 
+const getFrontendAuthToken = async () => {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(FRONTEND_AUTH_TOKEN_COOKIE)?.value;
+  if (!raw) return '';
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+};
+
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  const cookieHeader = buildCookieHeader();
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-    ...(cookieHeader ? { Cookie: cookieHeader } : {}),
-  };
+  const cookieHeader = await buildCookieHeader();
+  const authToken = await getFrontendAuthToken();
+  const headers = new Headers(options.headers || {});
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  if (cookieHeader) {
+    headers.set('Cookie', cookieHeader);
+  }
+  if (authToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${authToken}`);
+  }
+
   return fetch(url, {
     ...options,
     headers,
@@ -97,7 +117,7 @@ const extractEmail = (value: string) => {
 
 const extractReportValue = (report: any, keywords: string[]) => {
   if (!report?.Rows?.Row) return null;
-  const matches = [];
+  const matches: { label: string; amount: string }[] = [];
   const walk = (rows: any[]) => {
     rows.forEach((row) => {
       const headerText = row?.Header?.ColData?.[0]?.value;

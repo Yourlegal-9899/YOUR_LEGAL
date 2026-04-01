@@ -41,6 +41,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { message: text };
   };
 
+  const syncFrontendSessionToken = async (token?: string | null) => {
+    if (!token) return;
+    try {
+      await fetch('/api/session-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+    } catch {
+      // Non-fatal: dashboard API calls still rely on backend cookies.
+    }
+  };
+
+  const clearFrontendSessionToken = async () => {
+    try {
+      await fetch('/api/session-token', {
+        method: 'DELETE',
+      });
+    } catch {
+      // Best effort cleanup.
+    }
+  };
+
   const checkAuth = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
@@ -49,12 +72,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         const data = await parseResponse(response);
-        setUser(data.user);
+        setUser(data?.user || null);
+        await syncFrontendSessionToken(data?.token);
       } else {
         setUser(null);
+        await clearFrontendSessionToken();
       }
     } catch (error) {
       setUser(null);
+      await clearFrontendSessionToken();
     } finally {
       setLoading(false);
     }
@@ -79,16 +105,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setUser(data.user);
+    await syncFrontendSessionToken(data?.token);
     return data.user;
   };
 
   const logout = async () => {
-    await fetch(`${API_BASE_URL}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    setUser(null);
-    router.push('/login');
+    try {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } finally {
+      await clearFrontendSessionToken();
+      setUser(null);
+      router.push('/login');
+    }
   };
 
   return (

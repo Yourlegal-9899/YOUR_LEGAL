@@ -5,4 +5,6 @@ export const normalizeApiBaseUrl = (value?: string) => {
   return trimmedValue.endsWith("/api") ? trimmedValue : `${trimmedValue}/api`;
 };
 
-export const API_BASE_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
+export const API_BASE_URL = normalizeApiBaseUrl(
+  process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
+);

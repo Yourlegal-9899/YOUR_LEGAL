@@ -530,5 +530,11 @@ exports.logout = (req, res) => {
 };
 
 exports.getMe = async (req, res) => {
-  res.json({ success: true, user: req.user });
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader && authHeader.startsWith('Bearer ')
+    ? authHeader.split(' ')[1]
+    : null;
+  const token = req.session?.token || bearerToken || null;
+
+  res.json({ success: true, user: req.user, token });
 };
