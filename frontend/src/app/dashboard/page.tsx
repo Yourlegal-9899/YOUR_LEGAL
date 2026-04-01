@@ -57,6 +57,76 @@ import axios from 'axios';
 // =====================================================================
 
 const QUICKBOOKS_API_BASE = `${API_BASE_URL}/quickbooks`;
+const QUICKBOOKS_QUERY_PAGE_SIZE = 500;
+const QUICKBOOKS_MAX_QUERY_PAGES = 50;
+const QUICKBOOKS_TABLE_PAGE_SIZES = [20, 50, 100];
+
+const parseQuickBooksErrorMessage = (payload: any, fallback: string) => {
+    const qbError = payload?.Fault?.Error?.[0];
+    return qbError?.Detail || qbError?.Message || payload?.message || fallback;
+};
+
+const buildQuickBooksQueryUrl = (query: string) => `query?query=${encodeURIComponent(query)}`;
+
+const fetchQuickBooksProxyJson = async ({ method = 'GET', url, data }: { method?: string; url: string; data?: any }) => {
+    const response = await fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ method, url, data })
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(parseQuickBooksErrorMessage(payload, 'QuickBooks request failed.'));
+    }
+
+    const qbError = payload?.Fault?.Error?.[0];
+    if (qbError) {
+        throw new Error(parseQuickBooksErrorMessage(payload, 'QuickBooks request failed.'));
+    }
+
+    return payload;
+};
+
+const fetchQuickBooksQueryAll = async ({
+    entityName,
+    baseQuery,
+    pageSize = QUICKBOOKS_QUERY_PAGE_SIZE,
+}: {
+    entityName: string;
+    baseQuery: string;
+    pageSize?: number;
+}) => {
+    const results: any[] = [];
+    let startPosition = 1;
+
+    for (let page = 0; page < QUICKBOOKS_MAX_QUERY_PAGES; page += 1) {
+        const pagedQuery = `${baseQuery} STARTPOSITION ${startPosition} MAXRESULTS ${pageSize}`;
+        const payload = await fetchQuickBooksProxyJson({
+            method: 'GET',
+            url: buildQuickBooksQueryUrl(pagedQuery)
+        });
+        const queryResponse = payload?.QueryResponse || {};
+        const pageRows = Array.isArray(queryResponse?.[entityName]) ? queryResponse[entityName] : [];
+
+        results.push(...pageRows);
+
+        const totalCountRaw = Number(queryResponse?.totalCount);
+        const totalCount = Number.isFinite(totalCountRaw) && totalCountRaw > 0 ? totalCountRaw : null;
+        const qbStart = Number(queryResponse?.startPosition);
+        const qbMaxResults = Number(queryResponse?.maxResults);
+        const effectiveStart = Number.isFinite(qbStart) && qbStart > 0 ? qbStart : startPosition;
+        const effectiveBatchSize = Number.isFinite(qbMaxResults) && qbMaxResults > 0 ? qbMaxResults : pageRows.length;
+
+        if (!pageRows.length) break;
+        if (totalCount !== null && results.length >= totalCount) break;
+
+        startPosition = effectiveStart + Math.max(effectiveBatchSize, 1);
+    }
+
+    return results;
+};
 
 // Enhanced Navigation Items with nesting for Bookkeeping
 const navItems = [
@@ -1220,7 +1290,13 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading, dateR
     const [searchTerm, setSearchTerm] = useState('');
     const [minAmount, setMinAmount] = useState('');
     const [maxAmount, setMaxAmount] = useState('');
+    const [transactionTypeFilter, setTransactionTypeFilter] = useState('all');
+    const [accountFilter, setAccountFilter] = useState('all');
+    const [directionFilter, setDirectionFilter] = useState('all');
+    const [pageSize, setPageSize] = useState(String(QUICKBOOKS_TABLE_PAGE_SIZES[0]));
+    const [currentPage, setCurrentPage] = useState(1);
     const effectiveDateRange = dateRange || 'all';
+
     const normalizedTransactions = useMemo(() => {
         return (transactions || []).map((tx) => {
             const description =
@@ -1240,15 +1316,28 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading, dateR
             const amount = Number(tx?.TotalAmt ?? tx?.Amount ?? tx?.amount ?? 0);
             const dateValue = tx?.TxnDate || tx?.DueDate || tx?.MetaData?.CreateTime || tx?.date || '';
             const date = typeof dateValue === 'string' ? dateValue.slice(0, 10) : '';
+            const type = tx?.type || tx?.TxnType || tx?.transactionType || 'Transaction';
+            const account = tx?.account || tx?.Account || tx?.category || tx?.Category || 'Unassigned';
             return {
                 id: tx?.Id || tx?.id || `${description}-${date}-${amount}`,
                 description,
                 vendor,
                 amount: Number.isFinite(amount) ? amount : 0,
                 date,
+                type,
+                account,
             };
         });
     }, [transactions]);
+
+    const transactionTypeOptions = useMemo(() => {
+        return Array.from(new Set(normalizedTransactions.map((tx) => tx.type).filter(Boolean))).sort();
+    }, [normalizedTransactions]);
+
+    const accountOptions = useMemo(() => {
+        return Array.from(new Set(normalizedTransactions.map((tx) => tx.account).filter(Boolean))).sort();
+    }, [normalizedTransactions]);
+
     const filteredTransactions = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
         const min = minAmount === '' ? null : Number(minAmount);
@@ -1263,13 +1352,17 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading, dateR
 
         const filtered = normalizedTransactions.filter((tx) => {
             if (term) {
-                const haystack = `${tx.description} ${tx.vendor}`.toLowerCase();
+                const haystack = `${tx.description} ${tx.vendor} ${tx.type} ${tx.account}`.toLowerCase();
                 if (!haystack.includes(term)) return false;
             }
             if (rangeStart && tx.date) {
                 const txDate = new Date(tx.date);
                 if (!Number.isNaN(txDate.getTime()) && txDate < rangeStart) return false;
             }
+            if (transactionTypeFilter !== 'all' && tx.type !== transactionTypeFilter) return false;
+            if (accountFilter !== 'all' && tx.account !== accountFilter) return false;
+            if (directionFilter === 'inflow' && tx.amount <= 0) return false;
+            if (directionFilter === 'outflow' && tx.amount >= 0) return false;
             if (min !== null && Number.isFinite(min) && tx.amount < min) return false;
             if (max !== null && Number.isFinite(max) && tx.amount > max) return false;
             return true;
@@ -1277,15 +1370,40 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading, dateR
 
         filtered.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
         return filtered;
-    }, [normalizedTransactions, searchTerm, effectiveDateRange, minAmount, maxAmount]);
+    }, [
+        normalizedTransactions,
+        searchTerm,
+        effectiveDateRange,
+        minAmount,
+        maxAmount,
+        transactionTypeFilter,
+        accountFilter,
+        directionFilter
+    ]);
+
+    const resolvedPageSize = Number(pageSize) > 0 ? Number(pageSize) : QUICKBOOKS_TABLE_PAGE_SIZES[0];
+    const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / resolvedPageSize));
+    const pageStart = (currentPage - 1) * resolvedPageSize;
+    const pageEnd = pageStart + resolvedPageSize;
+    const paginatedTransactions = filteredTransactions.slice(pageStart, pageEnd);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, minAmount, maxAmount, effectiveDateRange, transactionTypeFilter, accountFilter, directionFilter, pageSize]);
+
+    useEffect(() => {
+        setCurrentPage((prev) => Math.min(prev, totalPages));
+    }, [totalPages]);
 
     const handleExportCsv = () => {
         if (!filteredTransactions.length) return;
-        const header = ['Date', 'Description', 'Vendor', 'Amount'];
+        const header = ['Date', 'Description', 'Vendor', 'Type', 'Account', 'Amount'];
         const rows = filteredTransactions.map((tx) => [
             tx.date || '',
             tx.description || '',
             tx.vendor || '',
+            tx.type || '',
+            tx.account || '',
             tx.amount.toFixed(2),
         ]);
         const escapeCell = (value) => `"${String(value).replace(/"/g, '""')}"`;
@@ -1300,14 +1418,14 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading, dateR
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     };
-    
+
     if (isLoading) {
         return (
             <div className="flex justify-center items-center p-10 bg-white rounded-xl shadow-sm border border-gray-200">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                 <p className="ml-3 text-gray-500">Syncing with QuickBooks...</p>
             </div>
-        )
+        );
     }
 
     if (!transactions || transactions.length === 0) {
@@ -1349,13 +1467,13 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading, dateR
                 </div>
                 {showFilters && (
                     <div className="p-4 border-b border-gray-100 bg-white">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                            <div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-7 gap-3">
+                            <div className="xl:col-span-2">
                                 <Label className="text-xs text-gray-500">Search</Label>
                                 <Input
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    placeholder="Vendor or description"
+                                    placeholder="Vendor, description, account, or type"
                                     className="mt-1"
                                 />
                             </div>
@@ -1370,6 +1488,44 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading, dateR
                                     <option value="30d">Last 30 days</option>
                                     <option value="90d">Last 90 days</option>
                                     <option value="365d">Last 12 months</option>
+                                </select>
+                            </div>
+                            <div>
+                                <Label className="text-xs text-gray-500">Type</Label>
+                                <select
+                                    value={transactionTypeFilter}
+                                    onChange={(e) => setTransactionTypeFilter(e.target.value)}
+                                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <option value="all">All types</option>
+                                    {transactionTypeOptions.map((type) => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <Label className="text-xs text-gray-500">Account</Label>
+                                <select
+                                    value={accountFilter}
+                                    onChange={(e) => setAccountFilter(e.target.value)}
+                                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <option value="all">All accounts</option>
+                                    {accountOptions.map((account) => (
+                                        <option key={account} value={account}>{account}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <Label className="text-xs text-gray-500">Direction</Label>
+                                <select
+                                    value={directionFilter}
+                                    onChange={(e) => setDirectionFilter(e.target.value)}
+                                    className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <option value="all">All</option>
+                                    <option value="inflow">Inflow (+)</option>
+                                    <option value="outflow">Outflow (-)</option>
                                 </select>
                             </div>
                             <div>
@@ -1395,6 +1551,9 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading, dateR
                         </div>
                     </div>
                 )}
+                <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100 bg-gray-50/60">
+                    Showing {filteredTransactions.length ? `${pageStart + 1}-${Math.min(pageEnd, filteredTransactions.length)}` : '0'} of {filteredTransactions.length} filtered transactions ({normalizedTransactions.length} total).
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
@@ -1402,33 +1561,70 @@ const RecentTransactions = ({ isQuickBooksLinked, transactions, isLoading, dateR
                                 <th className="px-6 py-3">Date</th>
                                 <th className="px-6 py-3">Description</th>
                                 <th className="px-6 py-3">Vendor</th>
+                                <th className="px-6 py-3">Type</th>
+                                <th className="px-6 py-3">Account</th>
                                 <th className="px-6 py-3 text-right">Amount</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredTransactions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-500">
+                                    <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
                                         No transactions match the selected filters.
                                     </td>
                                 </tr>
                             ) : (
-                                filteredTransactions.map((tx) => (
-                                    <React.Fragment key={tx.id}>
-                                        <tr className="bg-white border-b hover:bg-gray-50 transition">
-                                            <td className="px-6 py-4 text-gray-500">{tx.date || 'N/A'}</td>
-                                            <td className="px-6 py-4 font-medium text-gray-900">{tx.description}</td>
-                                            <td className="px-6 py-4 text-gray-500">{tx.vendor}</td>
-                                            <td className={`px-6 py-4 text-right font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                                                {tx.amount > 0 ? '+' : ''}{tx.amount.toFixed(2)}
-                                            </td>
-                                        </tr>
-                                    </React.Fragment>
+                                paginatedTransactions.map((tx) => (
+                                    <tr key={tx.id} className="bg-white border-b hover:bg-gray-50 transition">
+                                        <td className="px-6 py-4 text-gray-500">{tx.date || 'N/A'}</td>
+                                        <td className="px-6 py-4 font-medium text-gray-900">{tx.description}</td>
+                                        <td className="px-6 py-4 text-gray-500">{tx.vendor}</td>
+                                        <td className="px-6 py-4 text-gray-500">{tx.type || 'N/A'}</td>
+                                        <td className="px-6 py-4 text-gray-500">{tx.account || 'N/A'}</td>
+                                        <td className={`px-6 py-4 text-right font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                                            {tx.amount > 0 ? '+' : ''}{tx.amount.toFixed(2)}
+                                        </td>
+                                    </tr>
                                 ))
                             )}
                         </tbody>
                     </table>
                 </div>
+                {filteredTransactions.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border-t border-gray-100 bg-white">
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>Rows per page</span>
+                            <select
+                                value={pageSize}
+                                onChange={(e) => setPageSize(e.target.value)}
+                                className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700"
+                            >
+                                {QUICKBOOKS_TABLE_PAGE_SIZES.map((size) => (
+                                    <option key={size} value={String(size)}>{size}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                disabled={currentPage <= 1}
+                                className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                            >
+                                Previous
+                            </button>
+                            <span className="text-sm text-gray-600">Page {currentPage} of {totalPages}</span>
+                            <button
+                                type="button"
+                                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                disabled={currentPage >= totalPages}
+                                className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -1448,10 +1644,24 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
     const [amount, setAmount] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
+    const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('all');
+    const [invoiceDateRangeFilter, setInvoiceDateRangeFilter] = useState('all');
+    const [invoiceMinAmount, setInvoiceMinAmount] = useState('');
+    const [invoiceMaxAmount, setInvoiceMaxAmount] = useState('');
+    const [invoicePageSize, setInvoicePageSize] = useState(String(QUICKBOOKS_TABLE_PAGE_SIZES[0]));
+    const [invoicePage, setInvoicePage] = useState(1);
     
     const safeAmount = (value) => {
         const n = Number(value);
         return Number.isFinite(n) ? n : 0;
+    };
+    const resolveInvoiceStatus = (inv) => {
+        if (safeAmount(inv?.Balance) === 0) return 'paid';
+        if (inv?.DueDate) {
+            const due = new Date(inv.DueDate);
+            if (!Number.isNaN(due.getTime()) && due < new Date()) return 'overdue';
+        }
+        return 'open';
     };
     const now = new Date();
     const overdueAmount = invoices?.filter(inv => safeAmount(inv?.Balance) > 0 && inv?.DueDate && new Date(inv.DueDate) < now)
@@ -1482,34 +1692,81 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
         return isPaid && paidDate && paidDate >= thirtyDaysAgo;
     }).reduce((acc, inv) => acc + safeAmount(inv?.TotalAmt ?? inv?.Balance), 0) || 0;
 
+    const filteredInvoices = useMemo(() => {
+        const search = invoiceSearchTerm.trim().toLowerCase();
+        const min = invoiceMinAmount === '' ? null : Number(invoiceMinAmount);
+        const max = invoiceMaxAmount === '' ? null : Number(invoiceMaxAmount);
+        const rangeStart = (() => {
+            if (invoiceDateRangeFilter === '30d') {
+                const value = new Date();
+                value.setDate(value.getDate() - 30);
+                return value;
+            }
+            if (invoiceDateRangeFilter === '90d') {
+                const value = new Date();
+                value.setDate(value.getDate() - 90);
+                return value;
+            }
+            if (invoiceDateRangeFilter === '365d') {
+                const value = new Date();
+                value.setDate(value.getDate() - 365);
+                return value;
+            }
+            return null;
+        })();
+
+        return (invoices || [])
+            .filter((inv) => {
+                const invoiceStatus = resolveInvoiceStatus(inv);
+                const invoiceNumber = String(inv?.DocNumber || inv?.Id || '').toLowerCase();
+                const customerNameLower = String(inv?.CustomerRef?.name || '').toLowerCase();
+                const total = safeAmount(inv?.TotalAmt ?? inv?.Balance);
+                const txnDateRaw = inv?.TxnDate || inv?.MetaData?.CreateTime || inv?.MetaData?.LastUpdatedTime || '';
+                const txnDate = txnDateRaw ? new Date(txnDateRaw) : null;
+
+                if (search) {
+                    const haystack = `${invoiceNumber} ${customerNameLower} ${invoiceStatus}`.toLowerCase();
+                    if (!haystack.includes(search)) return false;
+                }
+
+                if (invoiceStatusFilter !== 'all' && invoiceStatus !== invoiceStatusFilter) return false;
+                if (min !== null && Number.isFinite(min) && total < min) return false;
+                if (max !== null && Number.isFinite(max) && total > max) return false;
+                if (rangeStart && txnDate && !Number.isNaN(txnDate.getTime()) && txnDate < rangeStart) return false;
+
+                return true;
+            })
+            .sort((a, b) => new Date(b?.TxnDate || b?.MetaData?.CreateTime || 0).getTime() - new Date(a?.TxnDate || a?.MetaData?.CreateTime || 0).getTime());
+    }, [invoices, invoiceSearchTerm, invoiceStatusFilter, invoiceDateRangeFilter, invoiceMinAmount, invoiceMaxAmount]);
+
+    const resolvedInvoicePageSize = Number(invoicePageSize) > 0 ? Number(invoicePageSize) : QUICKBOOKS_TABLE_PAGE_SIZES[0];
+    const invoiceTotalPages = Math.max(1, Math.ceil(filteredInvoices.length / resolvedInvoicePageSize));
+    const invoiceStartIndex = (invoicePage - 1) * resolvedInvoicePageSize;
+    const invoiceEndIndex = invoiceStartIndex + resolvedInvoicePageSize;
+    const paginatedInvoices = filteredInvoices.slice(invoiceStartIndex, invoiceEndIndex);
+
+    useEffect(() => {
+        setInvoicePage(1);
+    }, [invoiceSearchTerm, invoiceStatusFilter, invoiceDateRangeFilter, invoiceMinAmount, invoiceMaxAmount, invoicePageSize]);
+
+    useEffect(() => {
+        setInvoicePage((prev) => Math.min(prev, invoiceTotalPages));
+    }, [invoiceTotalPages]);
+
     useEffect(() => {
         if (!isDialogOpen || !isQuickBooksLinked) return;
         const loadLookups = async () => {
             setIsLoadingLookups(true);
             try {
-                const [customersRes, itemsRes] = await Promise.all([
-                    fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Customer' })
-                    }),
-                    fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Item' })
-                    })
+                const [allCustomers, allItems] = await Promise.all([
+                    fetchQuickBooksQueryAll({ entityName: 'Customer', baseQuery: 'select * from Customer' }),
+                    fetchQuickBooksQueryAll({ entityName: 'Item', baseQuery: 'select * from Item' })
                 ]);
-
-                const customersData = await customersRes.json();
-                const itemsData = await itemsRes.json();
-
-                setCustomers(customersData?.QueryResponse?.Customer || []);
-                setItems(itemsData?.QueryResponse?.Item || []);
-            } catch (error) {
+                setCustomers(allCustomers || []);
+                setItems(allItems || []);
+            } catch (error: any) {
                 console.error(error);
-                toast({ variant: 'destructive', title: 'Failed to load QuickBooks lookups.' });
+                toast({ variant: 'destructive', title: error?.message || 'Failed to load QuickBooks lookups.' });
             } finally {
                 setIsLoadingLookups(false);
             }
@@ -1742,31 +1999,81 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
                             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+                        <div>
+                            <Label className="text-xs text-gray-500">Status</Label>
+                            <select
+                                value={invoiceStatusFilter}
+                                onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+                                className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="all">All statuses</option>
+                                <option value="open">Open</option>
+                                <option value="overdue">Overdue</option>
+                                <option value="paid">Paid</option>
+                            </select>
+                        </div>
+                        <div>
+                            <Label className="text-xs text-gray-500">Date Range</Label>
+                            <select
+                                value={invoiceDateRangeFilter}
+                                onChange={(e) => setInvoiceDateRangeFilter(e.target.value)}
+                                className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="all">All time</option>
+                                <option value="30d">Last 30 days</option>
+                                <option value="90d">Last 90 days</option>
+                                <option value="365d">Last 12 months</option>
+                            </select>
+                        </div>
+                        <div>
+                            <Label className="text-xs text-gray-500">Min Amount</Label>
+                            <Input
+                                type="number"
+                                value={invoiceMinAmount}
+                                onChange={(e) => setInvoiceMinAmount(e.target.value)}
+                                placeholder="0.00"
+                                className="mt-1"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs text-gray-500">Max Amount</Label>
+                            <Input
+                                type="number"
+                                value={invoiceMaxAmount}
+                                onChange={(e) => setInvoiceMaxAmount(e.target.value)}
+                                placeholder="0.00"
+                                className="mt-1"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs text-gray-500">Rows Per Page</Label>
+                            <select
+                                value={invoicePageSize}
+                                onChange={(e) => setInvoicePageSize(e.target.value)}
+                                className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                {QUICKBOOKS_TABLE_PAGE_SIZES.map((size) => (
+                                    <option key={size} value={String(size)}>{size}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100 bg-gray-50/60">
+                    Showing {filteredInvoices.length ? `${invoiceStartIndex + 1}-${Math.min(invoiceEndIndex, filteredInvoices.length)}` : '0'} of {filteredInvoices.length} filtered invoices ({(invoices || []).length} total).
                 </div>
                 <div className="overflow-x-auto">
                     {!invoices || invoices.length === 0 ? (
                         <div className="text-center p-10 border-t">
                             <p className="text-gray-500">No invoices found.</p>
                         </div>
+                    ) : filteredInvoices.length === 0 ? (
+                        <div className="text-center p-10 border-t">
+                            <p className="text-gray-500">No invoices match the selected filters.</p>
+                        </div>
                     ) : (
-                        <>
-                            {(() => {
-                                const filteredInvoices = invoices.filter((inv) =>
-                                    inv.DocNumber?.toLowerCase().includes(invoiceSearchTerm.toLowerCase()) ||
-                                    inv.CustomerRef?.name?.toLowerCase().includes(invoiceSearchTerm.toLowerCase()) ||
-                                    (inv.Balance === 0 ? 'Paid' : (inv?.DueDate && new Date(inv.DueDate) < new Date() ? 'Overdue' : 'Sent')).toLowerCase().includes(invoiceSearchTerm.toLowerCase())
-                                );
-
-                                if (filteredInvoices.length === 0) {
-                                    return (
-                                        <div className="text-center p-10 border-t">
-                                            <p className="text-gray-500">No invoices match your search.</p>
-                                        </div>
-                                    );
-                                }
-
-                                return (
-                                    <table className="w-full text-sm text-left">
+                        <table className="w-full text-sm text-left">
                         <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
                             <tr>
                                 <th className="px-6 py-3">Invoice #</th>
@@ -1779,7 +2086,9 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredInvoices.map((inv) => (
+                            {paginatedInvoices.map((inv) => {
+                                const status = resolveInvoiceStatus(inv);
+                                return (
                                 <tr key={inv.Id} className="bg-white border-b hover:bg-gray-50 transition">
                                     <td className="px-6 py-4 font-medium text-blue-600">{inv.DocNumber || inv.Id}</td>
                                     <td className="px-6 py-4 font-semibold text-gray-900">{inv.CustomerRef?.name}</td>
@@ -1787,15 +2096,15 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
                                     <td className="px-6 py-4 text-gray-500">{inv.DueDate}</td>
                                     <td className="px-6 py-4">
                                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                                            inv.Balance === 0 ? 'bg-green-100 text-green-700' : 
-                                            new Date(inv.DueDate) < new Date() ? 'bg-red-100 text-red-700' :
+                                            status === 'paid' ? 'bg-green-100 text-green-700' :
+                                            status === 'overdue' ? 'bg-red-100 text-red-700' :
                                             'bg-blue-100 text-blue-700'
                                         }`}>
-                                            {safeAmount(inv?.Balance) === 0 ? 'Paid' : (inv?.DueDate && new Date(inv.DueDate) < new Date() ? 'Overdue' : 'Sent')}
+                                            {status === 'paid' ? 'Paid' : status === 'overdue' ? 'Overdue' : 'Open'}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right font-bold text-gray-900">
-                                        ${inv.TotalAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                        ${safeAmount(inv?.TotalAmt ?? inv?.Balance).toLocaleString(undefined, {minimumFractionDigits: 2})}
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <button 
@@ -1807,14 +2116,35 @@ const InvoicingSection = ({ isQuickBooksLinked, invoices, isLoading, accounts, o
                                         </button>
                                     </td>
                                 </tr>
-                            ))}
-                        </tbody>
-                                    </table>
                                 );
-                            })()}
-                        </>
+                            })}
+                        </tbody>
+                        </table>
                     )}
                 </div>
+                {filteredInvoices.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border-t border-gray-100 bg-white">
+                        <p className="text-sm text-gray-600">Page {invoicePage} of {invoiceTotalPages}</p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setInvoicePage((prev) => Math.max(1, prev - 1))}
+                                disabled={invoicePage <= 1}
+                                className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setInvoicePage((prev) => Math.min(invoiceTotalPages, prev + 1))}
+                                disabled={invoicePage >= invoiceTotalPages}
+                                className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-lg">
@@ -1883,6 +2213,8 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
     const [newAccountType, setNewAccountType] = useState('Expense');
     const [accountSearchTerm, setAccountSearchTerm] = useState('');
     const [accountTypeFilter, setAccountTypeFilter] = useState('');
+    const [accountPageSize, setAccountPageSize] = useState(String(QUICKBOOKS_TABLE_PAGE_SIZES[0]));
+    const [accountPage, setAccountPage] = useState(1);
 
     const accountTypes = ["Bank", "AccountsReceivable", "OtherCurrentAsset", "FixedAsset", "OtherAsset", "AccountsPayable", "CreditCard", "OtherCurrentLiability", "LongTermLiability", "OtherLiability", "Equity", "Income", "OtherIncome", "CostOfGoodsSold", "Expense", "OtherExpense"];
 
@@ -1892,28 +2224,16 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
         setIsLoading(true);
         setAccountsError(null);
         try {
-            const response = await fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    method: 'GET',
-                    url: 'query?query=select * from Account'
-                })
+            const allAccounts = await fetchQuickBooksQueryAll({
+                entityName: 'Account',
+                baseQuery: 'select * from Account'
             });
-            const data = await response.json();
-            const qbError = data?.Fault?.Error?.[0];
-            if (qbError || !response.ok) {
-                const message = qbError?.Detail || qbError?.Message || data?.message || 'Failed to fetch accounts from QuickBooks.';
-                setAccountsError(message);
-                toast({ variant: 'destructive', title: message });
-                return;
-            }
-            setAccounts(data?.QueryResponse?.Account || []);
-        } catch (error) {
+            setAccounts(allAccounts || []);
+        } catch (error: any) {
             console.error("Error fetching accounts:", error);
-            setAccountsError('Failed to fetch accounts.');
-            toast({ variant: 'destructive', title: 'Failed to fetch accounts.' });
+            const message = error?.message || 'Failed to fetch accounts.';
+            setAccountsError(message);
+            toast({ variant: 'destructive', title: message });
         } finally {
             setIsLoading(false);
         }
@@ -1922,6 +2242,33 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
     useEffect(() => {
         fetchAccounts();
     }, [fetchAccounts]);
+
+    const filteredAccounts = useMemo(() => {
+        const search = accountSearchTerm.trim().toLowerCase();
+        return (accounts || [])
+            .filter((account) => {
+                const name = String(account?.Name || '').toLowerCase();
+                const subtype = String(account?.AccountSubType || '').toLowerCase();
+                if (search && !name.includes(search) && !subtype.includes(search)) return false;
+                if (accountTypeFilter && account?.AccountType !== accountTypeFilter) return false;
+                return true;
+            })
+            .sort((a, b) => String(a?.Name || '').localeCompare(String(b?.Name || '')));
+    }, [accounts, accountSearchTerm, accountTypeFilter]);
+
+    const resolvedAccountPageSize = Number(accountPageSize) > 0 ? Number(accountPageSize) : QUICKBOOKS_TABLE_PAGE_SIZES[0];
+    const accountTotalPages = Math.max(1, Math.ceil(filteredAccounts.length / resolvedAccountPageSize));
+    const accountStartIndex = (accountPage - 1) * resolvedAccountPageSize;
+    const accountEndIndex = accountStartIndex + resolvedAccountPageSize;
+    const paginatedAccounts = filteredAccounts.slice(accountStartIndex, accountEndIndex);
+
+    useEffect(() => {
+        setAccountPage(1);
+    }, [accountSearchTerm, accountTypeFilter, accountPageSize]);
+
+    useEffect(() => {
+        setAccountPage((prev) => Math.min(prev, accountTotalPages));
+    }, [accountTotalPages]);
 
     const handleCreateAccount = async () => {
         if (!newAccountName) {
@@ -2012,6 +2359,21 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
                             ))}
                         </select>
                     </div>
+                    <div className="flex items-center gap-2">
+                        <ListChecks className="w-4 h-4 text-gray-400" />
+                        <select
+                            value={accountPageSize}
+                            onChange={(e) => setAccountPageSize(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            {QUICKBOOKS_TABLE_PAGE_SIZES.map((size) => (
+                                <option key={size} value={String(size)}>{size} rows per page</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+                <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100 bg-gray-50/60">
+                    Showing {filteredAccounts.length ? `${accountStartIndex + 1}-${Math.min(accountEndIndex, filteredAccounts.length)}` : '0'} of {filteredAccounts.length} filtered accounts ({(accounts || []).length} total).
                 </div>
                 <div className="overflow-x-auto">
                     {isLoading ? (
@@ -2029,25 +2391,13 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
                                           : 'No accounts found in QuickBooks.'}
                               </p>
                           </div>
+                      ) : filteredAccounts.length === 0 ? (
+                          <div className="text-center p-10">
+                              <p className="text-gray-500">No accounts match your search or filter.</p>
+                          </div>
                       ) : (
                         <>
-                            {(() => {
-                                const filteredAccounts = accounts.filter((account) =>
-                                    (account.Name?.toLowerCase().includes(accountSearchTerm.toLowerCase()) ||
-                                        account.AccountSubType?.toLowerCase().includes(accountSearchTerm.toLowerCase())) &&
-                                    (!accountTypeFilter || account.AccountType === accountTypeFilter)
-                                );
-
-                                if (filteredAccounts.length === 0) {
-                                    return (
-                                        <div className="text-center p-10">
-                                            <p className="text-gray-500">No accounts match your search or filter.</p>
-                                        </div>
-                                    );
-                                }
-
-                                return (
-                                    <table className="w-full text-sm text-left">
+                            <table className="w-full text-sm text-left">
                         <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
                             <tr>
                                 <th className="px-6 py-3">Account Name</th>
@@ -2057,7 +2407,7 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredAccounts.map((account) => (
+                            {paginatedAccounts.map((account) => (
                                 <tr key={account.Id} className="bg-white border-b hover:bg-gray-50 transition">
                                     <td className="px-6 py-4 font-medium text-gray-900">{account.Name}</td>
                                     <td className="px-6 py-4">
@@ -2070,9 +2420,28 @@ const ChartOfAccounts = ({ isQuickBooksLinked, userId }) => {
                                 </tr>
                             ))}
                         </tbody>
-                                    </table>
-                                );
-                            })()}
+                            </table>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border-t border-gray-100 bg-white">
+                                <p className="text-sm text-gray-600">Page {accountPage} of {accountTotalPages}</p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAccountPage((prev) => Math.max(1, prev - 1))}
+                                        disabled={accountPage <= 1}
+                                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Previous
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAccountPage((prev) => Math.min(accountTotalPages, prev + 1))}
+                                        disabled={accountPage >= accountTotalPages}
+                                        className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
                         </>
                     )}
                 </div>
@@ -4209,70 +4578,27 @@ export default function PortalPage({ onLogout }) {
         setQbError(null);
         try {
             const transactionListUrl = buildTransactionListUrl(qbTransactionRange);
-            const [billsRes, invoicesRes, pnlRes, balanceSheetRes, cashFlowRes, accountsRes, transactionsRes] = await Promise.all([
-                fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Bill' })
-                }),
-                fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Invoice' })
-                }),
-                fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ method: 'GET', url: 'reports/ProfitAndLoss' })
-                }),
-                fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ method: 'GET', url: 'reports/BalanceSheet' })
-                }),
-                fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ method: 'GET', url: 'reports/CashFlow' })
-                }),
-                fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Account' })
-                }),
-                fetch(`${QUICKBOOKS_API_BASE}/proxy`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ method: 'GET', url: transactionListUrl })
-                })
+            const [allBills, allInvoices, pnlData, balanceSheetData, cashFlowData, allAccounts, transactionsData] = await Promise.all([
+                fetchQuickBooksQueryAll({ entityName: 'Bill', baseQuery: 'select * from Bill' }),
+                fetchQuickBooksQueryAll({ entityName: 'Invoice', baseQuery: 'select * from Invoice' }),
+                fetchQuickBooksProxyJson({ method: 'GET', url: 'reports/ProfitAndLoss' }),
+                fetchQuickBooksProxyJson({ method: 'GET', url: 'reports/BalanceSheet' }),
+                fetchQuickBooksProxyJson({ method: 'GET', url: 'reports/CashFlow' }),
+                fetchQuickBooksQueryAll({ entityName: 'Account', baseQuery: 'select * from Account' }),
+                fetchQuickBooksProxyJson({ method: 'GET', url: transactionListUrl })
             ]);
 
-            const billsData = await billsRes.json();
-            const invoicesData = await invoicesRes.json();
-            const pnlData = await pnlRes.json();
-            const balanceSheetData = await balanceSheetRes.json();
-            const cashFlowData = await cashFlowRes.json();
-            const accountsData = await accountsRes.json();
-            const transactionsData = await transactionsRes.json();
-
-            setQbBills(billsData?.QueryResponse?.Bill || []);
-            setQbInvoices(invoicesData?.QueryResponse?.Invoice || []);
+            setQbBills(allBills || []);
+            setQbInvoices(allInvoices || []);
             setQbPnlData(pnlData || null);
             setQbBalanceSheetData(balanceSheetData || null);
             setQbCashFlowData(cashFlowData || null);
-            setQbAccounts(accountsData?.QueryResponse?.Account || []);
+            setQbAccounts(allAccounts || []);
             setQbTransactions(parseTransactionReport(transactionsData || {}));
             setQbLastSyncAt(new Date());
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            setQbError('Failed to fetch data from QuickBooks.');
+            setQbError(error?.message || 'Failed to fetch data from QuickBooks.');
         } finally {
             setQbLoading(false);
         }
