@@ -44,6 +44,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="google-site-verification" content="uXhQZUyEj0ClJCbnIDDw3fJoX1Gw6uHXSAhrL_29EC4" />
+        <link rel="canonical" href="https://www.yourlegal.io/" />
         <link rel="icon" href="/faviconyl.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
