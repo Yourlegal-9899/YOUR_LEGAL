@@ -4,7 +4,7 @@
 
 import { NextResponse } from 'next/server';
 
-const baseUrl = 'https://yourlegal.in';
+const baseUrl = 'https://yourlegal.io';
 const lastModified = '2024-07-26';
 
 // The list and order of sitemaps are explicitly defined as per the authority-first strategy.

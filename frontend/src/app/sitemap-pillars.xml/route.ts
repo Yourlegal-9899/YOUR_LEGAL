@@ -6,7 +6,7 @@
 import { NextResponse } from 'next/server';
 import { allPosts } from '@/lib/blog-posts';
 
-const baseUrl = 'https://yourlegal.in';
+const baseUrl = 'https://yourlegal.io';
 const lastModified = '2024-07-26';
 
 // Filter for pillar pages

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const baseUrl = 'https://yourlegal.in';
+const baseUrl = 'https://yourlegal.io';
 const lastModified = '2024-07-26';
 const countries = ['usa', 'dubai', 'uk', 'singapore', 'australia', 'saudi-arabia', 'in', 'netherlands'];
 const industrySubPages = [

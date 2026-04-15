@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next';
 
-const baseUrl = 'https://yourlegal.in';
+const baseUrl = 'https://yourlegal.io';
 
 export default function robots(): MetadataRoute.Robots {
   return {
