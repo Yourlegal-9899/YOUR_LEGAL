@@ -134,7 +134,7 @@ export default function NonResidentFormationPage() {
                         </p>
                         <div className="flex justify-center mb-4">
                             <Image
-                                src="/partners/mercury-logo.svg"
+                                src="/mercury_logo.svg"
                                 alt="Mercury Bank logo"
                                 width={120}
                                 height={32}

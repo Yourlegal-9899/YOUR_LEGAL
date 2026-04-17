@@ -164,7 +164,7 @@ export default function CompanyFormationServicePage() {
                     </p>
                     <div className="flex justify-center mb-6">
                         <Image
-                            src="/partners/mercury-logo.svg"
+                            src="/mercury_logo.svg"
                             alt="Mercury Bank logo"
                             width={150}
                             height={40}
