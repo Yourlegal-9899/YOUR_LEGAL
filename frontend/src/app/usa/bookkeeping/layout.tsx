@@ -4,8 +4,12 @@ export const metadata: Metadata = {
   title: 'Expert Online Bookkeeping for US Businesses | YourLegal',
   description:
     'Simplify finances with YourLegal’s expert online bookkeeping for US businesses. Accurate, compliant, human-reviewed and tech-powered solutions for growth.',
+  alternates: {
+    canonical: 'https://www.yourlegal.io/usa/bookkeeping',
+  },
 };
 
 export default function BookkeepingLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
+

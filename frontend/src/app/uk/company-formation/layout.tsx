@@ -4,8 +4,12 @@ export const metadata: Metadata = {
   title: 'Company Formation UK Non-Resident| YourLegal',
   description:
     'Fast company formation UK Non-Residents. Get your UK Ltd company registered with London address, HMRC, and full compliance in under 24 hours.',
+  alternates: {
+    canonical: 'https://www.yourlegal.io/uk/company-formation',
+  },
 };
 
 export default function UkCompanyFormationLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
+
