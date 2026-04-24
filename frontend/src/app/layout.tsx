@@ -53,14 +53,14 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Code+Pro&display=swap" rel="stylesheet" />
         
         {/* Google tag (gtag.js) */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-H58ZS2N8JB"></script>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-XPJPZ656SW"></script>
         <script>
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
 
-            gtag('config', 'G-H58ZS2N8JB');
+            gtag('config', 'G-XPJPZ656SW');
           `}
         </script>
         <Script id="meta-pixel" strategy="beforeInteractive">
