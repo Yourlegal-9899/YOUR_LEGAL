@@ -325,7 +325,7 @@ export default function UsaPage() {
                         Choose Your Home State Wisely
                     </h2>
                     <p className="text-lg text-gray-600 text-center max-w-3xl mx-auto mb-16">
-                        The state of incorporation is a critical decision. Compare the top four states for US company formation.
+                       Deciding where to register a company in the USA is a critical choice. Compare the top four states for US company formation for non-residents.
                     </p>
     
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -454,9 +454,9 @@ export default function UsaPage() {
              <section className="bg-gradient-to-r from-blue-50 via-gray-50 to-indigo-100 py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight">
-                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">USA Company Incorporation, Accounting &amp; Tax</span>
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">US Company Formation for Non-Residents,Incorporation, Accounting & Tax</span>
                     </h1>
-                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">End-to-end support for global entrepreneurs looking to establish a presence in the world's largest and most dynamic market.</p>
+                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">Your complete guide to US company formation for non-residents.     End-to-end support for global entrepreneurs looking to establish a presence in the world's largest and most dynamic market.</p>
                     <div className="mt-10">
                         <a href="https://outlook.office365.com/book/YOURLEGAL1@yourlegal.in/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer">
                             <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">Get a Free USA Consultation</Button>
@@ -492,7 +492,7 @@ export default function UsaPage() {
                                 </div>
                             </div>
                             <div className="bg-gray-50 p-8 rounded-xl">
-                                <h3 className="text-2xl font-bold text-gray-800 mb-6">What's Included?</h3>
+                                <h3 className="text-2xl font-bold text-gray-800 mb-6">What’s Included in Our US Company Formation Services? </h3>
                                  <ul className="space-y-3">
                                     <li className="flex items-start"><CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-1"/>Company Name Availability Check</li>
                                     <li className="flex items-start"><CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-1"/>State Filing of Formation Documents</li>

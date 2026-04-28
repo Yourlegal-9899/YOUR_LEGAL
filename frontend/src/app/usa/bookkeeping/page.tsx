@@ -72,7 +72,7 @@ export default function BookkeepingServicePage() {
         {
             title: "Bookkeeping FAQs",
             href: "/usa/bookkeeping/faqs",
-            description: "Get answers to frequently asked questions about our US bookkeeping services.",
+            description: "Get answers to frequently asked questions about our bookkeeping services in the USA.",
             icon: HelpCircle
         }
     ];
@@ -113,7 +113,8 @@ export default function BookkeepingServicePage() {
               {serviceName} Services in the {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Accurate {primaryKeyword.toLowerCase()} is the foundation of your company's financial health. We provide tech-powered, human-reviewed bookkeeping to keep you compliant and informed.
+              Accurate {primaryKeyword.toLowerCase()} is the foundation of your company's financial health. We provide tech-powered, human-reviewed bookkeeping to keep you compliant and informed. Our bookkeeping services in the USA support businesses with organized financial tracking and reliable reporting throughout the year.
+
             </p>
           </div>
         </section>
@@ -122,7 +123,7 @@ export default function BookkeepingServicePage() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Explore Bookkeeping Topics</h2>
-                <p className="text-lg text-gray-600">Click on a topic below to learn more about our bookkeeping services.</p>
+                <p className="text-lg text-gray-600">Click on a topic below to learn more about our bookkeeping services in the USA.</p>
             </div>
 
             <div className="space-y-4">

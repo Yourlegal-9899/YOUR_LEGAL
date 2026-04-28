@@ -31,13 +31,13 @@ export default function CrossBorderAccountingServicePage() {
       {
           title: "Who Needs This Service",
           href: "/usa/cross-border-accounting/who-needs-this-service",
-          description: "Learn if your international business requires specialized cross-border accounting.",
+          description: "Learn if your international business requires specialized Cross-Border Accounting Services.",
           icon: UserCheck
       },
       {
           title: "When This Is Required",
           href: "/usa/cross-border-accounting/when-this-is-required",
-          description: "Understand the triggers for needing cross-border expertise, such as foreign subsidiaries or transactions.",
+          description: "Understand the triggers for needing cross-border accounting services in the USA, such as foreign subsidiaries or transaction.",
           icon: Clock
       },
       {
@@ -55,7 +55,7 @@ export default function CrossBorderAccountingServicePage() {
       {
           title: "Cost Overview",
           href: "/usa/cross-border-accounting/cost-overview",
-          description: "A breakdown of typical costs for international accounting and tax advisory services.",
+          description: "A breakdown of typical costs for international accounting services and tax advisory services.",
           icon: DollarSign
       },
       {
@@ -79,7 +79,7 @@ export default function CrossBorderAccountingServicePage() {
       {
           title: "Cross-Border FAQs",
           href: "/usa/cross-border-accounting/faqs",
-          description: "Find answers to frequently asked questions about our international accounting services.",
+          description: "Find answers to frequently asked questions about our  international accounting services.",
           icon: HelpCircle
       }
   ];
@@ -116,10 +116,10 @@ export default function CrossBorderAccountingServicePage() {
                 Back to USA Services
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services in the {countryName}
+              {serviceName} Services in the USA
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Expert financial management for global businesses, covering transfer pricing, tax treaties, and multi-currency operations.
+              Expert financial management for global businesses, covering transfer pricing, tax treaties, and multi-currency operations. Our expert Cross-Border Accounting Services in the USA ensure your international transactions remain compliant and efficient.
             </p>
           </div>
         </section>
@@ -128,7 +128,7 @@ export default function CrossBorderAccountingServicePage() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Explore Cross-Border Topics</h2>
-                <p className="text-lg text-gray-600">Click on a topic below to learn more about our international services.</p>
+                <p className="text-lg text-gray-600">Click on a topic below to learn more about our international accounting services</p>
             </div>
 
             <div className="space-y-4">

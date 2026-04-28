@@ -79,7 +79,7 @@ export default function TaxComplianceServicePage() {
       {
           title: "Tax Compliance FAQs",
           href: "/usa/tax-compliance/faqs",
-          description: "Find answers to frequently asked questions about our US tax filing services.",
+          description: "Find answers to frequently asked questions about our US tax compliance services",
           icon: HelpCircle
       }
   ];
@@ -110,10 +110,10 @@ export default function TaxComplianceServicePage() {
                 Back to USA Services
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services in the {countryName}
+              US tax compliance services 
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Accurate, deadline-driven tax preparation and filing for US businesses. Explore our guides to demystify US taxes.
+             Accurate, deadline-driven tax preparation and filing for US businesses.Our US tax compliance services help businesses stay aligned with federal and state filing requirements while avoiding costly penalties.Explore our guides to demystify US taxes.
             </p>
           </div>
         </section>
@@ -122,7 +122,7 @@ export default function TaxComplianceServicePage() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Explore Tax Compliance Topics</h2>
-                <p className="text-lg text-gray-600">Click on a topic below to learn more about our tax services.</p>
+                <p className="text-lg text-gray-600">Click on a topic below to learn more about our US  tax compliance services.</p>
             </div>
 
             <div className="space-y-4">

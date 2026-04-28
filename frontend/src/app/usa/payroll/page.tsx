@@ -55,7 +55,7 @@ export default function PayrollServicePage() {
       {
           title: "Payroll Cost Overview",
           href: "/usa/payroll/cost-overview",
-          description: "Get a clear breakdown of the typical costs for outsourced payroll services in the US.",
+          description: "Get a clear breakdown of the typical costs for outsourced payroll services in the United States.",
           icon: DollarSign
       },
       {
@@ -73,7 +73,7 @@ export default function PayrollServicePage() {
       {
           title: "Payroll FAQs",
           href: "/usa/payroll/faqs",
-          description: "Find answers to frequently asked questions about our US payroll services.",
+          description: "Find answers to frequently asked questions about our payroll services in the United States.",
           icon: HelpCircle
       }
   ];
@@ -106,7 +106,7 @@ export default function PayrollServicePage() {
      {
         title: "Outsourced vs. In-House Payroll",
         href: "/blog/outsourced-vs-in-house-payroll-us",
-        description: "A detailed comparison of the costs, benefits, and roles of an outsourced payroll service versus hiring an in-house team.",
+        description: "A detailed comparison of the costs, benefits, and roles of an outsourced payroll services in the Unites States versus hiring an in-house team.",
         icon: GitCompare
     },
   ];
@@ -125,7 +125,7 @@ export default function PayrollServicePage() {
               {serviceName} Services in the {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Compliant, automated payroll to pay your US employees and contractors on time, every time. Explore our guides to understand US payroll inside and out.
+              Compliant, automated payroll to pay your US employees and contractors on time, every time. Our payroll services in the United States are designed to make running payroll simple, accurate, and fully compliant. Explore our guides to understand US payroll inside and out.
             </p>
           </div>
         </section>
@@ -134,7 +134,7 @@ export default function PayrollServicePage() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Explore Payroll Topics</h2>
-                <p className="text-lg text-gray-600">Click on a topic below to learn more about our payroll services.</p>
+                <p className="text-lg text-gray-600">Click on a topic below to learn more about our payroll services in the United States.</p>
             </div>
 
             <div className="space-y-4">

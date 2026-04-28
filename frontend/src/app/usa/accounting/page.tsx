@@ -55,7 +55,7 @@ export default function AccountingServicePage() {
         {
             title: "Cost Overview",
             href: "/usa/accounting/cost-overview",
-            description: "Get a clear breakdown of pricing for US accounting services.",
+            description: "Get a clear breakdown of pricing for accounting services in USA.",
             icon: DollarSign
         },
         {
@@ -79,7 +79,7 @@ export default function AccountingServicePage() {
         {
             title: "FAQs",
             href: "/usa/accounting/faqs",
-            description: "Find answers to frequently asked questions about our accounting services.",
+            description: "Find answers to frequently asked questions about our accounting services in USA.",
             icon: HelpCircle
         }
     ];
@@ -117,10 +117,10 @@ export default function AccountingServicePage() {
                 Back to USA Services
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services in the {countryName}
+              {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Expert {primaryKeyword.toLowerCase()} to ensure your business stays compliant and financially sound. Explore our detailed guides on every aspect of US accounting.
+              Expert {primaryKeyword.toLowerCase()} to ensure your business stays compliant and financially sound. Our accounting services in USA are designed to support growing businesses with accurate reporting and compliance. Explore our detailed guides on every aspect of US accounting.
             </p>
           </div>
         </section>
@@ -129,7 +129,7 @@ export default function AccountingServicePage() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Explore US Accounting</h2>
-                <p className="text-lg text-gray-600">Click on a topic below to learn more about our accounting services.</p>
+                <p className="text-lg text-gray-600">Click on a topic below to learn more about our accounting services in USA.</p>
             </div>
 
             <div className="space-y-4">

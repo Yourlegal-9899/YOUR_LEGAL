@@ -55,7 +55,7 @@ export default function AnnualComplianceServicePage() {
       {
           title: "Cost Overview",
           href: "/usa/annual-compliance/cost-overview",
-          description: "Get a clear breakdown of state fees and our service costs for annual compliance.",
+          description: "Get a clear breakdown of state fees and our costs for annual compliance services.",
           icon: DollarSign
       },
       {
@@ -79,7 +79,7 @@ export default function AnnualComplianceServicePage() {
       {
           title: "Annual Compliance FAQs",
           href: "/usa/annual-compliance/faqs",
-          description: "Find answers to frequently asked questions about our annual compliance services.",
+          description: "Find answers to frequently asked questions about our annual compliance services in United States.",
           icon: HelpCircle
       }
   ];
@@ -114,7 +114,7 @@ export default function AnnualComplianceServicePage() {
               {serviceName} Services in the {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Automated state filings to keep your US company in good standing, year after year. Explore our guides on every aspect of US annual compliance.
+             Automated state filings to keep your US company in good standing, year after year. Our annual compliance services in United States are designed to help businesses stay compliant with state regulations while reducing administrative burden. Explore our guides on every aspect of US annual compliance.
             </p>
           </div>
         </section>

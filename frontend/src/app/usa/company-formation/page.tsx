@@ -123,10 +123,10 @@ export default function CompanyFormationServicePage() {
                 Back to USA Services
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services in the {countryName}
+              Company Formation in USA for Non Residents
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Launch your Delaware or Wyoming company from anywhere. Fast, compliant, and built for non-residents. Explore our guides to learn everything you need to know.
+              Launch your Delaware or Wyoming company from anywhere. Fast, compliant, and built for non-residents. Our services are specifically designed to simplify the process of company formation in USA for non-residents, helping global founders start and manage their businesses with confidence. Explore our guides to learn everything you need to know.
             </p>
           </div>
         </section>
@@ -135,7 +135,8 @@ export default function CompanyFormationServicePage() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
                  <h2 className="text-3xl font-bold text-gray-900 mb-4">Explore Company Formation Topics</h2>
-                <p className="text-lg text-gray-600">Click on a topic below to learn more about our formation services.</p>
+                <p className="text-lg text-gray-600">Click on a topic below to learn more about our US Company formation services. 
+</p>
             </div>
 
             <div className="space-y-4">
@@ -192,7 +193,7 @@ export default function CompanyFormationServicePage() {
                     {[
                       { title: 'The US Company Formation Process', path: '/blog/us-company-formation-process'},
                       { title: 'Delaware vs. Wyoming Incorporation', path: '/blog/delaware-vs-wyoming-incorporation'},
-                      { title: 'A Non-Resident\'s Guide to US Company Formation', path: '/blog/us-company-formation-for-non-residents'},
+                      { title: 'Complete Guide to Company Formation in USA for Non-Residents', path: '/blog/us-company-formation-for-non-residents'},
                     ].map(post => (
                       <li key={post.path}>
                         <Link href={post.path} className="text-blue-600 hover:underline flex items-center">
