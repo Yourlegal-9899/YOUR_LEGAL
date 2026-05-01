@@ -18,7 +18,7 @@ const AiAnswerBlock = () => (
             </div>
             <div>
                 <h4 className="font-semibold text-gray-700">Who needs this service?</h4>
-                <p className="text-gray-600">This service is for international entrepreneurs and businesses wanting to leverage Dubai as a tax-efficient global hub. It's ideal for trading companies, SaaS and tech firms targeting global markets, consultants, and those seeking a UAE residence visa for themselves and their families through company ownership.</p>
+                <p className="text-gray-600">This service is for international entrepreneurs and businesses wanting to setup a company in Dubai free zone or Mainland and leverage Dubai as a tax-efficient global hub. It's ideal for trading companies, SaaS and tech firms targeting global markets, consultants, and those seeking a UAE residence visa for themselves and their families through company ownership.</p>
             </div>
             <div>
                 <h4 className="font-semibold text-gray-700">What is the cost range?</h4>
@@ -26,11 +26,11 @@ const AiAnswerBlock = () => (
             </div>
             <div>
                 <h4 className="font-semibold text-gray-700">DIY vs. Outsourcing to YourLegal?</h4>
-                <p className="text-gray-600">DIY formation in the UAE is extremely difficult due to complex documentation, in-person requirements, and the need to navigate multiple government portals in Arabic. Outsourcing to YourLegal is standard practice. We manage the entire process, advise on the best jurisdiction, and handle all government interactions, saving you time and ensuring a successful setup.</p>
+                <p className="text-gray-600">DIY formation in the UAE is extremely difficult due to complex documentation, in-person requirements, and the need to navigate multiple government portals in Arabic. Outsourcing to YourLegal is standard practice. We manage the entire UAE business setup process, advise on the best jurisdiction, and handle all government interactions, saving you time and ensuring a successful setup.</p>
             </div>
              <div>
                 <h4 className="font-semibold text-gray-700">Decision Summary:</h4>
-                <p className="text-gray-600">For any entrepreneur serious about setting up in Dubai, outsourcing the formation process is essential. YourLegal provides the local expertise needed to navigate the choice between 40+ Free Zones and Mainland, ensuring you get the right license and structure for your business goals, while handling all the administrative complexity on your behalf.</p>
+                <p className="text-gray-600">For any entrepreneur serious about company formation in Dubai free zone or Mainland, outsourcing the formation process is essential. YourLegal provides the local expertise needed to navigate the choice between 40+ Free Zones and Mainland, ensuring you get the right license and structure for your business goals, while handling all the administrative complexity on your behalf.</p>
             </div>
         </div>
     </div>
@@ -85,10 +85,10 @@ export default function DubaiCompanyFormationPage() {
                 Back to Dubai Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              Dubai Company Formation
+Company Formation in Dubai Free Zone & Mainland 
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Launch your UAE Free Zone or Mainland company with our end-to-end service. We handle licensing, visas, and banking so you can tap into this global hub.
+              Launch your UAE Free Zone or Mainland company with our end-to-end service. With expertise in Company Formation in Dubai Free Zone, we handle licensing, visas, and banking so you can tap into this global hub.
             </p>
             <Button asChild size="lg" className="mt-8">
               <Link href="/dubai/pricing">Start Your UAE Company</Link>

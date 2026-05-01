@@ -73,7 +73,7 @@ const faqs = [
     { q: "Do I need to register for VAT from day one?", a: "VAT registration is mandatory only if your taxable supplies and imports exceed AED 375,000 per year. You can register voluntarily if your turnover exceeds AED 187,500. We can advise on the best strategy for you." },
     { q: "Is the 9% corporate tax applicable to all free zone companies?", a: "Not necessarily. A 'Qualifying Free Zone Person' can benefit from a 0% corporate tax rate on 'Qualifying Income'. This depends on your activities and who you transact with. Our tax advisors can help you determine your status." },
     { q: "How long does the company formation process take in the UAE?", a: "The timeline varies by jurisdiction, but it typically takes 1-2 weeks once all documents are submitted correctly. We streamline this process to ensure the fastest possible setup." },
-    { q: "Can non-residents open a UAE company and bank account?", a: "Yes. The UAE allows 100% foreign ownership in most business activities. We provide full assistance with the company formation and bank account opening process for non-resident founders." },
+    { q: "Can non-residents open a UAE company and bank account?", a: "Yes. The UAE allows 100% foreign ownership in most business activities. We provide full assistance with the Dubai company formation and bank account opening process for non-resident founders." },
     { q: "Is bookkeeping mandatory in the UAE?", a: "Yes. The UAE Commercial Companies Law requires all companies to maintain proper accounting records for at least five years. This is also essential for VAT and Corporate Tax compliance." },
 ];
 
@@ -154,7 +154,7 @@ const ServicesGrid = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Our Services in Dubai</h2>
-                    <p className="text-lg text-gray-600">A complete suite of services for your UAE business.</p>
+                    <p className="text-lg text-gray-600">A complete suite of services for your UAE business, including Dubai company formation services, compliance, and accounting. </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {services.map(service => (
@@ -272,7 +272,7 @@ export default function DubaiPage() {
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight">
                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-800 to-indigo-900">Dubai Company Formation, Accounting & Tax</span>
                     </h1>
-                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">End-to-end solutions for international founders. We handle your UAE setup, bookkeeping, VAT, and corporate tax, so you can focus on growth.</p>
+                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">End-to-end Dubai company formation and compliance solutions for international founders. We handle your UAE business setup, bookkeeping, VAT, and corporate tax, so you can focus on growth.</p>
                     <div className="mt-10 flex justify-center gap-4">
                         <a href="https://outlook.office365.com/book/YOURLEGAL1@yourlegal.in/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer">
                             <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white">Get Free Consultation</Button>
@@ -292,7 +292,7 @@ export default function DubaiPage() {
                             <FeatureCard icon={Globe} title="Strategic Global Hub" description="Centrally located between East and West, providing unmatched access to global markets." />
                             <FeatureCard icon={Banknote} title="Favorable Tax Environment" description="0% personal income tax and a competitive 9% corporate tax rate on profits &gt; AED 375,000." />
                             <FeatureCard icon={Users} title="100% Foreign Ownership" description="Maintain full control of your business in both Mainland and Free Zone jurisdictions for most activities." />
-                            <FeatureCard icon={Building} title="World-Class Infrastructure" description="Benefit from modern logistics, transport, and digital infrastructure to support your business." />
+                            <FeatureCard icon={Building} title="World-Class Infrastructure" description="Benefit from modern logistics, transport, and digital infrastructure to support your UAE business." />
                             <FeatureCard icon={ShieldCheck} title="Stable & Pro-Business" description="A secure and welcoming environment with a government focused on ease of doing business." />
                             <FeatureCard icon={TrendingUp} title="Diverse Economic Hub" description="Ideal for startups, holding companies, trading, e-commerce, and professional services." />
                         </div>
@@ -306,10 +306,10 @@ export default function DubaiPage() {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                             {/* Mainland */}
                             <div className="bg-white p-8 rounded-xl border">
-                                <h3 className="text-2xl font-bold text-gray-800 mb-4">Mainland Company Formation</h3>
+                                <h3 className="text-2xl font-bold text-gray-800 mb-4">Mainland Company Formation Dubai</h3>
                                 <p className="mb-6 text-gray-600">Ideal for businesses that need to trade directly within the UAE market, work with government entities, or require a physical office location in Dubai.</p>
                                 <div className="space-y-6">
-                                    <ProcessStep number="1" title="Activity & Trade Name" description="We help you select your business activities and get your company name approved by the Department of Economic Development (DED)." />
+                                    <ProcessStep number="1" title="Activity & Trade Name" description="We help you select your business activities and get your company name approved by the Department of Economic Development (DED) — a key step in the Dubai company formation process. " />
                                     <ProcessStep number="2" title="Approvals & MOA" description="Obtain initial approvals and draft your Memorandum of Association (MOA)." />
                                     <ProcessStep number="3" title="License & Visas" description="Receive your official trade license and begin the process for your establishment card and visas." />
                                     <ProcessStep number="4" title="Bank Account Support" description="We provide expert assistance to navigate the corporate bank account opening process." />
@@ -320,7 +320,7 @@ export default function DubaiPage() {
                             </div>
                             {/* Free Zone */}
                              <div className="bg-white p-8 rounded-xl border">
-                                <h3 className="text-2xl font-bold text-gray-800 mb-4">Free Zone Company Formation</h3>
+                                <h3 className="text-2xl font-bold text-gray-800 mb-4">Free Zone Company Formation Dubai</h3>
                                 <p className="mb-6 text-gray-600">The most popular choice for international entrepreneurs, offering 100% ownership, tax exemptions, and simplified setup procedures.</p>
                                 <div className="space-y-6">
                                     <ProcessStep number="1" title="Jurisdiction & License" description="We advise on the best Free Zone (e.g., DMCC, Meydan, IFZA) and license type (Trading, Service) for your business." />
@@ -340,7 +340,7 @@ export default function DubaiPage() {
                         <div className="text-center">
                             <h2 className="text-3xl font-bold text-gray-900 mb-4">Transparent Pricing Plans</h2>
                             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-                                Choose the plan that fits your needs, from simple formation to full-service compliance and tax.
+                                Choose the plan that fits your needs, from simple Dubai company formation to full-service compliance and tax.
                             </p>
                             <Button asChild size="lg">
                                 <Link href="/dubai/pricing">View Detailed Pricing</Link>
