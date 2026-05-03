@@ -59,7 +59,7 @@ export default function AccountingServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              FTA-compliant and audit-ready accounting services to navigate VAT, Corporate Tax, and regulatory requirements in the UAE. Your business's financial health, managed by experts.
+              FTA-compliant and audit-ready accounting services in Dubai to navigate VAT, Corporate Tax, and regulatory requirements in the UAE. Your business's financial health, managed by experts.
             </p>
           </div>
         </section>
@@ -94,7 +94,7 @@ export default function AccountingServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>Outsourcing your accounting to YourLegal is the most effective way to navigate the UAE's complex regulatory environment. Our team of qualified accountants ensures your books are IFRS-compliant and always ready for audit. We manage your VAT and Corporate Tax obligations, protecting you from FTA penalties. By handling the financial complexities, we provide the clarity and confidence you need to run your business, make strategic decisions, and satisfy all legal requirements without the burden and cost of an in-house finance department. This is a foundational service that works in tandem with our <Link href="/dubai/tax-compliance" className="text-blue-600 hover:underline">tax compliance solutions</Link>.</p>
+                <p>Outsourcing your accounting to YourLegal is the most effective way to navigate the UAE's complex regulatory environment. Our team of qualified accountants ensures your books are IFRS-compliant and always ready for audit. We manage your VAT and Corporate Tax obligations, protecting you from FTA penalties. Our Professional accounting services in Dubai help businesses manage complex tax and reporting requirements with greater accuracy and efficiency. By handling the financial complexities, we provide the clarity and confidence you need to run your business, make strategic decisions, and satisfy all legal requirements without the burden and cost of an in-house finance department. This is a foundational service that works in tandem with our <Link href="/dubai/tax-compliance" className="text-blue-600 hover:underline">tax compliance solutions</Link>.</p>
             </ContentSection>
 
             <AiAnswerBlock blocks={aiBlocks} />
