@@ -9,6 +9,7 @@ const {
   assignLead,
   addLeadNote,
   handleZohoWebhook,
+  submitPublicContactLead,
 } = require('../controllers/zohoController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -23,5 +24,6 @@ router.patch('/leads/:id/status', protect, authorize('admin'), updateLeadStatus)
 router.patch('/leads/:id/assign', protect, authorize('admin'), assignLead);
 router.post('/leads/:id/notes', protect, authorize('admin'), addLeadNote);
 router.post('/webhook', handleZohoWebhook);
+router.post('/public-contact', submitPublicContactLead);
 
 module.exports = router;

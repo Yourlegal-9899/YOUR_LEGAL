@@ -1,7 +1,7 @@
 const crypto = require('crypto');
-const { fetchLeads, fetchLeadById, updateLead, addNoteToLead } = require('../services/zohoService');
+const { fetchLeads, fetchLeadById, updateLead, addNoteToLead, createLead } = require('../services/zohoService');
 const { upsertLeadFromZoho, syncPendingUsersToZoho } = require('../services/zohoLeadSyncService');
-const { mapLocalStatusToZoho } = require('../utils/zohoLeadMapper');
+const { mapLocalStatusToZoho, buildZohoLeadPayload } = require('../utils/zohoLeadMapper');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
 const { sendZeptoMail } = require('../services/zeptoMailService');
@@ -51,6 +51,75 @@ const resolveAssigneeValue = async (userId) => {
   if (!user) return null;
   const mode = String(process.env.ZOHO_ASSIGN_FIELD_VALUE || 'email').toLowerCase();
   return mode === 'name' ? (user.name || user.email) : (user.email || user.name);
+};
+
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+
+exports.submitPublicContactLead = async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      phone,
+      jurisdiction,
+      serviceRequired,
+      requirement,
+      pageUrl,
+    } = req.body || {};
+
+    const cleanName = String(name || '').trim();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanPhone = String(phone || '').trim();
+    const cleanJurisdiction = String(jurisdiction || '').trim();
+    const cleanServiceRequired = String(serviceRequired || '').trim();
+    const cleanRequirement = String(requirement || '').trim();
+    const cleanPageUrl = String(pageUrl || '').trim();
+
+    if (!cleanName || !cleanEmail) {
+      return res.status(400).json({ message: 'Name and email are required.' });
+    }
+
+    if (!isValidEmail(cleanEmail)) {
+      return res.status(400).json({ message: 'Please enter a valid email address.' });
+    }
+
+    const descriptionLines = [
+      `Website lead from contact form`,
+      `Name: ${cleanName}`,
+      `Email: ${cleanEmail}`,
+      `Phone: ${cleanPhone || 'N/A'}`,
+      `Jurisdiction: ${cleanJurisdiction || 'N/A'}`,
+      `Service Required: ${cleanServiceRequired || 'N/A'}`,
+      `Requirement: ${cleanRequirement || 'N/A'}`,
+      `Page URL: ${cleanPageUrl || 'N/A'}`,
+    ];
+
+    const payload = buildZohoLeadPayload({
+      fullName: cleanName,
+      email: cleanEmail,
+      phone: cleanPhone || undefined,
+      company: cleanJurisdiction || process.env.ZOHO_DEFAULT_COMPANY || 'Website Lead',
+      leadSource: process.env.ZOHO_WEBFORM_LEAD_SOURCE || 'Website Contact Form',
+      status: process.env.ZOHO_WEBFORM_LEAD_STATUS || 'new',
+      extraFields: {
+        Description: descriptionLines.join('\n'),
+      },
+    });
+
+    const zohoLead = await createLead(payload);
+    const storedLead = zohoLead ? await upsertLeadFromZoho(zohoLead) : null;
+
+    return res.json({
+      success: true,
+      message: 'Thanks! Your details have been submitted successfully.',
+      leadId: storedLead?._id || null,
+    });
+  } catch (error) {
+    console.error('Public contact lead submit failed:', error?.message || error);
+    return res.status(error.statusCode || 500).json({
+      message: error?.message || 'Unable to submit your request right now.',
+    });
+  }
 };
 
 
