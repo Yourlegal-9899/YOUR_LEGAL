@@ -1,4 +1,5 @@
 const OAuthClient = require('intuit-oauth');
+const crypto = require('crypto');
 const User = require('../models/User');
 
 const oauthClient = new OAuthClient({
@@ -6,6 +7,78 @@ const oauthClient = new OAuthClient({
   clientSecret: process.env.QB_CLIENT_SECRET,
   environment: process.env.QB_ENVIRONMENT || 'sandbox',
   redirectUri: process.env.QB_REDIRECT_URI,
+});
+
+const TOKEN_ENCRYPTION_SECRET =
+  process.env.QB_TOKEN_ENCRYPTION_KEY || process.env.QB_TOKENS_ENCRYPTION_KEY || '';
+const ENCRYPTION_PREFIX = 'enc';
+
+const getTokenEncryptionKey = () => {
+  if (!TOKEN_ENCRYPTION_SECRET) return null;
+  return crypto.createHash('sha256').update(String(TOKEN_ENCRYPTION_SECRET)).digest();
+};
+
+const encryptTokenValue = (value) => {
+  if (!value) return value;
+  if (typeof value !== 'string') value = String(value);
+  if (value.startsWith(`${ENCRYPTION_PREFIX}:`)) return value;
+
+  const key = getTokenEncryptionKey();
+  if (!key) return value;
+
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+
+  return [
+    ENCRYPTION_PREFIX,
+    iv.toString('base64'),
+    authTag.toString('base64'),
+    encrypted.toString('base64'),
+  ].join(':');
+};
+
+const decryptTokenValue = (value) => {
+  if (!value || typeof value !== 'string') return value;
+  if (!value.startsWith(`${ENCRYPTION_PREFIX}:`)) return value;
+
+  const key = getTokenEncryptionKey();
+  if (!key) {
+    throw new Error('QuickBooks token is encrypted but QB_TOKEN_ENCRYPTION_KEY is missing.');
+  }
+
+  const parts = value.split(':');
+  if (parts.length !== 4) {
+    throw new Error('Invalid encrypted QuickBooks token format.');
+  }
+
+  const [, ivB64, authTagB64, encryptedB64] = parts;
+  const iv = Buffer.from(ivB64, 'base64');
+  const authTag = Buffer.from(authTagB64, 'base64');
+  const encrypted = Buffer.from(encryptedB64, 'base64');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+
+  const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+  return decrypted.toString('utf8');
+};
+
+const getQuickBooksTokens = (user) => {
+  const stored = user?.quickBooksTokens || {};
+  return {
+    accessToken: decryptTokenValue(stored.accessToken),
+    refreshToken: decryptTokenValue(stored.refreshToken),
+    realmId: stored.realmId,
+    expiresAt: stored.expiresAt,
+  };
+};
+
+const buildStoredQuickBooksTokens = ({ accessToken, refreshToken, realmId, expiresAt }) => ({
+  accessToken: encryptTokenValue(accessToken),
+  refreshToken: encryptTokenValue(refreshToken),
+  realmId,
+  expiresAt,
 });
 
 const makeApiCall = async (accessToken, realmId, url, method = 'GET', body = null) => {
@@ -40,31 +113,47 @@ const makeApiCall = async (accessToken, realmId, url, method = 'GET', body = nul
 };
 
 const refreshTokenIfNeeded = async (user, force = false) => {
-  if (!user.quickBooksTokens || !user.quickBooksTokens.expiresAt) {
+  const tokens = getQuickBooksTokens(user);
+  if (!tokens?.realmId) return user;
+
+  const expiresAt = tokens.expiresAt ? new Date(tokens.expiresAt) : null;
+  const now = new Date();
+
+  const shouldRefresh =
+    force ||
+    !expiresAt ||
+    Number.isNaN(expiresAt.getTime()) ||
+    !tokens.accessToken ||
+    expiresAt <= now;
+
+  if (!shouldRefresh) {
     return user;
   }
 
-  const expiresAt = new Date(user.quickBooksTokens.expiresAt);
-  const now = new Date();
-  
-  if (!force && expiresAt > now) {
-    return user;
+  if (!tokens.refreshToken) {
+    user.quickBooksConnected = false;
+    user.quickBooksTokens = {};
+    await user.save();
+    const authError = new Error('QuickBooks refresh token missing. Please reconnect.');
+    authError.status = 401;
+    authError.code = 'QB_REFRESH_INVALID';
+    throw authError;
   }
 
   try {
     oauthClient.setToken({
-      refresh_token: user.quickBooksTokens.refreshToken,
+      refresh_token: tokens.refreshToken,
     });
 
     const authResponse = await oauthClient.refresh();
     const token = authResponse.getJson();
 
-    user.quickBooksTokens = {
+    user.quickBooksTokens = buildStoredQuickBooksTokens({
       accessToken: token.access_token,
-      refreshToken: token.refresh_token,
-      realmId: user.quickBooksTokens.realmId,
+      refreshToken: token.refresh_token || tokens.refreshToken,
+      realmId: tokens.realmId,
       expiresAt: new Date(Date.now() + token.expires_in * 1000)
-    };
+    });
     await user.save();
     return user;
   } catch (error) {
@@ -107,9 +196,10 @@ const callQuickBooks = async (user, { method = 'GET', url, data }) => {
     }
     throw error;
   }
+  const initialTokens = getQuickBooksTokens(refreshedUser);
   let result = await makeApiCall(
-    refreshedUser.quickBooksTokens.accessToken,
-    refreshedUser.quickBooksTokens.realmId,
+    initialTokens.accessToken,
+    initialTokens.realmId,
     url,
     method,
     data
@@ -118,9 +208,10 @@ const callQuickBooks = async (user, { method = 'GET', url, data }) => {
   if (result.status === 401) {
     try {
       refreshedUser = await refreshTokenIfNeeded(refreshedUser, true);
+      const refreshedTokens = getQuickBooksTokens(refreshedUser);
       result = await makeApiCall(
-        refreshedUser.quickBooksTokens.accessToken,
-        refreshedUser.quickBooksTokens.realmId,
+        refreshedTokens.accessToken,
+        refreshedTokens.realmId,
         url,
         method,
         data
@@ -139,7 +230,8 @@ const callQuickBooks = async (user, { method = 'GET', url, data }) => {
 exports.getAuthUrl = (req, res) => {
   try {
     const authUri = oauthClient.authorizeUri({
-      scope: [OAuthClient.scopes.Accounting],
+      // offline_access is required to receive a refresh token and keep the integration persistent.
+      scope: [OAuthClient.scopes.Accounting, 'offline_access'],
       state: req.user.id,
     });
     res.json({ success: true, authUrl: authUri });
@@ -163,12 +255,12 @@ exports.handleCallback = async (req, res) => {
 
     await User.findByIdAndUpdate(userId, {
       quickBooksConnected: true,
-      quickBooksTokens: {
+      quickBooksTokens: buildStoredQuickBooksTokens({
         accessToken: token.access_token,
         refreshToken: token.refresh_token,
         realmId,
         expiresAt: new Date(Date.now() + token.expires_in * 1000)
-      }
+      }),
     });
 
     res.redirect(`${process.env.FRONTEND_URL}/dashboard?qb_status=success&page=settings`);

@@ -1,16 +1,11 @@
 'use server';
 
 /**
- * @fileOverview This file defines a Genkit flow for answering basic legal questions.
- *
- * It includes:
- * - answerLegalQuestions: A function to answer legal questions.
- * - AnswerLegalQuestionsInput: The input type for the function.
- * - AnswerLegalQuestionsOutput: The output type for the function.
+ * @fileOverview This file defines a server-side flow for answering platform questions.
+ * It now uses Groq Chat Completions while keeping the same knowledge base and behavior.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { z } from 'zod';
 
 const YOURLEGAL_KB = `
 YourLegal Knowledge Base (from project code):
@@ -82,6 +77,14 @@ Policies:
 - Peace-of-mind guarantee: accurate state and IRS filings; if YourLegal makes an error, it covers the costs.
 `;
 
+const SYSTEM_PROMPT = `You are the YourLegal AI assistant for the YourLegal platform. Answer only questions related to the YourLegal project, product, and workflows.
+You can help with topics like: onboarding, company formation, EIN application, initial compliance, formation progress, documents, admin vs. user flows, Company & Legal page, Taxes & Filings, subscriptions/payments, notifications, support, and QuickBooks integration.
+Use any provided LIVE DATA to answer questions about compliance dates, tax deadlines, bookkeeping, QuickBooks balances, invoices, bills, and reports. If LIVE DATA is missing or indicates a service is not connected, say that the data is not available and explain how to connect the service in the YourLegal dashboard.
+If a question is not about the YourLegal platform or asks for general legal advice, respond briefly that you can only help with the YourLegal platform and ask the user to rephrase with platform context. Do not provide legal advice.
+Do not use tools for legal precedence; this assistant does not have access to real legal databases. End every response with a short disclaimer that you are not providing legal advice and the user should consult a lawyer.
+
+${YOURLEGAL_KB}`;
+
 const AnswerLegalQuestionsInputSchema = z.object({
   question: z.string().describe('The legal question to be answered.'),
   liveData: z.string().optional().describe('Live, user-specific data fetched from the platform APIs.'),
@@ -93,50 +96,68 @@ const AnswerLegalQuestionsOutputSchema = z.object({
 });
 export type AnswerLegalQuestionsOutput = z.infer<typeof AnswerLegalQuestionsOutputSchema>;
 
+type GroqChatCompletionResponse = {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+  error?: {
+    message?: string;
+  };
+};
 
-const getLegalPrecedence = ai.defineTool({
-  name: 'getLegalPrecedence',
-  description: 'Returns the legal precedence for a given legal question.',
-  inputSchema: z.object({
-    question: z.string().describe('The legal question to find precedence for.'),
-  }),
-  outputSchema: z.string().describe('The legal precedence for the given question.'),
-}, async (input) => {
-  // TODO: Implement the actual retrieval of legal precedence.
-  // This is a placeholder implementation.
-  return `This is a placeholder for legal precedence related to: ${input.question}.  Consult a qualified legal expert for actual legal advice.`;
-});
+const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-const answerLegalQuestionsPrompt = ai.definePrompt({
-  name: 'answerLegalQuestionsPrompt',
-  input: {schema: AnswerLegalQuestionsInputSchema},
-  output: {schema: AnswerLegalQuestionsOutputSchema},
-  tools: [getLegalPrecedence],
-  system: `You are the YourLegal AI assistant for the YourLegal platform. Answer only questions related to the YourLegal project, product, and workflows.
-You can help with topics like: onboarding, company formation, EIN application, initial compliance, formation progress, documents, admin vs. user flows, Company & Legal page, Taxes & Filings, subscriptions/payments, notifications, support, and QuickBooks integration.
-Use any provided LIVE DATA to answer questions about compliance dates, tax deadlines, bookkeeping, QuickBooks balances, invoices, bills, and reports. If LIVE DATA is missing or indicates a service is not connected, say that the data is not available and explain how to connect the service in the YourLegal dashboard.
-If a question is not about the YourLegal platform or asks for general legal advice, respond briefly that you can only help with the YourLegal platform and ask the user to rephrase with platform context. Do not provide legal advice.
-Do not use tools for legal precedence; this assistant does not have access to real legal databases. End every response with a short disclaimer that you are not providing legal advice and the user should consult a lawyer.
+const callGroqChat = async (input: AnswerLegalQuestionsInput): Promise<string> => {
+  const apiKey = process.env.GROQ_API_KEY || '';
+  const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
-${YOURLEGAL_KB}`,
-  prompt: `Question: {{{question}}}
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY is not set.');
+  }
+
+  const userPrompt = `Question: ${input.question}
 
 LIVE DATA (if available, may be empty):
-{{{liveData}}}`, // removed the conditional logic here since the tool will handle if legal precedence is needed.
-});
+${input.liveData || ''}`;
 
-const answerLegalQuestionsFlow = ai.defineFlow(
-  {
-    name: 'answerLegalQuestionsFlow',
-    inputSchema: AnswerLegalQuestionsInputSchema,
-    outputSchema: AnswerLegalQuestionsOutputSchema,
-  },
-  async input => {
-    const {output} = await answerLegalQuestionsPrompt(input);
-    return output!;
+  const response = await fetch(GROQ_CHAT_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.2,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+    }),
+    cache: 'no-store',
+  });
+
+  const data = (await response.json().catch(() => null)) as GroqChatCompletionResponse | null;
+
+  if (!response.ok) {
+    const message = data?.error?.message || `Groq API request failed with status ${response.status}`;
+    throw new Error(message);
   }
-);
 
-export async function answerLegalQuestions(input: AnswerLegalQuestionsInput): Promise<AnswerLegalQuestionsOutput> {
-  return answerLegalQuestionsFlow(input);
+  const answer = data?.choices?.[0]?.message?.content?.trim();
+  if (!answer) {
+    throw new Error('Groq response did not include an answer.');
+  }
+
+  return answer;
+};
+
+export async function answerLegalQuestions(
+  input: AnswerLegalQuestionsInput
+): Promise<AnswerLegalQuestionsOutput> {
+  const validated = AnswerLegalQuestionsInputSchema.parse(input);
+  const answer = await callGroqChat(validated);
+  return AnswerLegalQuestionsOutputSchema.parse({ answer });
 }

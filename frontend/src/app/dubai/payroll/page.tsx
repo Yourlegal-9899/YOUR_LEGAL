@@ -39,7 +39,7 @@ export default function PayrollServicePage() {
     { title: "What is Payroll in the UAE?", content: "UAE payroll involves processing employee salaries in compliance with the Wages Protection System (WPS), calculating end-of-service gratuity, and managing leave pay according to UAE Labour Law. There is no personal income tax to withhold." },
     { title: "Who needs it?", content: "Any company in the UAE (Mainland or Free Zone) that employs staff must have a compliant payroll process to meet legal obligations, especially the WPS requirement." },
     { title: "Cost range?", content: "Payroll services are often bundled with accounting. Standalone services might range from AED 50-150 per employee per month, depending on the provider." },
-    { title: "DIY vs outsourcing?", content: "While seemingly simple due to the lack of income tax, gratuity calculations and WPS compliance can be complex. Outsourcing ensures accuracy and adherence to UAE Labour Law." },
+    { title: "DIY vs outsourcing?", content: "While seemingly simple due to the lack of income tax, gratuity calculations and WPS compliance can be complex. Outsourcing payroll services in Dubai ensures accuracy and adherence to UAE Labour Law." },
     { title: "Final decision summary", content: "To ensure compliance with the mandatory Wages Protection System (WPS) and correctly calculate employee benefits, outsourcing your UAE payroll is the most reliable approach." }
   ];
 
@@ -57,7 +57,7 @@ export default function PayrollServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              WPS-compliant payroll to manage salaries, leave, and gratuity for your UAE employees.
+              WPS-compliant payroll to manage salaries, leave, and gratuity for your UAE employees. Our payroll services in Dubai help businesses streamline salary processing while ensuring full compliance with UAE labour regulations.
             </p>
           </div>
         </section>
@@ -65,7 +65,7 @@ export default function PayrollServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>This service is for any UAE-based company with employees. It is essential for ensuring that salary payments, end-of-service benefits (gratuity), and leave policies are all managed in strict accordance with UAE Labour Law.</p>
+                <p>This service is for any UAE-based company with employees looking for reliable payroll services in Dubai. It is essential for ensuring that salary payments, end-of-service benefits (gratuity), and leave policies are all managed in strict accordance with UAE Labour Law.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">
@@ -90,7 +90,7 @@ export default function PayrollServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>Although the UAE has no income tax, its Labour Law has specific and strict rules regarding payment timing, leave calculation, and end-of-service gratuity. Outsourcing to YourLegal ensures your payroll is fully compliant with the WPS, all calculations are accurate, and your business is protected from potential employee disputes and government penalties.</p>
+                <p>Although the UAE has no income tax, its Labour Law has specific and strict rules regarding payment timing, leave calculation, and end-of-service gratuity. Outsourcing to YourLegal ensures your payroll is fully compliant with the WPS, all calculations are accurate, and your business is protected from potential employee disputes and government penalties through our expert payroll services in Dubai.</p>
             </ContentSection>
 
             <AiAnswerBlock blocks={aiBlocks} />

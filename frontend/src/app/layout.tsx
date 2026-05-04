@@ -61,6 +61,7 @@ export default function RootLayout({
             gtag('js', new Date());
 
             gtag('config', 'G-XPJPZ656SW');
+            gtag('config', 'AW-11219388065');
           `}
         </script>
         <Script id="meta-pixel" strategy="beforeInteractive">
