@@ -48,10 +48,10 @@ const ProcessStep = ({ number, title, description }) => (
 
 const faqs = [
     { q: "What is a Dutch B.V.?", a: "A 'Besloten Vennootschap' (B.V.) is a private limited liability company in the Netherlands. It's the most common legal form for foreign entrepreneurs as it provides limited liability and has a professional image." },
-    { q: "Is a local director required?", a: "No, a Dutch B.V. can be 100% foreign-owned and managed. There is no requirement for a resident director, making it very accessible for international founders." },
+    { q: "Is a local director required?", a: "No, a Dutch B.V. can be 100% foreign-owned and managed. There is no requirement for a resident director for Netherlands company formation for non residents, making it very accessible for international founders." },
     { q: "What is the '30% ruling'?", a: "The 30% ruling is a tax advantage for highly skilled migrants moving to the Netherlands for a specific job. If the criteria are met, the employer can grant a tax-free allowance of up to 30% of the gross salary." },
     { q: "What are the main corporate taxes in the Netherlands?", a: "The corporate income tax rate is 19% on the first €200,000 of profits and 25.8% on profits above that amount. There is also a Value Added Tax (BTW) of 21% on most goods and services." },
-    { q: "Is a physical office address necessary?", a: "Yes, you need a registered office address in the Netherlands to incorporate a B.V. We can provide a registered address service to meet this requirement." },
+    { q: "Is a physical office address necessary?", a: "Yes, you need a registered office address in the Netherlands to incorporate a B.V. We can provide a registered address service to meet this requirement for Netherlands company formation for non residents." },
 ];
 
 const BlogSection = () => {
@@ -196,9 +196,9 @@ export default function NetherlandsPage() {
             <section className="bg-gradient-to-r from-orange-50 via-gray-50 to-blue-50 py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight">
-                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-red-500 to-blue-600">Netherlands Company Formation, Accounting & Tax</span>
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-red-500 to-blue-600">Netherlands company formation for non-residents, Accounting & Tax</span>
                     </h1>
-                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">Your complete solution for launching a Dutch B.V. We handle incorporation, compliance, and financial management, so you can expand into Europe with confidence.</p>
+                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">End-to-end Netherlands company formation for non-residents.Your complete solution for launching a Dutch B.V. We handle incorporation, compliance, and financial management, so you can expand into Europe with confidence.</p>
                     <div className="mt-10">
                         <a href="https://outlook.office365.com/book/YOURLEGAL1@yourlegal.in/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer">
                             <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white">Get a Free Netherlands Consultation</Button>
@@ -257,7 +257,7 @@ export default function NetherlandsPage() {
                         <div className="text-center">
                             <h2 className="text-3xl font-bold text-gray-900 mb-4">Transparent Pricing Plans</h2>
                             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-                                Choose the plan that fits your needs, from simple formation to full-service compliance and tax.
+                                Choose the plan that fits your needs, from simple Netherlands company formation for non residents to full-service compliance and tax.
                             </p>
                             <Button asChild size="lg">
                                 <Link href="/netherlands/pricing">View Detailed Pricing</Link>

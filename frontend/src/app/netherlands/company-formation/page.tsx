@@ -85,10 +85,11 @@ export default function NetherlandsCompanyFormationPage() {
                 Back to Netherlands Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              Netherlands Company Formation
+              Company Formation Netherlands
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Launch your Dutch B.V. and establish your gateway to Europe. We manage the entire notarial and registration process remotely.
+              Launch your Dutch B.V. and establish your gateway to Europe. We manage the entire notarial and registration process remotely. Our company formation Netherlands services are designed to help international founders set up and operate seamlessly. 
+
             </p>
             <Button asChild size="lg" className="mt-8">
               <Link href="/netherlands/pricing">Start Your Dutch B.V.</Link>
@@ -112,7 +113,7 @@ export default function NetherlandsCompanyFormationPage() {
             </div>
 
              <div className="p-8 bg-gray-50 rounded-lg border border-gray-200">
-                <h2 className="text-3xl font-bold text-center text-gray-900 mb-6">Why Formation Service is Essential in the Netherlands</h2>
+                <h2 className="text-3xl font-bold text-center text-gray-900 mb-6">Why Company Formation Netherlands Service is Essential </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
                     <div>
                         <h4 className="font-bold text-lg text-orange-600">Notary is Mandatory</h4>
