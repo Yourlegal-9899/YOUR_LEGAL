@@ -229,7 +229,7 @@ const fetchQuickBooksReportAll = async ({
 // Enhanced Navigation Items with nesting for Bookkeeping
 const navItems = [
     { name: 'Dashboard', icon: LayoutGrid, path: 'dashboard' },
-    { name: 'AI Assistant', icon: Bot, path: 'ai-assistant' },
+    { name: 'AI CFO', icon: Bot, path: 'ai-assistant' },
     { name: 'Company & Legal', icon: Building, path: 'company' },
     { name: 'Services & Add-ons', icon: ShoppingCart, path: 'services' }, // New Services Tab
     { 
@@ -389,7 +389,7 @@ const FinancialSnapshot = ({ isQuickBooksLinked, data, isLoading, lastSyncAt, su
 
 const EnhancedChatbot = () => {
     const initialState: ChatState = {
-        messages: [{ role: 'assistant', content: "Hi there! I'm your Legal & Tax AI Assistant. I can help with LLC formation, tax deadlines, or bookkeeping questions.", id: 'initial' }],
+        messages: [{ role: 'assistant', content: "Hi there! I'm your Legal & Tax AI CFO. I can help with LLC formation, tax deadlines, or bookkeeping questions.", id: 'initial' }],
         loading: false,
     };
     const [state, formAction] = useActionState(askQuestion, initialState);
@@ -414,7 +414,7 @@ const EnhancedChatbot = () => {
             <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
                 <div className="flex items-center">
                     <Bot className="w-6 h-6 mr-2 text-blue-600" />
-                    <h3 className="text-lg font-bold text-gray-800">YourLegal AI Assistant</h3>
+                    <h3 className="text-lg font-bold text-gray-800">YourLegal AI CFO</h3>
                 </div>
                 <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full font-medium flex items-center">
                     <Sparkles className="w-3 h-3 mr-1" /> AI Powered
@@ -535,11 +535,11 @@ const DashboardContent = ({ user, navigate, isQuickBooksLinked, financialSnapsho
             <div className="lg:col-span-1 h-full flex flex-col space-y-6">
                 <div className="p-4 bg-white rounded-xl shadow-md border border-gray-100">
                     <h4 className="text-md font-semibold text-gray-700 flex items-center mb-2">
-                        <Bot className="w-4 h-4 mr-2 text-blue-600" /> YourLegal AI Assistant
+                        <Bot className="w-4 h-4 mr-2 text-blue-600" /> YourLegal AI CFO
                     </h4>
                     <p className="text-sm text-gray-500">Ask legal, tax, and compliance questions anytime.</p>
                     <Button onClick={() => navigate('ai-assistant')} className="mt-3 w-full">
-                        Open AI Assistant
+                        Open AI CFO
                     </Button>
                 </div>
                 <div className="p-4 bg-white rounded-xl shadow-md border border-gray-100">
@@ -565,7 +565,7 @@ const SectionWrapper = ({ title, children }) => (
 );
 
 const AiAssistantSection = () => (
-    <SectionWrapper title="YourLegal AI Assistant">
+    <SectionWrapper title="YourLegal AI CFO">
         <div className="max-w-4xl">
             <p className="text-sm text-gray-600">
                 Chat with your dedicated AI assistant for legal, tax, and compliance guidance tailored to your company.
