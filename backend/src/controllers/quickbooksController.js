@@ -9,6 +9,42 @@ const oauthClient = new OAuthClient({
   redirectUri: process.env.QB_REDIRECT_URI,
 });
 
+const getFrontendDashboardUrl = ({ status, reason, page = 'settings' }) => {
+  const base = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/+$/, '');
+  const params = new URLSearchParams({ qb_status: status, page });
+  if (reason) {
+    params.set('qb_reason', reason);
+  }
+  return `${base}/dashboard?${params.toString()}`;
+};
+
+const getOAuthErrorMessage = (error) => {
+  const rawMessage =
+    error?.originalMessage ||
+    error?.message ||
+    error?.error ||
+    error?.oauth_error ||
+    error?.body?.error_description ||
+    '';
+
+  const normalized = String(rawMessage).toLowerCase();
+
+  if (normalized.includes('invalid_grant')) {
+    return 'QuickBooks rejected the auth code (invalid_grant). This is usually a redirect URI or environment mismatch.';
+  }
+  if (normalized.includes('redirect')) {
+    return 'QuickBooks redirect URI mismatch. Verify QB_REDIRECT_URI matches Intuit app settings exactly.';
+  }
+  if (normalized.includes('invalid_client')) {
+    return 'QuickBooks client credentials are invalid for the selected environment.';
+  }
+  if (normalized.includes('access_denied')) {
+    return 'QuickBooks authorization was denied.';
+  }
+
+  return rawMessage || 'QuickBooks callback failed.';
+};
+
 const TOKEN_ENCRYPTION_SECRET =
   process.env.QB_TOKEN_ENCRYPTION_KEY || process.env.QB_TOKENS_ENCRYPTION_KEY || '';
 const ENCRYPTION_PREFIX = 'enc';
@@ -229,6 +265,23 @@ const callQuickBooks = async (user, { method = 'GET', url, data }) => {
 
 exports.getAuthUrl = (req, res) => {
   try {
+    if (!process.env.QB_CLIENT_ID || !process.env.QB_CLIENT_SECRET || !process.env.QB_REDIRECT_URI) {
+      return res.status(500).json({
+        success: false,
+        message: 'QuickBooks is not configured. Missing QB_CLIENT_ID, QB_CLIENT_SECRET, or QB_REDIRECT_URI.',
+      });
+    }
+
+    if (
+      process.env.NODE_ENV === 'production' &&
+      /^http:\/\/localhost[:/]/i.test(String(process.env.QB_REDIRECT_URI || ''))
+    ) {
+      return res.status(500).json({
+        success: false,
+        message: 'QuickBooks redirect URI is set to localhost in production. Update QB_REDIRECT_URI to your live callback URL.',
+      });
+    }
+
     const authUri = oauthClient.authorizeUri({
       // offline_access is required to receive a refresh token and keep the integration persistent.
       scope: [OAuthClient.scopes.Accounting, 'offline_access'],
@@ -243,8 +296,22 @@ exports.getAuthUrl = (req, res) => {
 
 exports.handleCallback = async (req, res) => {
   try {
-    const { code, realmId, state } = req.query;
+    const { code, realmId, state, error, error_description: errorDescription } = req.query;
     const userId = state;
+
+    if (error) {
+      const reason = errorDescription || error;
+      return res.redirect(getFrontendDashboardUrl({ status: 'error', reason }));
+    }
+
+    if (!code || !realmId || !userId) {
+      return res.redirect(
+        getFrontendDashboardUrl({
+          status: 'error',
+          reason: 'Missing required callback parameters from QuickBooks.',
+        })
+      );
+    }
 
     console.log('QuickBooks Callback:', { code: !!code, realmId, userId });
 
@@ -253,7 +320,7 @@ exports.handleCallback = async (req, res) => {
 
     console.log('QuickBooks Token Success');
 
-    await User.findByIdAndUpdate(userId, {
+    const updated = await User.findByIdAndUpdate(userId, {
       quickBooksConnected: true,
       quickBooksTokens: buildStoredQuickBooksTokens({
         accessToken: token.access_token,
@@ -263,10 +330,20 @@ exports.handleCallback = async (req, res) => {
       }),
     });
 
-    res.redirect(`${process.env.FRONTEND_URL}/dashboard?qb_status=success&page=settings`);
+    if (!updated) {
+      return res.redirect(
+        getFrontendDashboardUrl({
+          status: 'error',
+          reason: 'User session not found while saving QuickBooks connection.',
+        })
+      );
+    }
+
+    res.redirect(getFrontendDashboardUrl({ status: 'success' }));
   } catch (error) {
     console.error('QuickBooks Callback Error:', error);
-    res.redirect(`${process.env.FRONTEND_URL}/dashboard?qb_status=error&page=settings`);
+    const reason = getOAuthErrorMessage(error);
+    res.redirect(getFrontendDashboardUrl({ status: 'error', reason }));
   }
 };
 

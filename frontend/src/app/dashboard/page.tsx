@@ -5092,14 +5092,19 @@ export default function PortalPage({ onLogout }) {
                     credentials: 'include',
                 });
                 const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data?.message || 'Unable to connect to QuickBooks.');
+                }
                 if (data.authUrl) {
                     window.location.href = data.authUrl;
+                    return;
                 }
+                throw new Error(data?.message || 'QuickBooks auth URL was not returned.');
             } catch (error) {
                 toast({
                     variant: 'destructive',
                     title: 'Connection Failed',
-                    description: 'Unable to connect to QuickBooks',
+                    description: error instanceof Error ? error.message : 'Unable to connect to QuickBooks',
                 });
             }
         }
@@ -5125,11 +5130,12 @@ export default function PortalPage({ onLogout }) {
         }
     };
 
-      useEffect(() => {
-          if (typeof window !== 'undefined') {
-              const params = new URLSearchParams(window.location.search);
-              const qbStatus = params.get('qb_status');
-              const page = params.get('page');
+	      useEffect(() => {
+	          if (typeof window !== 'undefined') {
+	              const params = new URLSearchParams(window.location.search);
+	              const qbStatus = params.get('qb_status');
+                  const qbReason = params.get('qb_reason');
+	              const page = params.get('page');
 
               if (page === 'settings') {
                   setActivePath('settings');
@@ -5145,16 +5151,16 @@ export default function PortalPage({ onLogout }) {
                       description: 'Your QuickBooks account has been successfully linked.',
                   });
                   window.history.replaceState(null, '', window.location.pathname);
-              } else if (qbStatus === 'error') {
-                  toast({
-                      variant: 'destructive',
-                      title: 'QuickBooks Connection Failed',
-                      description: 'Something went wrong. Please try connecting again.',
-                  });
-                  window.history.replaceState(null, '', window.location.pathname);
-              }
-          }
-      }, [toast]);
+	              } else if (qbStatus === 'error') {
+	                  toast({
+	                      variant: 'destructive',
+	                      title: 'QuickBooks Connection Failed',
+	                      description: qbReason || 'Something went wrong. Please try connecting again.',
+	                  });
+	                  window.history.replaceState(null, '', window.location.pathname);
+	              }
+	          }
+	      }, [toast]);
 
     const bankAccountCount = useMemo(() => {
         return (qbAccounts || []).filter(account => account?.AccountType === 'Bank').length;

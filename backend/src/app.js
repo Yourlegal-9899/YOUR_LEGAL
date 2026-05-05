@@ -9,10 +9,29 @@ const app = express();
 
 app.set('trust proxy', 1);
 
+const allowedOrigins = new Set(
+  [
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URLS,
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://www.yourlegal.io',
+    'https://yourlegal.io',
+  ]
+    .flatMap((value) => String(value || '').split(','))
+    .map((value) => value.trim())
+    .filter(Boolean)
+);
+
 app.use(helmet());
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'http://localhost:3001', "https://www.yourlegal.io"],
+    origin: (origin, callback) => {
+      // Allow non-browser clients (no Origin header)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.has(origin)) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   })
 );

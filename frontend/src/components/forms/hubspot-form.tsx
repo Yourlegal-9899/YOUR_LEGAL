@@ -99,6 +99,11 @@ export const HubspotForm: React.FC<HubspotFormProps> = ({ portalId, formId }) =>
       setStatus('success');
       setStatusMessage(data?.message || 'Thanks! Our team will contact you shortly.');
       setForm(DEFAULT_FORM);
+
+      // Fire Google Ads conversion event on successful lead submit.
+      if (typeof window !== 'undefined' && typeof window.trackYourLegalLeadSubmit === 'function') {
+        window.trackYourLegalLeadSubmit();
+      }
     } catch (error) {
       setStatus('error');
       setStatusMessage(error instanceof Error ? error.message : 'Unable to submit your details right now.');
@@ -214,3 +219,8 @@ export const HubspotForm: React.FC<HubspotFormProps> = ({ portalId, formId }) =>
   );
 };
 
+declare global {
+  interface Window {
+    trackYourLegalLeadSubmit?: () => void;
+  }
+}

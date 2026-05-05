@@ -62,6 +62,12 @@ export default function RootLayout({
 
             gtag('config', 'G-XPJPZ656SW');
             gtag('config', 'AW-11219388065');
+
+            // Google Ads lead conversion helper.
+            // Trigger this only after a successful lead form submit.
+            window.trackYourLegalLeadSubmit = function () {
+              gtag('event', 'conversion', {'send_to': 'AW-11219388065/xPzWCKeD86oYEKGN6eUp'});
+            };
           `}
         </script>
         <Script id="meta-pixel" strategy="beforeInteractive">
