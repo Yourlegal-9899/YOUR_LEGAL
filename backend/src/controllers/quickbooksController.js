@@ -283,8 +283,9 @@ exports.getAuthUrl = (req, res) => {
     }
 
     const authUri = oauthClient.authorizeUri({
-      // offline_access is required to receive a refresh token and keep the integration persistent.
-      scope: [OAuthClient.scopes.Accounting, 'offline_access'],
+      // QuickBooks expects Intuit scopes (e.g., Accounting/Payment/OpenId).
+      // Passing non-Intuit scopes like "offline_access" can cause "invalid param: scope".
+      scope: [OAuthClient.scopes.Accounting],
       state: req.user.id,
     });
     res.json({ success: true, authUrl: authUri });
