@@ -63,6 +63,7 @@ import { ReportsView } from "@/components/admin/views/reports-view";
 import { ServicesView } from "@/components/admin/views/services-view";
 import { UsersView } from "@/components/admin/views/users-view";
 import { ZohoLeadsView } from "@/components/admin/views/zoho-leads-view";
+import { AiTrainingView } from "@/components/admin/views/ai-training-view";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminData } from "@/hooks/useAdminData";
 import { API_BASE_URL } from "@/lib/api-base";
@@ -84,7 +85,8 @@ type AdminView =
   | "quickbooks"
   | "compliance"
   | "taxes"
-  | "zoho-leads";
+  | "zoho-leads"
+  | "ai-training";
 type DocumentStatus = "pending" | "verified" | "rejected" | "missing";
 type DocumentSource = "client_uploads" | "legal_docs";
 type DocumentCategory = "KYC" | "Tax" | "Compliance" | "Banking" | "Legal" | "Corporate" | "Incorporation" | "Receipts";
@@ -322,6 +324,7 @@ const viewMeta: Record<AdminView, { title: string; subtitle: string }> = {
   compliance: { title: "Compliance Tracking", subtitle: "Monitor deadlines and risk levels" },
   taxes: { title: "Taxes & Filings", subtitle: "Manage government filings and submissions" },
   "zoho-leads": { title: "Zoho Leads", subtitle: "Leads synced from Zoho CRM" },
+  "ai-training": { title: "AI Training", subtitle: "Train the AI CFO with approved Q&A rules" },
 };
 
 const navItems: Array<{ key: AdminView; label: string; icon: React.ComponentType<{ className?: string }> }> = [
@@ -335,6 +338,7 @@ const navItems: Array<{ key: AdminView; label: string; icon: React.ComponentType
   { key: "documents", label: "Documents", icon: FileCheck2 },
   { key: "payments", label: "Payments", icon: CreditCard },
   { key: "quickbooks", label: "QuickBooks", icon: ShieldCheck },
+  { key: "ai-training", label: "AI Training", icon: Settings },
   { key: "compliance", label: "Compliance", icon: ShieldCheck },
   { key: "taxes", label: "Taxes & Filings", icon: PiggyBank },
   { key: "blogs", label: "Blog Posts", icon: PenSquare },
@@ -358,6 +362,7 @@ const viewHref: Record<AdminView, string> = {
   services: "/admin/services",
   documents: "/admin/documents",
   quickbooks: "/admin/quickbooks",
+  "ai-training": "/admin/ai-training",
   compliance: "/admin/compliance",
   taxes: "/admin/taxes",
 };
@@ -926,6 +931,8 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
         return servicesLoading;
       case "quickbooks":
         return isUsersDataLoading;
+      case "ai-training":
+        return false;
       case "taxes":
         return complianceLoading;
       case "compliance":
@@ -2780,6 +2787,7 @@ export function AdminFlow({ activeView = "overview" }: { activeView?: AdminView 
             {activeView === "services" ? <ServicesView ctx={viewCtx} /> : null}
             {activeView === "documents" ? <DocumentsView ctx={viewCtx} /> : null}
             {activeView === "quickbooks" ? <QuickbooksView ctx={viewCtx} /> : null}
+            {activeView === "ai-training" ? <AiTrainingView ctx={viewCtx} /> : null}
             {activeView === "taxes" ? <TaxesView ctx={viewCtx} /> : null}
             {activeView === "compliance" ? <ComplianceView ctx={viewCtx} /> : null}
             {activeView === "zoho-leads" ? <ZohoLeadsView ctx={viewCtx} /> : null}

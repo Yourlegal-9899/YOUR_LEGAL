@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { API_BASE_URL } from '@/lib/api-base';
 
 const YOURLEGAL_KB = `
 YourLegal Knowledge Base (from project code):
@@ -111,6 +112,236 @@ type GroqChatCompletionResponse = {
 };
 
 const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const TRAINING_SETTING_KEY = 'ai_chat_training_rules';
+const TRAINING_CACHE_TTL_MS = 60 * 1000;
+const FALLBACK_DISCLAIMER =
+  'This information is not legal advice; please consult a qualified lawyer for legal guidance.';
+
+type AiTrainingRule = {
+  id: string;
+  question: string;
+  answer: string;
+  keywords: string[];
+  priority: number;
+  isActive: boolean;
+};
+
+type RuleMatch = {
+  rule: AiTrainingRule;
+  score: number;
+};
+
+const stopWords = new Set([
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'by',
+  'for',
+  'from',
+  'how',
+  'i',
+  'in',
+  'is',
+  'it',
+  'me',
+  'my',
+  'of',
+  'on',
+  'or',
+  'our',
+  'please',
+  'the',
+  'to',
+  'us',
+  'we',
+  'what',
+  'when',
+  'where',
+  'who',
+  'why',
+  'you',
+  'your',
+]);
+
+let trainingRulesCache: {
+  expiresAt: number;
+  rules: AiTrainingRule[];
+} = {
+  expiresAt: 0,
+  rules: [],
+};
+
+const normalizeText = (value: string) =>
+  String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const tokenize = (value: string) =>
+  normalizeText(value)
+    .split(' ')
+    .map((token) => token.trim())
+    .filter((token) => token.length > 1 && !stopWords.has(token));
+
+const toUniqueTokenSet = (value: string) => new Set(tokenize(value));
+
+const jaccardSimilarity = (left: Set<string>, right: Set<string>) => {
+  if (!left.size || !right.size) return 0;
+
+  let intersection = 0;
+  left.forEach((token) => {
+    if (right.has(token)) intersection += 1;
+  });
+
+  const union = left.size + right.size - intersection;
+  if (!union) return 0;
+
+  return intersection / union;
+};
+
+const ensureLegalDisclaimer = (value: string) => {
+  const text = String(value || '').trim();
+  if (!text) return FALLBACK_DISCLAIMER;
+
+  if (/not legal advice|consult (a|your) lawyer/i.test(text)) {
+    return text;
+  }
+
+  return `${text}\n\n${FALLBACK_DISCLAIMER}`;
+};
+
+const clampPriority = (value: number) => {
+  if (Number.isNaN(value)) return 5;
+  return Math.min(10, Math.max(1, Math.round(value)));
+};
+
+const parseTrainingRules = (raw: any): AiTrainingRule[] => {
+  const list = Array.isArray(raw?.rules) ? raw.rules : Array.isArray(raw) ? raw : [];
+
+  return list
+    .map((item: any, index: number) => {
+      const question = String(item?.question || '').trim();
+      const answer = String(item?.answer || '').trim();
+
+      if (!question || !answer) return null;
+
+      const keywords = Array.isArray(item?.keywords)
+        ? item.keywords.map((keyword: any) => normalizeText(String(keyword || ''))).filter(Boolean)
+        : String(item?.keywords || '')
+            .split(',')
+            .map((keyword) => normalizeText(keyword))
+            .map((keyword) => keyword.trim())
+            .filter(Boolean);
+
+      return {
+        id: String(item?.id || `rule-${index + 1}`),
+        question,
+        answer,
+        keywords,
+        priority: clampPriority(Number(item?.priority ?? 5)),
+        isActive: item?.isActive !== false,
+      } satisfies AiTrainingRule;
+    })
+    .filter((rule): rule is AiTrainingRule => Boolean(rule));
+};
+
+const fetchAiTrainingRules = async (): Promise<AiTrainingRule[]> => {
+  if (trainingRulesCache.expiresAt > Date.now()) {
+    return trainingRulesCache.rules;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/settings/public`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      trainingRulesCache = {
+        expiresAt: Date.now() + TRAINING_CACHE_TTL_MS,
+        rules: [],
+      };
+      return [];
+    }
+
+    const data = (await response.json().catch(() => null)) as
+      | {
+          settings?: Array<{ key?: string; value?: any }>;
+        }
+      | null;
+
+    const settings = Array.isArray(data?.settings) ? data.settings : [];
+    const trainingSetting = settings.find((setting) => setting?.key === TRAINING_SETTING_KEY);
+    const rules = parseTrainingRules(trainingSetting?.value || {});
+
+    trainingRulesCache = {
+      expiresAt: Date.now() + TRAINING_CACHE_TTL_MS,
+      rules,
+    };
+
+    return rules;
+  } catch {
+    trainingRulesCache = {
+      expiresAt: Date.now() + TRAINING_CACHE_TTL_MS,
+      rules: [],
+    };
+    return [];
+  }
+};
+
+const keywordScore = (questionNormalized: string, rule: AiTrainingRule) => {
+  if (!rule.keywords.length) return 0;
+  let matched = 0;
+
+  rule.keywords.forEach((keyword) => {
+    if (!keyword) return;
+    if (questionNormalized.includes(keyword)) matched += 1;
+  });
+
+  return matched / rule.keywords.length;
+};
+
+const computeRuleMatchScore = (question: string, rule: AiTrainingRule) => {
+  const normalizedQuestion = normalizeText(question);
+  const normalizedRuleQuestion = normalizeText(rule.question);
+  const questionTokens = toUniqueTokenSet(normalizedQuestion);
+  const ruleTokens = toUniqueTokenSet(normalizedRuleQuestion);
+
+  const semanticScore = jaccardSimilarity(questionTokens, ruleTokens);
+  const keywordsMatchScore = keywordScore(normalizedQuestion, rule);
+  const directPhraseBoost =
+    normalizedQuestion === normalizedRuleQuestion
+      ? 1
+      : normalizedQuestion.includes(normalizedRuleQuestion) || normalizedRuleQuestion.includes(normalizedQuestion)
+        ? 0.8
+        : 0;
+
+  const weightedBase = semanticScore * 0.62 + keywordsMatchScore * 0.28 + directPhraseBoost * 0.1;
+  const priorityWeight = 1 + (clampPriority(rule.priority) - 5) * 0.03;
+
+  return weightedBase * priorityWeight;
+};
+
+const findTrainingMatches = (question: string, rules: AiTrainingRule[]): RuleMatch[] => {
+  const matches = rules
+    .filter((rule) => rule.isActive)
+    .map((rule) => ({
+      rule,
+      score: computeRuleMatchScore(question, rule),
+    }))
+    .filter((match) => match.score >= 0.2)
+    .sort((left, right) => right.score - left.score);
+
+  return matches.slice(0, 5);
+};
 
 const callGroqChat = async (input: AnswerLegalQuestionsInput): Promise<string> => {
   const apiKey = process.env.GROQ_API_KEY || '';
@@ -120,10 +351,37 @@ const callGroqChat = async (input: AnswerLegalQuestionsInput): Promise<string> =
     throw new Error('GROQ_API_KEY is not set.');
   }
 
+  const trainingRules = await fetchAiTrainingRules();
+  const trainingMatches = findTrainingMatches(input.question, trainingRules);
+  const topMatch = trainingMatches[0];
+
+  if (topMatch && topMatch.score >= 0.86) {
+    return ensureLegalDisclaimer(topMatch.rule.answer);
+  }
+
+  const trainingContext = trainingMatches.length
+    ? trainingMatches
+        .slice(0, 3)
+        .map(
+          (match, index) =>
+            `Match ${index + 1}
+- Score: ${match.score.toFixed(2)}
+- Question pattern: ${match.rule.question}
+- Preferred answer: ${match.rule.answer}
+- Keywords: ${match.rule.keywords.join(', ') || 'none'}`
+        )
+        .join('\n\n')
+    : 'No trained match found.';
+
   const userPrompt = `Question: ${input.question}
 
 Account context (internal, do not mention this label in your response):
-${input.liveData || ''}`;
+${input.liveData || ''}
+
+AI training context (internal):
+${trainingContext}
+
+Instruction: If trained answers are relevant, prefer their wording and intent while keeping the response natural and concise.`;
 
   const response = await fetch(GROQ_CHAT_URL, {
     method: 'POST',
@@ -154,7 +412,7 @@ ${input.liveData || ''}`;
     throw new Error('Groq response did not include an answer.');
   }
 
-  return answer;
+  return ensureLegalDisclaimer(answer);
 };
 
 export async function answerLegalQuestions(
