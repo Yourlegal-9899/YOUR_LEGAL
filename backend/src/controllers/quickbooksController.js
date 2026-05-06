@@ -48,6 +48,8 @@ const getOAuthErrorMessage = (error) => {
 const TOKEN_ENCRYPTION_SECRET =
   process.env.QB_TOKEN_ENCRYPTION_KEY || process.env.QB_TOKENS_ENCRYPTION_KEY || '';
 const ENCRYPTION_PREFIX = 'enc';
+const ACCESS_TOKEN_REFRESH_SKEW_MS = 60 * 1000;
+const refreshInFlightByUser = new Map();
 
 const getTokenEncryptionKey = () => {
   if (!TOKEN_ENCRYPTION_SECRET) return null;
@@ -117,6 +119,21 @@ const buildStoredQuickBooksTokens = ({ accessToken, refreshToken, realmId, expir
   expiresAt,
 });
 
+const withUserRefreshLock = async (userId, callback) => {
+  if (!userId) return callback();
+
+  const key = String(userId);
+  const existing = refreshInFlightByUser.get(key);
+  if (existing) return existing;
+
+  const pending = (async () => callback())().finally(() => {
+    refreshInFlightByUser.delete(key);
+  });
+
+  refreshInFlightByUser.set(key, pending);
+  return pending;
+};
+
 const makeApiCall = async (accessToken, realmId, url, method = 'GET', body = null) => {
   const baseUrl = process.env.QB_ENVIRONMENT === 'sandbox' 
     ? 'https://sandbox-quickbooks.api.intuit.com'
@@ -149,77 +166,110 @@ const makeApiCall = async (accessToken, realmId, url, method = 'GET', body = nul
 };
 
 const refreshTokenIfNeeded = async (user, force = false) => {
-  const tokens = getQuickBooksTokens(user);
-  if (!tokens?.realmId) return user;
+  const userId = user?._id || user?.id;
+  if (!userId) return user;
 
-  const expiresAt = tokens.expiresAt ? new Date(tokens.expiresAt) : null;
-  const now = new Date();
+  return withUserRefreshLock(userId, async () => {
+    let workingUser = user;
 
-  const shouldRefresh =
-    force ||
-    !expiresAt ||
-    Number.isNaN(expiresAt.getTime()) ||
-    !tokens.accessToken ||
-    expiresAt <= now;
+    const latestUser = await User.findById(userId);
+    if (latestUser) {
+      workingUser = latestUser;
+    }
 
-  if (!shouldRefresh) {
-    return user;
-  }
+    const tokens = getQuickBooksTokens(workingUser);
+    if (!tokens?.realmId) return workingUser;
 
-  if (!tokens.refreshToken) {
-    user.quickBooksConnected = false;
-    user.quickBooksTokens = {};
-    await user.save();
-    const authError = new Error('QuickBooks refresh token missing. Please reconnect.');
-    authError.status = 401;
-    authError.code = 'QB_REFRESH_INVALID';
-    throw authError;
-  }
+    const expiresAt = tokens.expiresAt ? new Date(tokens.expiresAt) : null;
+    const refreshCutoff = new Date(Date.now() + ACCESS_TOKEN_REFRESH_SKEW_MS);
 
-  try {
-    oauthClient.setToken({
-      refresh_token: tokens.refreshToken,
-    });
+    const shouldRefresh =
+      force ||
+      !expiresAt ||
+      Number.isNaN(expiresAt.getTime()) ||
+      !tokens.accessToken ||
+      expiresAt <= refreshCutoff;
 
-    const authResponse = await oauthClient.refresh();
-    const token = authResponse.getJson();
+    if (!shouldRefresh) {
+      return workingUser;
+    }
 
-    user.quickBooksTokens = buildStoredQuickBooksTokens({
-      accessToken: token.access_token,
-      refreshToken: token.refresh_token || tokens.refreshToken,
-      realmId: tokens.realmId,
-      expiresAt: new Date(Date.now() + token.expires_in * 1000)
-    });
-    await user.save();
-    return user;
-  } catch (error) {
-    console.error('Token refresh error:', error);
-    const errorText = [
-      error?.oauth_error,
-      error?.error,
-      error?.body?.error,
-      error?.body?.error_description,
-      error?.message
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-
-    const isInvalidRefresh =
-      errorText.includes('refresh') && (errorText.includes('invalid') || errorText.includes('expired') || errorText.includes('grant'));
-
-    if (isInvalidRefresh) {
-      user.quickBooksConnected = false;
-      user.quickBooksTokens = {};
-      await user.save();
-      const authError = new Error('QuickBooks authorization expired. Please reconnect.');
+    if (!tokens.refreshToken) {
+      workingUser.quickBooksConnected = false;
+      workingUser.quickBooksTokens = {};
+      await workingUser.save();
+      const authError = new Error('QuickBooks refresh token missing. Please reconnect.');
       authError.status = 401;
       authError.code = 'QB_REFRESH_INVALID';
       throw authError;
     }
 
-    throw error;
-  }
+    const attemptedRefreshToken = tokens.refreshToken;
+
+    try {
+      oauthClient.setToken({
+        refresh_token: tokens.refreshToken,
+      });
+
+      const authResponse = await oauthClient.refresh();
+      const token = authResponse.getJson();
+
+      workingUser.quickBooksTokens = buildStoredQuickBooksTokens({
+        accessToken: token.access_token,
+        refreshToken: token.refresh_token || tokens.refreshToken,
+        realmId: tokens.realmId,
+        expiresAt: new Date(Date.now() + token.expires_in * 1000)
+      });
+      await workingUser.save();
+      return workingUser;
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      const errorText = [
+        error?.oauth_error,
+        error?.error,
+        error?.body?.error,
+        error?.body?.error_description,
+        error?.message
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      const isInvalidRefresh =
+        errorText.includes('refresh') && (errorText.includes('invalid') || errorText.includes('expired') || errorText.includes('grant'));
+
+      if (isInvalidRefresh) {
+        // Handle refresh-token rotation race: another request may already
+        // have refreshed and stored a newer refresh token.
+        const latestAfterFailure = await User.findById(userId);
+        if (latestAfterFailure) {
+          const latestTokens = getQuickBooksTokens(latestAfterFailure);
+          const latestExpiresAt = latestTokens?.expiresAt ? new Date(latestTokens.expiresAt) : null;
+          const hasNewerRefreshToken =
+            latestTokens?.refreshToken && latestTokens.refreshToken !== attemptedRefreshToken;
+          const hasUsableAccessToken =
+            latestTokens?.accessToken &&
+            latestExpiresAt &&
+            !Number.isNaN(latestExpiresAt.getTime()) &&
+            latestExpiresAt > refreshCutoff;
+
+          if (hasNewerRefreshToken || hasUsableAccessToken) {
+            return latestAfterFailure;
+          }
+        }
+
+        workingUser.quickBooksConnected = false;
+        workingUser.quickBooksTokens = {};
+        await workingUser.save();
+        const authError = new Error('QuickBooks authorization expired. Please reconnect.');
+        authError.status = 401;
+        authError.code = 'QB_REFRESH_INVALID';
+        throw authError;
+      }
+
+      throw error;
+    }
+  });
 };
 
 const callQuickBooks = async (user, { method = 'GET', url, data }) => {
