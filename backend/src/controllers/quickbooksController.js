@@ -49,6 +49,9 @@ const TOKEN_ENCRYPTION_SECRET =
   process.env.QB_TOKEN_ENCRYPTION_KEY || process.env.QB_TOKENS_ENCRYPTION_KEY || '';
 const ENCRYPTION_PREFIX = 'enc';
 const ACCESS_TOKEN_REFRESH_SKEW_MS = 60 * 1000;
+const REFRESH_LOCK_TTL_MS = 45 * 1000;
+const REFRESH_LOCK_RETRY_ATTEMPTS = 12;
+const REFRESH_LOCK_RETRY_DELAY_MS = 350;
 const refreshInFlightByUser = new Map();
 
 const getTokenEncryptionKey = () => {
@@ -117,7 +120,78 @@ const buildStoredQuickBooksTokens = ({ accessToken, refreshToken, realmId, expir
   refreshToken: encryptTokenValue(refreshToken),
   realmId,
   expiresAt,
+  refreshLockUntil: null,
 });
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isAccessTokenUsable = (tokens, refreshCutoff) => {
+  if (!tokens?.accessToken || !tokens?.expiresAt) return false;
+  const expiresAt = new Date(tokens.expiresAt);
+  if (Number.isNaN(expiresAt.getTime())) return false;
+  return expiresAt > refreshCutoff;
+};
+
+const hasConcurrentRefreshProgress = ({ latestTokens, attemptedRefreshToken, refreshCutoff }) => {
+  if (!latestTokens) return false;
+  const hasNewerRefreshToken =
+    latestTokens.refreshToken && latestTokens.refreshToken !== attemptedRefreshToken;
+  const hasUsableAccessToken = isAccessTokenUsable(latestTokens, refreshCutoff);
+  return Boolean(hasNewerRefreshToken || hasUsableAccessToken);
+};
+
+const acquireDistributedRefreshLock = async (userId) => {
+  if (!userId) return null;
+
+  const now = new Date();
+  const lockUntil = new Date(Date.now() + REFRESH_LOCK_TTL_MS);
+
+  return User.findOneAndUpdate(
+    {
+      _id: userId,
+      $or: [
+        { 'quickBooksTokens.refreshLockUntil': { $exists: false } },
+        { 'quickBooksTokens.refreshLockUntil': null },
+        { 'quickBooksTokens.refreshLockUntil': { $lte: now } },
+      ],
+    },
+    {
+      $set: {
+        'quickBooksTokens.refreshLockUntil': lockUntil,
+      },
+    },
+    { new: true }
+  );
+};
+
+const releaseDistributedRefreshLock = async (userId) => {
+  if (!userId) return;
+  try {
+    await User.updateOne(
+      { _id: userId },
+      {
+        $unset: {
+          'quickBooksTokens.refreshLockUntil': '',
+        },
+      }
+    );
+  } catch (error) {
+    console.error('Failed to release QuickBooks refresh lock:', error);
+  }
+};
+
+const waitForConcurrentRefresh = async ({ userId, attemptedRefreshToken, refreshCutoff }) => {
+  for (let attempt = 0; attempt < REFRESH_LOCK_RETRY_ATTEMPTS; attempt += 1) {
+    await sleep(REFRESH_LOCK_RETRY_DELAY_MS);
+    const latestUser = await User.findById(userId);
+    if (!latestUser) continue;
+    const latestTokens = getQuickBooksTokens(latestUser);
+    if (hasConcurrentRefreshProgress({ latestTokens, attemptedRefreshToken, refreshCutoff })) {
+      return latestUser;
+    }
+  }
+  return null;
+};
 
 const withUserRefreshLock = async (userId, callback) => {
   if (!userId) return callback();
@@ -205,10 +279,60 @@ const refreshTokenIfNeeded = async (user, force = false) => {
     }
 
     const attemptedRefreshToken = tokens.refreshToken;
+    let lockAcquired = false;
 
     try {
+      let lockedUser = await acquireDistributedRefreshLock(userId);
+      if (!lockedUser) {
+        const concurrentRefreshResult = await waitForConcurrentRefresh({
+          userId,
+          attemptedRefreshToken,
+          refreshCutoff,
+        });
+        if (concurrentRefreshResult) {
+          return concurrentRefreshResult;
+        }
+
+        lockedUser = await acquireDistributedRefreshLock(userId);
+      }
+
+      if (!lockedUser) {
+        const refreshBusyError = new Error('QuickBooks token refresh is in progress. Please retry.');
+        refreshBusyError.status = 429;
+        refreshBusyError.code = 'QB_REFRESH_BUSY';
+        throw refreshBusyError;
+      }
+
+      lockAcquired = true;
+      workingUser = lockedUser;
+
+      const latestTokensBeforeRefresh = getQuickBooksTokens(workingUser);
+      const latestExpiresAt = latestTokensBeforeRefresh?.expiresAt
+        ? new Date(latestTokensBeforeRefresh.expiresAt)
+        : null;
+      const latestShouldRefresh =
+        force ||
+        !latestExpiresAt ||
+        Number.isNaN(latestExpiresAt.getTime()) ||
+        !latestTokensBeforeRefresh.accessToken ||
+        latestExpiresAt <= refreshCutoff;
+
+      if (!latestShouldRefresh) {
+        return workingUser;
+      }
+
+      if (!latestTokensBeforeRefresh.refreshToken) {
+        workingUser.quickBooksConnected = false;
+        workingUser.quickBooksTokens = {};
+        await workingUser.save();
+        const authError = new Error('QuickBooks refresh token missing. Please reconnect.');
+        authError.status = 401;
+        authError.code = 'QB_REFRESH_INVALID';
+        throw authError;
+      }
+
       oauthClient.setToken({
-        refresh_token: tokens.refreshToken,
+        refresh_token: latestTokensBeforeRefresh.refreshToken,
       });
 
       const authResponse = await oauthClient.refresh();
@@ -241,19 +365,16 @@ const refreshTokenIfNeeded = async (user, force = false) => {
       if (isInvalidRefresh) {
         // Handle refresh-token rotation race: another request may already
         // have refreshed and stored a newer refresh token.
-        const latestAfterFailure = await User.findById(userId);
+        const latestAfterFailure =
+          (await waitForConcurrentRefresh({
+            userId,
+            attemptedRefreshToken,
+            refreshCutoff,
+          })) || (await User.findById(userId));
+
         if (latestAfterFailure) {
           const latestTokens = getQuickBooksTokens(latestAfterFailure);
-          const latestExpiresAt = latestTokens?.expiresAt ? new Date(latestTokens.expiresAt) : null;
-          const hasNewerRefreshToken =
-            latestTokens?.refreshToken && latestTokens.refreshToken !== attemptedRefreshToken;
-          const hasUsableAccessToken =
-            latestTokens?.accessToken &&
-            latestExpiresAt &&
-            !Number.isNaN(latestExpiresAt.getTime()) &&
-            latestExpiresAt > refreshCutoff;
-
-          if (hasNewerRefreshToken || hasUsableAccessToken) {
+          if (hasConcurrentRefreshProgress({ latestTokens, attemptedRefreshToken, refreshCutoff })) {
             return latestAfterFailure;
           }
         }
@@ -268,6 +389,10 @@ const refreshTokenIfNeeded = async (user, force = false) => {
       }
 
       throw error;
+    } finally {
+      if (lockAcquired) {
+        await releaseDistributedRefreshLock(userId);
+      }
     }
   });
 };
@@ -277,7 +402,12 @@ const callQuickBooks = async (user, { method = 'GET', url, data }) => {
   try {
     refreshedUser = await refreshTokenIfNeeded(user);
   } catch (error) {
-    if (error?.code === 'QB_REFRESH_INVALID' || error?.status === 401) {
+    if (
+      error?.code === 'QB_REFRESH_INVALID' ||
+      error?.code === 'QB_REFRESH_BUSY' ||
+      error?.status === 401 ||
+      error?.status === 429
+    ) {
       return { result: { status: 401, data: { message: error.message } }, user };
     }
     throw error;
@@ -303,7 +433,12 @@ const callQuickBooks = async (user, { method = 'GET', url, data }) => {
         data
       );
     } catch (error) {
-      if (error?.code === 'QB_REFRESH_INVALID' || error?.status === 401) {
+      if (
+        error?.code === 'QB_REFRESH_INVALID' ||
+        error?.code === 'QB_REFRESH_BUSY' ||
+        error?.status === 401 ||
+        error?.status === 429
+      ) {
         return { result: { status: 401, data: { message: error.message } }, user: refreshedUser };
       }
       throw error;

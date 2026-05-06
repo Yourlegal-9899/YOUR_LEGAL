@@ -64,7 +64,8 @@ const userSchema = new mongoose.Schema({
     accessToken: String,
     refreshToken: String,
     realmId: String,
-    expiresAt: Date
+    expiresAt: Date,
+    refreshLockUntil: Date
   },
   stripeCustomerId: String,
   subscriptionId: String,
