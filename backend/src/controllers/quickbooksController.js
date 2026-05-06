@@ -2,12 +2,13 @@ const OAuthClient = require('intuit-oauth');
 const crypto = require('crypto');
 const User = require('../models/User');
 
-const oauthClient = new OAuthClient({
-  clientId: process.env.QB_CLIENT_ID,
-  clientSecret: process.env.QB_CLIENT_SECRET,
-  environment: process.env.QB_ENVIRONMENT || 'sandbox',
-  redirectUri: process.env.QB_REDIRECT_URI,
-});
+const getOAuthClient = () =>
+  new OAuthClient({
+    clientId: process.env.QB_CLIENT_ID,
+    clientSecret: process.env.QB_CLIENT_SECRET,
+    environment: process.env.QB_ENVIRONMENT || 'sandbox',
+    redirectUri: process.env.QB_REDIRECT_URI,
+  });
 
 const getFrontendDashboardUrl = ({ status, reason, page = 'settings' }) => {
   const base = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/+$/, '');
@@ -331,11 +332,10 @@ const refreshTokenIfNeeded = async (user, force = false) => {
         throw authError;
       }
 
-      oauthClient.setToken({
-        refresh_token: latestTokensBeforeRefresh.refreshToken,
-      });
-
-      const authResponse = await oauthClient.refresh();
+      const refreshClient = getOAuthClient();
+      const authResponse = await refreshClient.refreshUsingToken(
+        latestTokensBeforeRefresh.refreshToken
+      );
       const token = authResponse.getJson();
 
       workingUser.quickBooksTokens = buildStoredQuickBooksTokens({
@@ -382,7 +382,15 @@ const refreshTokenIfNeeded = async (user, force = false) => {
         workingUser.quickBooksConnected = false;
         workingUser.quickBooksTokens = {};
         await workingUser.save();
-        const authError = new Error('QuickBooks authorization expired. Please reconnect.');
+        let reasonCode = 'refresh_invalid';
+        if (errorText.includes('invalid_client')) reasonCode = 'invalid_client';
+        else if (errorText.includes('invalid_grant')) reasonCode = 'invalid_grant';
+        else if (errorText.includes('expired')) reasonCode = 'refresh_expired';
+        else if (errorText.includes('revoked')) reasonCode = 'token_revoked';
+
+        const authError = new Error(
+          `QuickBooks authorization expired (${reasonCode}). Please reconnect.`
+        );
         authError.status = 401;
         authError.code = 'QB_REFRESH_INVALID';
         throw authError;
@@ -467,7 +475,7 @@ exports.getAuthUrl = (req, res) => {
       });
     }
 
-    const authUri = oauthClient.authorizeUri({
+    const authUri = getOAuthClient().authorizeUri({
       // QuickBooks expects Intuit scopes (e.g., Accounting/Payment/OpenId).
       // Passing non-Intuit scopes like "offline_access" can cause "invalid param: scope".
       scope: [OAuthClient.scopes.Accounting],
@@ -501,7 +509,7 @@ exports.handleCallback = async (req, res) => {
 
     console.log('QuickBooks Callback:', { code: !!code, realmId, userId });
 
-    const authResponse = await oauthClient.createToken(req.url);
+    const authResponse = await getOAuthClient().createToken(req.url);
     const token = authResponse.getJson();
 
     console.log('QuickBooks Token Success');
