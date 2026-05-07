@@ -113,7 +113,7 @@ type GroqChatCompletionResponse = {
 
 const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const TRAINING_SETTING_KEY = 'ai_chat_training_rules';
-const TRAINING_CACHE_TTL_MS = 60 * 1000;
+const TRAINING_CACHE_TTL_MS = 5 * 1000;
 const FALLBACK_DISCLAIMER =
   'This information is not legal advice; please consult a qualified lawyer for legal guidance.';
 
@@ -215,6 +215,8 @@ const ensureLegalDisclaimer = (value: string) => {
   return `${text}\n\n${FALLBACK_DISCLAIMER}`;
 };
 
+const ensureRuleAnswer = (value: string) => String(value || '').trim();
+
 const clampPriority = (value: number) => {
   if (Number.isNaN(value)) return 5;
   return Math.min(10, Math.max(1, Math.round(value)));
@@ -247,7 +249,7 @@ const parseTrainingRules = (raw: any): AiTrainingRule[] => {
         isActive: item?.isActive !== false,
       } satisfies AiTrainingRule;
     })
-    .filter((rule): rule is AiTrainingRule => Boolean(rule));
+    .filter((rule: AiTrainingRule | null): rule is AiTrainingRule => Boolean(rule));
 };
 
 const fetchAiTrainingRules = async (): Promise<AiTrainingRule[]> => {
@@ -330,6 +332,33 @@ const computeRuleMatchScore = (question: string, rule: AiTrainingRule) => {
   return weightedBase * priorityWeight;
 };
 
+const isDirectRuleHit = (question: string, rule: AiTrainingRule) => {
+  const normalizedQuestion = normalizeText(question);
+  const normalizedRuleQuestion = normalizeText(rule.question);
+
+  if (!normalizedQuestion || !normalizedRuleQuestion) return false;
+
+  if (normalizedQuestion === normalizedRuleQuestion) return true;
+
+  if (
+    normalizedQuestion.includes(normalizedRuleQuestion) ||
+    normalizedRuleQuestion.includes(normalizedQuestion)
+  ) {
+    return true;
+  }
+
+  const questionTokens = toUniqueTokenSet(normalizedQuestion);
+  const ruleTokens = toUniqueTokenSet(normalizedRuleQuestion);
+  if (!ruleTokens.size) return false;
+
+  let matched = 0;
+  ruleTokens.forEach((token) => {
+    if (questionTokens.has(token)) matched += 1;
+  });
+
+  return matched / ruleTokens.size >= 0.85;
+};
+
 const findTrainingMatches = (question: string, rules: AiTrainingRule[]): RuleMatch[] => {
   const matches = rules
     .filter((rule) => rule.isActive)
@@ -355,8 +384,14 @@ const callGroqChat = async (input: AnswerLegalQuestionsInput): Promise<string> =
   const trainingMatches = findTrainingMatches(input.question, trainingRules);
   const topMatch = trainingMatches[0];
 
-  if (topMatch && topMatch.score >= 0.86) {
-    return ensureLegalDisclaimer(topMatch.rule.answer);
+  if (topMatch) {
+    if (isDirectRuleHit(input.question, topMatch.rule) && topMatch.score >= 0.45) {
+      return ensureRuleAnswer(topMatch.rule.answer);
+    }
+
+    if (topMatch.score >= 0.74) {
+      return ensureRuleAnswer(topMatch.rule.answer);
+    }
   }
 
   const trainingContext = trainingMatches.length
