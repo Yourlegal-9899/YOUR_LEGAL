@@ -37,11 +37,11 @@ export default function AccountingServicePage() {
   const primaryKeyword = "Accounting services in Netherlands";
 
   const aiBlocks = [
-    { title: "What is accounting in the Netherlands?", content: "Accounting for a Dutch B.V. involves maintaining financial records according to Dutch GAAP, preparing annual accounts for filing with the KVK (Chamber of Commerce), and managing BTW (VAT) and corporate income tax (VPB) compliance." },
+    { title: "What is accounting in the Netherlands?", content: "Accounting for a Dutch B.V. involves maintaining financial records according to Dutch GAAP, preparing annual accounts for filing with the KVK (Chamber of Commerce), and managing BTW (VAT) and corporate income tax (VPB) compliance. Our professional accounting services in the Netherlands handle all of this accurately." },
     { title: "Who needs it?", content: "Every registered Dutch B.V. is legally required to have compliant accounting for tax filings, annual reporting, and financial management, regardless of its size or activity level." },
     { title: "Cost range?", content: "Typically €800 to €2,500+ annually for a small B.V., covering annual accounts and tax returns. Monthly services for ongoing bookkeeping are separate." },
     { title: "DIY vs outsourcing?", content: "DIY is not feasible due to the complexities of Dutch GAAP and tax law. Outsourcing to a Dutch accounting professional is standard practice to ensure compliance and accuracy." },
-    { title: "Final decision summary", content: "To meet mandatory KVK and tax filing obligations and avoid penalties, outsourcing your accounting in the Netherlands is the only reliable and professional choice." }
+    { title: "Final decision summary", content: "To meet mandatory KVK and tax filing obligations and avoid penalties, outsourcing your accounting services in the Netherlands is the only reliable and professional choice." }
   ];
 
   return (
@@ -59,7 +59,7 @@ export default function AccountingServicePage() {
               {serviceName} Services in the {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Professional accounting for your Dutch B.V. We ensure compliance with Dutch GAAP, KVK filing requirements, and the Belastingdienst (tax authority).
+              Professional accounting services in the Netherlands for your Dutch B.V. We ensure compliance with Dutch GAAP, KVK filing requirements, and the Belastingdienst (tax authority).
             </p>
           </div>
         </section>
@@ -71,7 +71,7 @@ export default function AccountingServicePage() {
             </ContentSection>
             
              <ContentSection title="When It Is Required">
-                <p>Formal accounting is required from the moment your Dutch B.V. is incorporated. It is a legal necessity for preparing the annual financial statements (jaarrekening) that must be filed with the Chamber of Commerce (KVK). Furthermore, accurate accounts are the basis for all tax filings, including the periodic BTW (VAT) returns and the annual corporate income tax (VPB) return filed with the Belastingdienst.</p>
+                <p>Formal accounting is required from the moment your Dutch B.V. is incorporated. It is a legal necessity for preparing the annual financial statements (jaarrekening) that must be filed with the Chamber of Commerce (KVK). Furthermore, accurate accounts are the basis for all tax filings, including the periodic BTW (VAT) returns and the annual corporate income tax (VPB) return filed with the Belastingdienst. Professional accounting services in the Netherlands ensure these obligations are met on time.</p>
             </ContentSection>
 
             <ContentSection title="Cost Ranges in the Netherlands">

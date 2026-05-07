@@ -40,7 +40,7 @@ export default function AccountingServicePage() {
     { title: "What is accounting in India?", content: "Accounting in India involves preparing financial statements compliant with Ind AS (Indian Accounting Standards), preparing for statutory audits, and managing corporate tax obligations with the Income Tax Department." },
     { title: "Who needs it?", content: "Every registered Private Limited company in India is legally required to have its accounts prepared and audited annually for filing with the Ministry of Corporate Affairs (MCA) and the tax authorities." },
     { title: "Cost range?", content: "An annual package for preparing financial statements and filing the tax return typically costs ₹25,000 to ₹1,00,000+ for a standard small company. This excludes monthly bookkeeping and audit fees." },
-    { title: "DIY vs outsourcing?", content: "DIY is not possible. Preparing statutory accounts requires a qualified Chartered Accountant who understands Ind AS and Indian tax law. Outsourcing is mandatory." },
+    { title: "DIY vs outsourcing?", content: "DIY is not possible. Preparing statutory accounts requires a qualified Chartered Accountant who understands Ind AS and Indian tax law. Outsourcing accounting services in India is mandatory." },
     { title: "Final decision summary", content: "To meet mandatory MCA and tax filing obligations and to avoid director liability for incorrect accounts, outsourcing your accounting in India is an essential legal requirement." }
   ];
 
@@ -59,7 +59,7 @@ export default function AccountingServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Professional accounting to keep your Indian business compliant with the MCA, Income Tax Department, and Ind AS standards.
+              Professional accounting services in India to keep your Indian business compliant with the MCA, Income Tax Department, and Ind AS standards.
             </p>
           </div>
         </section>

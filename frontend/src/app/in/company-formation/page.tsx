@@ -18,7 +18,7 @@ const AiAnswerBlock = () => (
             </div>
             <div>
                 <h4 className="font-semibold text-gray-700">Who needs this service?</h4>
-                <p className="text-gray-600">This service is essential for foreign companies and entrepreneurs looking to tap into the vast Indian market. It's ideal for tech startups, e-commerce businesses, manufacturing units, and service companies that need a formal legal entity to operate, hire employees, and conduct business in India.</p>
+                <p className="text-gray-600">This India company formation for foreigners service is essential for foreign companies and entrepreneurs looking to tap into the vast Indian market. It's ideal for tech startups, e-commerce businesses, manufacturing units, and service companies that need a formal legal entity to operate, hire employees, and conduct business in India.</p>
             </div>
             <div>
                 <h4 className="font-semibold text-gray-700">What is the cost range?</h4>
@@ -88,7 +88,7 @@ export default function IndiaCompanyFormationPage() {
               India Company Formation for Foreigners
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Launch your Indian Private Limited company remotely. We provide the mandatory resident director and manage all MCA & tax registrations.
+              Launch your Indian Private Limited company remotely with our complete India company formation for foreigners service. We provide the mandatory resident director and manage all MCA & tax registrations to ensure a smooth and compliant setup in India.
             </p>
             <Button asChild size="lg" className="mt-8">
               <Link href="/in/pricing">Start Your Indian Company</Link>
@@ -102,7 +102,7 @@ export default function IndiaCompanyFormationPage() {
             <div className="mb-20">
               <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Your Complete India Formation Package</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <IncludedFeature icon={Users} title="Nominee Resident Director" description="Fulfill the legal requirement for one resident Indian director with our professional nominee service." />
+                <IncludedFeature icon={Users} title="Nominee Resident Director" description="Fulfill the legal requirement for one resident Indian director with our professional nominee service for India company formation for foreigners." />
                 <IncludedFeature icon={FileText} title="MCA Company Registration" description="We handle the entire SPICe+ filing process to obtain your Corporate Identity Number (CIN)." />
                 <IncludedFeature icon={Landmark} title="PAN & TAN Registration" description="We register your company with the Income Tax Department to obtain its PAN and TAN." />
                 <IncludedFeature icon={Shield} title="GST Registration" description="We manage your Goods and Services Tax (GST) registration, mandatory for most businesses." />

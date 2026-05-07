@@ -39,7 +39,7 @@ export default function CrossBorderAccountingServicePage() {
     { title: "What is Cross-Border Accounting?", content: "For an Indian company, this involves managing multi-currency transactions, FEMA and RBI compliance for foreign investment, handling withholding tax (TDS) on foreign payments, and navigating transfer pricing regulations for inter-company transactions." },
     { title: "Who needs it?", content: "Indian subsidiaries of foreign companies, Indian companies with overseas subsidiaries, and businesses that make or receive payments in foreign currency for services or goods." },
     { title: "Cost range?", content: "This is a specialized service with custom pricing, typically starting from ₹50,000+ per month, reflecting the complexity of international tax laws, FEMA regulations, and transfer pricing." },
-    { title: "DIY vs outsourcing?", content: "DIY is impossible. The complexities of FEMA, transfer pricing audits, and international tax treaties require deep expert knowledge. Outsourcing is the only professional approach." },
+    { title: "DIY vs outsourcing?", content: "DIY is impossible. The complexities of FEMA, transfer pricing audits, and international tax treaties require deep expert knowledge. Outsourcing Cross-Border Accounting Services in India is the only professional approach." },
     { title: "Final decision summary", content: "To optimize your global tax position and comply with India's strict foreign exchange and transfer pricing laws, outsourcing cross-border accounting is a mandatory strategic investment." }
   ];
 
@@ -57,7 +57,7 @@ export default function CrossBorderAccountingServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Expert financial strategy for your Indian business, focusing on FEMA/RBI compliance, transfer pricing, and multi-currency management.
+              Expert financial strategy for your Indian business with specialized Cross-Border Accounting Services in India, focusing on FEMA/RBI compliance, transfer pricing, multi-currency management, and international financial compliance. 
             </p>
           </div>
         </section>
@@ -69,7 +69,7 @@ export default function CrossBorderAccountingServicePage() {
             </ContentSection>
             
              <ContentSection title="When It Is Required">
-                <p>This service is required the moment your business engages in a financial transaction with a party outside of India. It is especially critical when receiving foreign investment (FDI), which triggers mandatory reporting to the Reserve Bank of India (RBI) under the Foreign Exchange Management Act (FEMA). It is also essential when you have inter-company transactions, which are subject to India's detailed Transfer Pricing regulations.</p>
+                <p>Cross-Border Accounting Services in India is required the moment your business engages in a financial transaction with a party outside of India. It is especially critical when receiving foreign investment (FDI), which triggers mandatory reporting to the Reserve Bank of India (RBI) under the Foreign Exchange Management Act (FEMA). It is also essential when you have inter-company transactions, which are subject to India's detailed Transfer Pricing regulations.</p>
             </ContentSection>
 
             <ContentSection title="Cost Ranges in India">

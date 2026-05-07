@@ -40,7 +40,7 @@ export default function AnnualComplianceServicePage() {
     { title: "Who needs it?", content: "Every registered Private Limited company in India must complete these annual filings with the MCA to maintain its legal standing." },
     { title: "Cost range?", content: "Professional fees for handling all annual MCA filings typically range from ₹15,000 to ₹40,000 per year for a small company, excluding audit fees." },
     { title: "DIY vs outsourcing?", content: "DIY is not possible. A qualified Company Secretary or Chartered Accountant must prepare and certify these filings. Outsourcing is the standard and required practice." },
-    { title: "Final decision summary", content: "To meet mandatory MCA filing obligations and avoid director disqualification, outsourcing annual compliance to a professional firm is a legal necessity in India." }
+    { title: "Final decision summary", content: "To meet mandatory MCA filing obligations and avoid director disqualification, outsourcing annual compliance for Private Limited companies in India to a professional firm is a legal necessity in India." }
   ];
 
   return (
@@ -54,10 +54,10 @@ export default function AnnualComplianceServicePage() {
                 Back to India Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services in {countryName}
+              {serviceName} Services for Private Limited Company in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Reliable MCA filings and secretarial services to keep your Indian company compliant and in good standing.
+              Reliable MCA filings and secretarial services to keep your Indian company compliant and in good standing. This service is designed to meet all annual compliance requirements for Private Limited companies in India, ensuring accurate MCA filings and hassle-free regulatory compliance. 
             </p>
           </div>
         </section>
@@ -65,7 +65,7 @@ export default function AnnualComplianceServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>This service is for all Private Limited companies registered in India. It ensures that the mandatory annual filings with the Ministry of Corporate Affairs (MCA) are handled correctly and on time, maintaining the company's active legal status and protecting its directors from penalties.</p>
+                <p>This service is for all Private Limited companies registered in India. It ensures that the mandatory annual filings with the Ministry of Corporate Affairs (MCA) are handled correctly and on time, maintaining the company's active legal status and protecting its directors from penalties. It is an important part of annual compliance requirements for Private Limited companies in India.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">

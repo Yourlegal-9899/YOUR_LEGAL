@@ -39,7 +39,7 @@ export default function VirtualCfoServicePage() {
     { title: "What is a Virtual CFO?", content: "A Virtual CFO provides high-level, strategic financial leadership for your Indian business on a flexible, part-time basis. This includes fundraising support, cash flow management, investor reporting (MIS), and strategic business planning." },
     { title: "Who needs it?", content: "Funded startups, scale-ups, and SMEs in India that need executive-level financial strategy but are not yet ready for the high cost (often ₹40L+) of a full-time, in-house CFO." },
     { title: "Cost range?", content: "Typically ₹75,000 to ₹2,50,000+ per month, depending on the level of strategic involvement, reporting complexity, and fundraising support required." },
-    { title: "DIY vs outsourcing?", content: "Strategic financial leadership is not a DIY role. Outsourcing provides access to seasoned CFOs with a track record of scaling businesses, navigating the Indian venture ecosystem, and managing complex compliance." },
+    { title: "DIY vs outsourcing?", content: "Strategic financial leadership is not a DIY role. Outsourcing Virtual CFO Services in India provides access to seasoned CFOs with a track record of scaling businesses, navigating the Indian venture ecosystem, and managing complex compliance." },
     { title: "Final decision summary", content: "To navigate the complexities of scaling a business in India and to successfully raise capital from investors, a Virtual CFO service is an essential strategic asset for any serious startup." }
   ];
 
@@ -57,7 +57,7 @@ export default function VirtualCfoServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Strategic financial leadership to help you scale, raise capital from Indian & global VCs, and maximize profitability.
+              Strategic financial leadership to help you scale, raise capital from Indian & global VCs, and maximize profitability with expert virtual CFO services in India. 
             </p>
           </div>
         </section>
@@ -73,7 +73,7 @@ export default function VirtualCfoServicePage() {
             </ContentSection>
 
             <ContentSection title="Cost Ranges in India">
-                <p>A full-time, experienced CFO in India is a major executive expense, often costing over ₹40-50 Lakhs per year. Our Virtual CFO service provides access to equivalent talent on a flexible, cost-effective basis:</p>
+                <p>A full-time, experienced CFO in India is a major executive expense, often costing over ₹40-50 Lakhs per year. Our Virtual CFO services in India provides access to equivalent talent on a flexible, cost-effective basis:</p>
                 <ul className="list-disc pl-6 space-y-2">
                     <li>**Growth Advisory Package:** ₹75,000 – ₹1,50,000 per month for services like financial modeling, MIS reporting, and regular strategic reviews.</li>
                     <li>**Comprehensive CFO Support:** ₹1,50,000 – ₹3,00,000+ per month for intensive support, including fundraising assistance, board meeting participation, and treasury management.</li>

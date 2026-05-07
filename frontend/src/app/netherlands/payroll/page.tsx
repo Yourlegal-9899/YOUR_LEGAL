@@ -39,7 +39,7 @@ export default function PayrollServicePage() {
     { title: "What is Payroll in the Netherlands?", content: "Dutch payroll involves processing employee salaries while withholding wage tax (loonheffing) and social security contributions. It also includes managing benefits like holiday allowance and complying with the 30% ruling for eligible expats." },
     { title: "Who needs it?", content: "Any company with employees in the Netherlands must operate a compliant payroll system to meet its obligations with the Dutch Tax and Customs Administration (Belastingdienst)." },
     { title: "Cost range?", content: "Costs are typically around €20-€40 per employee per month. Set-up fees for the payroll administration may also apply." },
-    { title: "DIY vs outsourcing?", content: "Dutch payroll is extremely complex, with intricate tax calculations and rules. DIY is not a viable option for any serious business. Outsourcing is the standard and necessary approach." },
+    { title: "DIY vs outsourcing?", content: "Dutch payroll is extremely complex, with intricate tax calculations and rules. DIY is not a viable option for any serious business. Outsourcing Payroll services in the Netherlands is the standard and necessary approach." },
     { title: "Final decision summary", content: "To navigate the complexities of Dutch wage tax, social security, and employment law, outsourcing your payroll to a local expert is a critical requirement for compliance." }
   ];
 
@@ -57,7 +57,7 @@ export default function PayrollServicePage() {
               {serviceName} Services in the {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Compliant payroll services to manage salaries, wage tax, and social security for your Dutch employees.
+              Compliant payroll services in the Netherlands to manage salaries, wage tax, and social security for your Dutch employees.
             </p>
           </div>
         </section>
@@ -65,7 +65,7 @@ export default function PayrollServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>This service is for any Dutch B.V. that hires employees in the Netherlands. It's essential for ensuring correct calculation and payment of salaries, wage tax (loonheffing), social security contributions, and managing special schemes like the 30% ruling for skilled expatriates.</p>
+                <p>Our Payroll services in the Netherlands is for any Dutch B.V. that hires employees in the Netherlands. It's essential for ensuring correct calculation and payment of salaries, wage tax (loonheffing), social security contributions, and managing special schemes like the 30% ruling for skilled expatriates.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">
@@ -73,7 +73,7 @@ export default function PayrollServicePage() {
             </ContentSection>
 
             <ContentSection title="Cost Ranges">
-                <p>Pricing for outsourced payroll in the Netherlands is usually on a per-payslip basis:</p>
+                <p>Pricing for outsourced payroll services in the Netherlands  is usually on a per-payslip basis:</p>
                 <ul className="list-disc pl-6 space-y-2">
                     <li>**Per Employee, Per Month:** €20 – €40.</li>
                     <li>**One-time Setup Fee:** A setup fee of €100 – €250 may apply.</li>
@@ -90,7 +90,7 @@ export default function PayrollServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>Dutch payroll legislation is highly complex, involving detailed calculations for tax, pensions, and various social security schemes. Outsourcing to YourLegal's local partners ensures that all deductions are calculated correctly, all declarations to the tax authorities are made on time, and your company remains fully compliant with Dutch employment and tax law. It is the only safe and efficient method for managing payroll in the Netherlands.</p>
+                <p>Dutch payroll legislation is highly complex, involving detailed calculations for tax, pensions, and various social security schemes. Outsourcing Payroll services in the Netherlands to YourLegal's local partners ensures that all deductions are calculated correctly, all declarations to the tax authorities are made on time, and your company remains fully compliant with Dutch employment and tax law. It is the only safe and efficient method for managing payroll in the Netherlands.</p>
             </ContentSection>
 
             <AiAnswerBlock blocks={aiBlocks} />

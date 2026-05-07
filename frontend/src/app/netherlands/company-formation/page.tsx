@@ -14,7 +14,7 @@ const AiAnswerBlock = () => (
         <div className="space-y-6">
             <div>
                 <h4 className="font-semibold text-gray-700">What is Netherlands Company Formation?</h4>
-                <p className="text-gray-600">Netherlands Company Formation is the process of setting up a Dutch Besloten Vennootschap (B.V.), a private limited liability company. It involves engaging a civil-law notary to draft and execute a deed of incorporation, and then registering the company with the Dutch Chamber of Commerce (KVK). This creates a legal entity that can operate throughout the EU.</p>
+                <p className="text-gray-600">Company Formation Netherlands is the process of setting up a Dutch Besloten Vennootschap (B.V.), a private limited liability company. It involves engaging a civil-law notary to draft and execute a deed of incorporation, and then registering the company with the Dutch Chamber of Commerce (KVK). This creates a legal entity that can operate throughout the EU.</p>
             </div>
             <div>
                 <h4 className="font-semibold text-gray-700">Who needs this service?</h4>
@@ -26,7 +26,7 @@ const AiAnswerBlock = () => (
             </div>
             <div>
                 <h4 className="font-semibold text-gray-700">DIY vs. Outsourcing to YourLegal?</h4>
-                <p className="text-gray-600">DIY formation is not possible in the Netherlands as the process legally requires the involvement of a Dutch civil-law notary. Outsourcing to a service like YourLegal is the standard procedure. We work with our notary partners to manage the entire process for you remotely, including drafting documents and handling all registrations.</p>
+                <p className="text-gray-600">DIY formation is not possible in the Netherlands as the process legally requires the involvement of a Dutch civil-law notary. Outsourcing to a service like YourLegal is the standard procedure for company formation Netherlands. We work with our notary partners to manage the entire process for you remotely, including drafting documents and handling all registrations.</p>
             </div>
              <div>
                 <h4 className="font-semibold text-gray-700">Decision Summary:</h4>

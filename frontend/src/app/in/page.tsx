@@ -69,7 +69,7 @@ const ComparisonTable = () => (
 
 const faqs = [
     { q: "What is a Private Limited Company?", a: "A Private Limited (Pvt. Ltd.) Company is the most popular corporate entity for businesses in India. It is a separate legal entity and offers limited liability protection to its shareholders." },
-    { q: "Is a local Indian director mandatory?", a: "Yes, every Indian company must have at least one director who is a resident of India (defined as staying in India for at least 182 days in the previous year). We can provide a professional nominee director to fulfill this requirement." },
+    { q: "Is a local Indian director mandatory?", a: "Yes, every Indian company must have at least one director who is a resident of India (defined as staying in India for at least 182 days in the previous year). We can provide a professional nominee director to fulfill this requirement.This is essential for anyone planning to register a business in India." },
     { q: "When is GST registration required?", a: "GST registration is mandatory for businesses with an aggregate turnover exceeding ₹20 lakhs for services or ₹40 lakhs for goods. It is also mandatory for e-commerce operators and those making inter-state sales, regardless of turnover." },
     { q: "What is FDI and does it apply to my business?", a: "Foreign Direct Investment (FDI) policy dictates the rules for foreign ownership. Most sectors, including IT and e-commerce marketplaces, fall under the 'Automatic Route', allowing 100% FDI without prior government approval." },
     { q: "What are the main annual compliance requirements?", a: "Key annual tasks include holding board meetings, filing an Annual Return (Form MGT-7) and Financial Statements (Form AOC-4) with the Ministry of Corporate Affairs (MCA), and filing an annual Income Tax Return." }
@@ -267,9 +267,9 @@ export default function IndiaPage() {
             <section className="bg-gradient-to-r from-orange-50 via-gray-50 to-green-50 py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight">
-                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-red-600">India Company Formation, Accounting & Tax</span>
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-500 to-red-600">Register a Business in India | Company Formation, Accounting & Tax</span>
                     </h1>
-                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">Your all-in-one solution for launching and managing an Indian company. We handle incorporation, compliance, GST, and tax so you can succeed in one of the world's fastest-growing markets.</p>
+                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">Your all-in-one solution for register a business in India  and managing an Indian company. We handle incorporation, compliance, GST, and tax so you can succeed in one of the world's fastest-growing markets.</p>
                     <div className="mt-10">
                         <a href="https://outlook.office365.com/book/YOURLEGAL1@yourlegal.in/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer">
                             <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white">Get a Free India Consultation</Button>
@@ -283,7 +283,7 @@ export default function IndiaPage() {
             <div className="py-16">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-20">
                     <section className="animate-fade-in-up">
-                        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Why Incorporate in India?</h2>
+                        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Why Register a Business in India?</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                             <FeatureCard icon={TrendingUp} title="Fast-Growing Economy" description="Tap into one of the world's largest and fastest-growing economies with a massive domestic market." />
                             <FeatureCard icon={Globe} title="Skilled Talent Pool" description="Access a vast pool of skilled, English-speaking tech and business talent at a competitive cost." />
@@ -329,7 +329,7 @@ export default function IndiaPage() {
                         <div className="text-center">
                             <h2 className="text-3xl font-bold text-gray-900 mb-4">Transparent Pricing Plans</h2>
                             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-                                Choose the plan that fits your needs, from simple formation to full-service compliance and tax.
+                                Choose the plan that fits your needs, from simple formation to full-service compliance and tax for those looking to register a business in India.
                             </p>
                             <Button asChild size="lg">
                                 <Link href="/in/pricing">View Detailed Pricing</Link>

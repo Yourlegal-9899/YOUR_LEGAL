@@ -57,7 +57,7 @@ export default function BookkeepingServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Accurate, GST-compliant bookkeeping for your Indian business. We keep your financials organized and ready for tax and MCA filings.
+              Accurate, GST-compliant bookkeeping services in India for your Indian business. We keep your financials organized and ready for tax and MCA filings.
             </p>
           </div>
         </section>
@@ -92,7 +92,7 @@ export default function BookkeepingServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>Outsourcing your bookkeeping to YourLegal ensures that your financial transactions are recorded accurately and reconciled regularly by professionals who understand Indian tax law. We use modern cloud accounting software (like Zoho Books or QuickBooks) to automate data entry and give you real-time insights. Our process guarantees that your records are always compliant with GST and TDS rules, making your monthly and annual filings seamless. By letting us handle the books, you free up your time to focus on growing your business. It is the essential first step towards a robust <Link href="/in/accounting" className="text-blue-600 hover:underline">accounting</Link> service.</p>
+                <p>Outsourcing your bookkeeping services in India to YourLegal ensures that your financial transactions are recorded accurately and reconciled regularly by professionals who understand Indian tax law. We use modern cloud accounting software (like Zoho Books or QuickBooks) to automate data entry and give you real-time insights. Our process guarantees that your records are always compliant with GST and TDS rules, making your monthly and annual filings seamless. By letting us handle the books, you free up your time to focus on growing your business. It is the essential first step towards a robust <Link href="/in/accounting" className="text-blue-600 hover:underline">accounting</Link> service.</p>
             </ContentSection>
 
             <AiAnswerBlock blocks={aiBlocks} />

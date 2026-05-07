@@ -40,7 +40,7 @@ export default function PayrollServicePage() {
     { title: "Who needs it?", content: "Every company in India that hires employees must operate a compliant payroll system to meet its obligations under various labor and tax laws." },
     { title: "Cost range?", content: "Outsourced payroll in India typically costs ₹500 to ₹1,500 per employee per month, depending on the complexity and number of employees." },
     { title: "DIY vs outsourcing?", content: "DIY payroll is extremely complex due to varying state-level rules (like Professional Tax) and the intricate calculations for PF, ESI, and TDS. Outsourcing to a payroll expert is the standard and necessary approach." },
-    { title: "Final decision summary", content: "To navigate India's complex web of labor laws and tax deductions, and to avoid significant penalties for non-compliance, outsourcing payroll is an essential business decision." }
+    { title: "Final decision summary", content: "To navigate India's complex web of labor laws and tax deductions, and to avoid significant penalties for non-compliance, outsourcing payroll services in India is an essential business decision." }
   ];
 
   return (
@@ -57,7 +57,7 @@ export default function PayrollServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Compliant payroll services to manage salaries, TDS, PF, and ESI for your Indian team.
+              Compliant payroll services in India to manage salaries, TDS, PF, and ESI for your Indian team.
             </p>
           </div>
         </section>
@@ -65,7 +65,7 @@ export default function PayrollServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>This service is for any company registered in India that has employees. It is essential for ensuring that salary payments, tax deductions, and statutory contributions are all managed in strict accordance with Indian labor and tax laws. It's a must-have for startups, SMEs, and foreign subsidiaries hiring local talent.</p>
+                <p>Payroll services in India is for any company registered in India that has employees. It is essential for ensuring that salary payments, tax deductions, and statutory contributions are all managed in strict accordance with Indian labor and tax laws. It's a must-have for startups, SMEs, and foreign subsidiaries hiring local talent.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">
