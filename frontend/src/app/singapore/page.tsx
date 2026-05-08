@@ -51,7 +51,7 @@ const faqs = [
     { q: "Is a local director mandatory?", a: "Yes, every Singapore company must have at least one director who is ordinarily resident in Singapore. We can provide a nominee director service to fulfill this requirement for foreign founders." },
     { q: "When is GST registration required?", a: "GST registration is mandatory if your company's taxable turnover for the past 12 months has exceeded S$1 million, or if you expect it to exceed S$1 million in the next 12 months. Voluntary registration is also possible." },
     { q: "Is bookkeeping mandatory in Singapore?", a: "Yes, under the Singapore Companies Act, all companies are required to maintain proper accounting records from the date of incorporation. These records are essential for tax filing and AGMs." },
-    { q: "How long does incorporation take?", a: "The entire process, including name approval and registration with ACRA, can typically be completed within 1-3 business days, provided all documents are in order." },
+    { q: "How long does incorporation take?", a: "The entire process of company incorporation  in Singapore, including name approval and registration with ACRA, can typically be completed within 1-3 business days, provided all documents are in order." },
     { q: "What are the main annual compliance costs?", a: "Annual costs typically include fees for the company secretary, registered address, filing of the Annual Return with ACRA, and corporate tax filing with IRAS." }
 ];
 
@@ -197,9 +197,9 @@ export default function SingaporePage() {
             <section className="bg-gradient-to-br from-red-50 to-orange-100 py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight">
-                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-orange-500">Singapore Company Incorporation, Accounting & Tax</span>
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-orange-500">Company Incorporation Services in Singapore, Accounting & Tax</span>
                     </h1>
-                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">End-to-end support for global entrepreneurs looking to establish a presence in Asia's premier business hub.</p>
+                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">End-to-end support for global entrepreneurs looking to establish a presence in Asia's premier business hub.Our company incorporation services in Singapore make it simple and compliant to launch your business successfully.</p>
                     <div className="mt-10">
                         <a href="https://outlook.office365.com/book/YOURLEGAL1@yourlegal.in/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer">
                             <Button size="lg" className="bg-red-600 hover:bg-red-700 text-white">Get a Free Consultation</Button>
@@ -256,7 +256,7 @@ export default function SingaporePage() {
                        <div className="text-center">
                             <h2 className="text-3xl font-bold text-gray-900 mb-4">Transparent Pricing Plans</h2>
                             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-                                Choose the plan that fits your needs, from simple formation to full-service compliance and tax.
+                                Choose the plan that fits your needs, from simple Singapore Company incorporation to full-service compliance and tax.
                             </p>
                             <Button asChild size="lg">
                                 <Link href="/singapore/pricing">View Detailed Pricing</Link>
