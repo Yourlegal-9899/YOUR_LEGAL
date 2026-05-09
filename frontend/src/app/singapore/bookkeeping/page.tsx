@@ -40,7 +40,7 @@ export default function BookkeepingServicePage() {
     { title: "Who needs it?", content: "Every company registered in Singapore is legally required by the Companies Act to maintain proper books of accounts from the day of incorporation." },
     { title: "Cost range?", content: "Monthly bookkeeping services for a small company in Singapore typically cost between S$200 and S$600, depending on the volume and complexity of transactions." },
     { title: "DIY vs outsourcing?", content: "While possible for very simple businesses, DIY bookkeeping often leads to errors in GST calculations and costly cleanup work at year-end. Outsourcing ensures professional accuracy and frees up founder time." },
-    { title: "Final decision summary", content: "To ensure your Singapore company has accurate financial records for tax filing and decision-making, outsourcing bookkeeping is the most efficient and reliable solution." }
+    { title: "Final decision summary", content: "To ensure your Singapore company has accurate financial records for tax filing and decision-making, outsourcing bookkeeping services in Singapore is the most efficient and reliable solution." }
   ];
   
   const schema = {
@@ -106,7 +106,7 @@ export default function BookkeepingServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Accurate, compliant bookkeeping for your Singapore company. We keep your financials organized and ready for GST and tax filings.
+              Accurate, compliant bookkeeping services in Singapore for your Singapore company. We keep your financials organized and ready for GST and tax filings.
             </p>
           </div>
         </section>
@@ -142,7 +142,7 @@ export default function BookkeepingServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>Outsourcing your bookkeeping to YourLegal is the most efficient way to manage your company's financial records. Our professional team uses modern, cloud-based software like Xero or QuickBooks to automate transaction entry and provide you with a real-time view of your finances. We ensure all your income and expenses are categorized correctly according to Singaporean accounting standards.</p>
+                <p>Outsourcing your bookkeeping services in Singapore to YourLegal is the most efficient way to manage your company's financial records. Our professional team uses modern, cloud-based software like Xero or QuickBooks to automate transaction entry and provide you with a real-time view of your finances. We ensure all your income and expenses are categorized correctly according to Singaporean accounting standards.</p>
                 <p className="mt-4">This guarantees that your data is always clean, reconciled, and ready for your accountant to prepare your year-end financial statements and tax returns. By letting us handle the administrative burden of daily bookkeeping, you not only save countless hours but also gain the financial clarity needed to make smart, data-driven decisions for your business. It is the essential foundation for our comprehensive <Link href="/singapore/accounting" className="text-blue-600 hover:underline">accounting</Link> service.</p>
             </ContentSection>
 

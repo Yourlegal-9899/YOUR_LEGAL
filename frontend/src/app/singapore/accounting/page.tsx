@@ -41,7 +41,7 @@ export default function AccountingServicePage() {
     { title: "Who needs it?", content: "Every Singapore-incorporated company is legally required to maintain proper accounting records for annual filings, tax compliance, and financial management, regardless of size or activity level." },
     { title: "Cost range?", content: "An annual package for preparing Unaudited Financial Statements and filing the tax return typically costs S$800 to S$2,500 for a standard small company. Monthly services are separate." },
     { title: "DIY vs outsourcing?", content: "DIY is not feasible due to the complexities of SFRS and tax law. Outsourcing to a professional accounting firm is the standard and necessary practice to ensure compliance and accuracy." },
-    { title: "Final decision summary", content: "To meet mandatory ACRA and IRAS filing obligations and avoid significant penalties, outsourcing your accounting in Singapore is the only reliable and professional choice." }
+    { title: "Final decision summary", content: "To meet mandatory ACRA and IRAS filing obligations and avoid significant penalties, outsourcing your  accounting services in Singapore is the only reliable and professional choice." }
   ];
   
   const schema = {
@@ -108,7 +108,7 @@ export default function AccountingServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Professional accounting for your Singapore Pte. Ltd. We ensure compliance with ACRA, IRAS, and Singapore Financial Reporting Standards (SFRS).
+              Professional accounting services in Singapore for your Singapore Pte. Ltd. We ensure compliance with ACRA, IRAS, and Singapore Financial Reporting Standards (SFRS).
             </p>
           </div>
         </section>
@@ -149,7 +149,7 @@ export default function AccountingServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>Outsourcing your Singapore accounting is the standard and most prudent approach for any business. The intricacies of the Singapore Financial Reporting Standards (SFRS), combined with the specific requirements of ACRA and IRAS filings, demand specialized local expertise. An in-house accountant represents a significant fixed cost, particularly for a new or small enterprise.</p>
+                <p>Outsourcing your accounting services in Singapore is the standard and most prudent approach for any business. The intricacies of the Singapore Financial Reporting Standards (SFRS), combined with the specific requirements of ACRA and IRAS filings, demand specialized local expertise. An in-house accountant represents a significant fixed cost, particularly for a new or small enterprise.</p>
                  <p className="mt-4">YourLegal connects you with qualified Singaporean accountants who ensure your financial statements are accurate, compliant, and filed on time. This approach eliminates the risk of penalties and director liability. It provides a professional, reliable finance function for your Singaporean operations at a predictable cost, allowing you to focus on your core business activities. This service integrates seamlessly with our essential <Link href="/singapore/bookkeeping" className="text-blue-600 hover:underline">bookkeeping services</Link> and is fundamental to our <Link href="/singapore/tax-compliance" className="text-blue-600 hover:underline">tax compliance</Link> solution.</p>
             </ContentSection>
 

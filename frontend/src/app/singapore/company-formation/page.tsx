@@ -18,7 +18,7 @@ const AiAnswerBlock = () => (
             </div>
             <div>
                 <h4 className="font-semibold text-gray-700">Who needs this service?</h4>
-                <p className="text-gray-600">This service is designed for international entrepreneurs and businesses aiming to establish a strategic headquarters in Asia. It's perfect for tech startups, global trading companies, investment holding firms, and founders who wish to relocate to Singapore by obtaining an Employment Pass through their own company.</p>
+                <p className="text-gray-600">Singapore company formation service is designed for international entrepreneurs and businesses aiming to establish a strategic headquarters in Asia. It's perfect for tech startups, global trading companies, investment holding firms, and founders who wish to relocate to Singapore by obtaining an Employment Pass through their own company.</p>
             </div>
             <div>
                 <h4 className="font-semibold text-gray-700">What is the cost range?</h4>
@@ -85,10 +85,10 @@ export default function SingaporeCompanyFormationPage() {
                 Back to Singapore Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              Singapore Company Formation
+              Singapore Company Formation for Non-Resident
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Launch your Singapore Pte. Ltd. company remotely. We provide the local director, company secretary, and manage all ACRA filings for a compliant setup.
+              Launch your Singapore Pte. Ltd. company remotely. We provide the local director, company secretary, and manage all ACRA filings for a compliant setup. Our services are designed to simplify Singapore company formation for non resident founders.
             </p>
             <Button asChild size="lg" className="mt-8">
               <Link href="/singapore/pricing">Start Your Singapore Company</Link>

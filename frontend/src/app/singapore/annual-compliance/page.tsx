@@ -39,7 +39,7 @@ export default function AnnualComplianceServicePage() {
     { title: "What is Annual Compliance in Singapore?", content: "Annual compliance in Singapore involves holding an Annual General Meeting (AGM) and filing an Annual Return with ACRA. This confirms the company's details and must be done within a specific timeframe after the financial year-end." },
     { title: "Who needs it?", content: "Every incorporated company in Singapore (Pte. Ltd.) is required by law to fulfill these annual filing obligations with ACRA to remain compliant." },
     { title: "Cost range?", content: "Annual compliance services, which typically include company secretarial services and filing fees, range from S$600 to S$1,500 per year for a standard small company." },
-    { title: "DIY vs outsourcing?", content: "DIY is not possible. A company must appoint a qualified Company Secretary to manage ACRA filings. Outsourcing to a corporate service provider like YourLegal is the standard and required practice." },
+    { title: "DIY vs outsourcing?", content: "DIY is not possible. A company must appoint a qualified Company Secretary to manage ACRA annual return filing in Singapore. Outsourcing to a corporate service provider like YourLegal is the standard and required practice." },
     { title: "Final decision summary", content: "Given the mandatory requirement for a Company Secretary and the complexities of ACRA filings, outsourcing annual compliance is a legal necessity for all companies in Singapore." }
   ];
 
@@ -54,10 +54,10 @@ export default function AnnualComplianceServicePage() {
                 Back to Singapore Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services in {countryName}
+              {serviceName} Services & ACRA Annual Return Filing {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Reliable ACRA filings and corporate secretarial services to keep your Singapore company compliant.
+              Reliable ACRA annual return filing Singapore and corporate secretarial services to keep your Singapore company compliant.
             </p>
           </div>
         </section>
@@ -69,7 +69,7 @@ export default function AnnualComplianceServicePage() {
             </ContentSection>
             
              <ContentSection title="When It Is Required">
-                <p>A company must hold its Annual General Meeting (AGM) and file its Annual Return with ACRA following the end of its Financial Year. For most companies, the deadline to file the Annual Return is within 7 months of the financial year-end. Our service ensures these deadlines are met without fail.</p>
+                <p>A company must hold its Annual General Meeting (AGM) and file its Annual Return with ACRA following the end of its Financial Year. For most companies, the deadline to file the Annual Return is within 7 months of the financial year-end. Our service ensures these deadlines are met without fail, including all aspects of ACRA filing Singapore.</p>
             </ContentSection>
 
             <ContentSection title="Cost Ranges">

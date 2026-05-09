@@ -103,10 +103,10 @@ export default function CrossBorderAccountingServicePage() {
                 Back to Singapore Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services for {countryName}
+              {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Expert financial strategy for your Singapore company, focusing on tax treaty benefits, transfer pricing, and multi-currency management for your APAC and global operations.
+              Expert financial strategy for your Singapore company, focusing on tax treaty benefits, transfer pricing, and multi-currency management for your APAC and global operations. With our expert cross border accounting services in Singapore, your business can efficiently navigate international finance while ensuring full compliance.
             </p>
           </div>
         </section>
@@ -114,7 +114,7 @@ export default function CrossBorderAccountingServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>Cross-border accounting is a critical service for companies that use Singapore as a hub for their international business activities. This includes Singaporean holding companies that own subsidiaries in other countries, multinational corporations with a regional headquarters in Singapore, e-commerce businesses selling across Southeast Asia, and any company that regularly deals with multiple currencies (e.g., USD, AUD, EUR) and international supply chains.</p>
+                <p>Cross-border accounting services in Singapore are a critical service for companies that use Singapore as a hub for their international business activities. This includes Singaporean holding companies that own subsidiaries in other countries, multinational corporations with a regional headquarters in Singapore, e-commerce businesses selling across Southeast Asia, and any company that regularly deals with multiple currencies (e.g., USD, AUD, EUR) and international supply chains.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">

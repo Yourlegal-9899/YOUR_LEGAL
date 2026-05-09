@@ -40,7 +40,7 @@ export default function PayrollServicePage() {
     { title: "Who needs it?", content: "Any company in Singapore that hires employees, especially Singapore Citizens or Permanent Residents, must run a payroll system to manage CPF contributions and other legal requirements." },
     { title: "Cost range?", content: "Outsourced payroll in Singapore typically costs S$30 - S$70 per employee per month. Costs can be higher for companies with expatriate employees requiring tax clearance." },
     { title: "DIY vs outsourcing?", content: "CPF contribution rates vary by age and residency status, making calculations complex. Outsourcing ensures these mandatory contributions are calculated and paid correctly, avoiding penalties." },
-    { title: "Final decision summary", content: "To ensure accurate and timely CPF contributions, which is a strict legal requirement, outsourcing payroll in Singapore is the most reliable and risk-free approach for any employer." }
+    { title: "Final decision summary", content: "To ensure accurate and timely CPF contributions, which is a strict legal requirement, outsourcing  payroll services in Singapore is the most reliable and risk-free approach for any employer." }
   ];
 
   return (
@@ -57,7 +57,7 @@ export default function PayrollServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Compliant payroll services to manage salaries and mandatory CPF contributions for your Singapore team.
+              Compliant payroll services in Singapore to manage salaries and mandatory CPF contributions for your Singapore team.
             </p>
           </div>
         </section>
@@ -65,7 +65,7 @@ export default function PayrollServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>This service is for any Singapore-registered company that employs Singapore Citizens or Permanent Residents (PRs). It is essential for managing the complex and mandatory Central Provident Fund (CPF) contributions, which are the cornerstone of Singapore's social security system.</p>
+                <p>This service is for any Singapore-registered company that employs Singapore Citizens or Permanent Residents (PRs). It is essential for managing the complex and mandatory Central Provident Fund (CPF) contributions, which are the cornerstone of Singapore's social security system. Businesses looking for reliable payroll services in Singapore will benefit from our professional handling of these requirements.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">
@@ -90,7 +90,7 @@ export default function PayrollServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>CPF contribution rates are complex, varying based on an employee's age and residency status. Outsourcing your payroll to YourLegal ensures these multi-tiered calculations are always accurate. We manage the entire process, from calculating contributions and issuing itemized payslips (a legal requirement) to ensuring timely payment to the CPF Board, safeguarding your business from significant financial penalties.</p>
+                <p>CPF contribution rates are complex, varying based on an employee's age and residency status. Outsourcing your  payroll services in Singapore to YourLegal ensures these multi-tiered calculations are always accurate. We manage the entire process, from calculating contributions and issuing itemized payslips (a legal requirement) to ensuring timely payment to the CPF Board, safeguarding your business from significant financial penalties.</p>
             </ContentSection>
 
             <AiAnswerBlock blocks={aiBlocks} />
