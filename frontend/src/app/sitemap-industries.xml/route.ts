@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import {
+  buildUrlSetXml,
   getSitemapBaseUrl,
-  getSitemapLastModifiedDate,
+  SitemapUrlEntry,
   SITEMAP_XML_HEADERS,
 } from '@/lib/sitemap-utils';
+import { getIndustryLastmod } from '@/lib/sitemap-lastmod';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,34 +15,24 @@ const industrySubPages = [
     'startups', 'agencies', 'healthcare', 'manufacturing', 'fintech'
 ];
 
-function generateSitemap(urls: string[], baseUrl: string, lastModified: string) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${urls
-    .map((url) => `
-    <url>
-      <loc>${baseUrl}${url}</loc>
-      <lastmod>${lastModified}</lastmod>
-      <changefreq>monthly</changefreq>
-      <priority>0.7</priority>
-    </url>`)
-    .join('')}
-</urlset>`;
-}
-
 export async function GET() {
-  const industryPages = countries.flatMap((country) => {
-    const baseIndustryPage = `/${country}/industries`;
-    const subIndustryPages = industrySubPages.map(industry => `/${country}/industries/${industry}`);
-    return [baseIndustryPage, ...subIndustryPages];
-  });
+  const entries: SitemapUrlEntry[] = countries.flatMap((country) => [
+    {
+      path: `/${country}/industries`,
+      lastmod: getIndustryLastmod(country),
+      changefreq: 'monthly' as const,
+      priority: 0.7,
+    },
+    ...industrySubPages.map((industry) => ({
+      path: `/${country}/industries/${industry}`,
+      lastmod: getIndustryLastmod(country, industry),
+      changefreq: 'monthly' as const,
+      priority: 0.7,
+    })),
+  ]);
 
-  const sitemap = generateSitemap(
-    industryPages,
-    getSitemapBaseUrl(),
-    getSitemapLastModifiedDate()
-  );
-  
+  const sitemap = buildUrlSetXml(entries, getSitemapBaseUrl());
+
   return new NextResponse(sitemap, {
     headers: SITEMAP_XML_HEADERS,
   });

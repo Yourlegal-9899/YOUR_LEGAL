@@ -4,10 +4,12 @@
 
 import { NextResponse } from 'next/server';
 import {
+  buildUrlSetXml,
   getSitemapBaseUrl,
-  getSitemapLastModifiedDate,
+  SitemapUrlEntry,
   SITEMAP_XML_HEADERS,
 } from '@/lib/sitemap-utils';
+import { getCountryLastmod } from '@/lib/sitemap-lastmod';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,27 +24,16 @@ const countries = [
     '/netherlands'
 ];
 
-function generateSitemap(urls: string[], baseUrl: string, lastModified: string) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${urls
-    .map((url) => `
-    <url>
-      <loc>${baseUrl}${url}</loc>
-      <lastmod>${lastModified}</lastmod>
-      <changefreq>monthly</changefreq>
-      <priority>0.8</priority>
-    </url>`)
-    .join('')}
-</urlset>`;
-}
+const getCountrySlugFromPath = (path: string) => path.replace(/^\//, '');
 
 export async function GET() {
-  const sitemap = generateSitemap(
-    countries,
-    getSitemapBaseUrl(),
-    getSitemapLastModifiedDate()
-  );
+  const entries: SitemapUrlEntry[] = countries.map((path) => ({
+    path,
+    lastmod: getCountryLastmod(getCountrySlugFromPath(path)),
+    changefreq: 'monthly',
+    priority: 0.8,
+  }));
+  const sitemap = buildUrlSetXml(entries, getSitemapBaseUrl());
   
   return new NextResponse(sitemap, {
     headers: SITEMAP_XML_HEADERS,

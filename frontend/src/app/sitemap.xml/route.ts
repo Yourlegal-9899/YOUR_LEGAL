@@ -4,10 +4,11 @@
 
 import { NextResponse } from 'next/server';
 import {
+  buildSitemapIndexXml,
   getSitemapBaseUrl,
-  getSitemapLastModifiedDate,
   SITEMAP_XML_HEADERS,
 } from '@/lib/sitemap-utils';
+import { getSitemapFileLastmod } from '@/lib/sitemap-lastmod';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,18 +25,12 @@ const sitemaps = [
 
 export async function GET() {
   const baseUrl = getSitemapBaseUrl();
-  const lastModified = getSitemapLastModifiedDate();
-
-  const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
-<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${sitemaps
-    .map((sitemap) => `
-    <sitemap>
-      <loc>${baseUrl}/${sitemap}</loc>
-      <lastmod>${lastModified}</lastmod>
-    </sitemap>`)
-    .join('')}
-</sitemapindex>`;
+  const sitemapIndex = buildSitemapIndexXml(
+    sitemaps.map((sitemapName) => ({
+      loc: `${baseUrl}/${sitemapName}`,
+      lastmod: getSitemapFileLastmod(sitemapName),
+    }))
+  );
 
   return new NextResponse(sitemapIndex, {
     headers: SITEMAP_XML_HEADERS,

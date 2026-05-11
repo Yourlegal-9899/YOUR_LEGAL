@@ -5,10 +5,12 @@
 
 import { NextResponse } from 'next/server';
 import {
+  buildUrlSetXml,
   getSitemapBaseUrl,
-  getSitemapLastModifiedDate,
+  SitemapUrlEntry,
   SITEMAP_XML_HEADERS,
 } from '@/lib/sitemap-utils';
+import { getServiceLastmod } from '@/lib/sitemap-lastmod';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,31 +21,16 @@ const serviceSubPages = [
     'pricing', 'process', 'services'
 ];
 
-function generateSitemap(urls: string[], baseUrl: string, lastModified: string) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${urls
-    .map((url) => `
-    <url>
-      <loc>${baseUrl}${url}</loc>
-      <lastmod>${lastModified}</lastmod>
-      <changefreq>weekly</changefreq>
-      <priority>0.9</priority>
-    </url>`)
-    .join('')}
-</urlset>`;
-}
-
 export async function GET() {
-  const serviceUrls = countries.flatMap((country) => 
-    serviceSubPages.map(subPage => `/${country}/${subPage}`)
+  const entries: SitemapUrlEntry[] = countries.flatMap((country) =>
+    serviceSubPages.map((subPage) => ({
+      path: `/${country}/${subPage}`,
+      lastmod: getServiceLastmod(country, subPage),
+      changefreq: 'weekly' as const,
+      priority: 0.9,
+    }))
   );
-
-  const sitemap = generateSitemap(
-    serviceUrls,
-    getSitemapBaseUrl(),
-    getSitemapLastModifiedDate()
-  );
+  const sitemap = buildUrlSetXml(entries, getSitemapBaseUrl());
   
   return new NextResponse(sitemap, {
     headers: SITEMAP_XML_HEADERS,

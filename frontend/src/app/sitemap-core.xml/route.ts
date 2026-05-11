@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import {
+  buildUrlSetXml,
   getSitemapBaseUrl,
-  getSitemapLastModifiedDate,
+  SitemapUrlEntry,
   SITEMAP_XML_HEADERS,
 } from '@/lib/sitemap-utils';
+import { getCorePageLastmod } from '@/lib/sitemap-lastmod';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,33 +21,16 @@ const staticPages = [
     { url: '/company/partner', priority: 0.6 },
     { url: '/support/contact-sales', priority: 0.6 },
     { url: '/blog', priority: 0.9 },
-];
-
-function generateSitemap(
-  pages: { url: string, priority: number }[],
-  baseUrl: string,
-  lastModified: string
-) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${pages
-    .map((page) => `
-    <url>
-      <loc>${baseUrl}${page.url}</loc>
-      <lastmod>${lastModified}</lastmod>
-      <changefreq>weekly</changefreq>
-      <priority>${page.priority.toFixed(1)}</priority>
-    </url>`)
-    .join('')}
-</urlset>`;
-}
+ ] as const;
 
 export async function GET() {
-  const sitemap = generateSitemap(
-    staticPages,
-    getSitemapBaseUrl(),
-    getSitemapLastModifiedDate()
-  );
+  const entries: SitemapUrlEntry[] = staticPages.map((page) => ({
+    path: page.url,
+    lastmod: getCorePageLastmod(page.url),
+    changefreq: 'weekly',
+    priority: page.priority,
+  }));
+  const sitemap = buildUrlSetXml(entries, getSitemapBaseUrl());
   
   return new NextResponse(sitemap, {
     headers: SITEMAP_XML_HEADERS,
