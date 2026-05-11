@@ -1,8 +1,9 @@
 import { MetadataRoute } from 'next';
-
-const baseUrl = 'https://yourlegal.io';
+import { getSitemapBaseUrl } from '@/lib/sitemap-utils';
 
 export default function robots(): MetadataRoute.Robots {
+  const baseUrl = getSitemapBaseUrl();
+
   return {
     rules: {
       userAgent: '*',

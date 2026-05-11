@@ -5,9 +5,13 @@
 
 import { NextResponse } from 'next/server';
 import { allPosts } from '@/lib/blog-posts';
+import {
+  getSitemapBaseUrl,
+  getSitemapLastModifiedDate,
+  SITEMAP_XML_HEADERS,
+} from '@/lib/sitemap-utils';
 
-const baseUrl = 'https://yourlegal.io';
-const lastModified = '2024-07-26';
+export const dynamic = 'force-dynamic';
 
 // Filter for pillar pages
 const pillarPages = allPosts
@@ -15,7 +19,7 @@ const pillarPages = allPosts
   .map(post => post.path);
 
 
-function generateSitemap(urls: string[]) {
+function generateSitemap(urls: string[], baseUrl: string, lastModified: string) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   ${urls
@@ -31,9 +35,13 @@ function generateSitemap(urls: string[]) {
 }
 
 export async function GET() {
-  const sitemap = generateSitemap(pillarPages);
+  const sitemap = generateSitemap(
+    pillarPages,
+    getSitemapBaseUrl(),
+    getSitemapLastModifiedDate()
+  );
   
   return new NextResponse(sitemap, {
-    headers: { 'Content-Type': 'application/xml' },
+    headers: SITEMAP_XML_HEADERS,
   });
 }

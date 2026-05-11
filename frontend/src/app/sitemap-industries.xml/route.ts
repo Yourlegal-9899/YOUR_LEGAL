@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
+import {
+  getSitemapBaseUrl,
+  getSitemapLastModifiedDate,
+  SITEMAP_XML_HEADERS,
+} from '@/lib/sitemap-utils';
 
-const baseUrl = 'https://yourlegal.io';
-const lastModified = '2024-07-26';
+export const dynamic = 'force-dynamic';
+
 const countries = ['usa', 'dubai', 'uk', 'singapore', 'australia', 'saudi-arabia', 'in', 'netherlands'];
 const industrySubPages = [
     'saas', 'ecommerce', 'consulting', 'real-estate', 'logistics', 
     'startups', 'agencies', 'healthcare', 'manufacturing', 'fintech'
 ];
 
-function generateSitemap(urls: string[]) {
+function generateSitemap(urls: string[], baseUrl: string, lastModified: string) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   ${urls
@@ -30,9 +35,13 @@ export async function GET() {
     return [baseIndustryPage, ...subIndustryPages];
   });
 
-  const sitemap = generateSitemap(industryPages);
+  const sitemap = generateSitemap(
+    industryPages,
+    getSitemapBaseUrl(),
+    getSitemapLastModifiedDate()
+  );
   
   return new NextResponse(sitemap, {
-    headers: { 'Content-Type': 'application/xml' },
+    headers: SITEMAP_XML_HEADERS,
   });
 }

@@ -3,9 +3,13 @@
 // This structure tells search engines to prioritize crawling our most important pages first.
 
 import { NextResponse } from 'next/server';
+import {
+  getSitemapBaseUrl,
+  getSitemapLastModifiedDate,
+  SITEMAP_XML_HEADERS,
+} from '@/lib/sitemap-utils';
 
-const baseUrl = 'https://yourlegal.io';
-const lastModified = '2024-07-26';
+export const dynamic = 'force-dynamic';
 
 // The list and order of sitemaps are explicitly defined as per the authority-first strategy.
 const sitemaps = [
@@ -19,6 +23,9 @@ const sitemaps = [
 ];
 
 export async function GET() {
+  const baseUrl = getSitemapBaseUrl();
+  const lastModified = getSitemapLastModifiedDate();
+
   const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   ${sitemaps
@@ -31,6 +38,6 @@ export async function GET() {
 </sitemapindex>`;
 
   return new NextResponse(sitemapIndex, {
-    headers: { 'Content-Type': 'application/xml' },
+    headers: SITEMAP_XML_HEADERS,
   });
 }
