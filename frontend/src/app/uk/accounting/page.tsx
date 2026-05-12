@@ -40,7 +40,7 @@ export default function AccountingServicePage() {
     { title: "What is Accounting in the UK?", content: "Accounting in the UK involves preparing annual financial statements compliant with UK GAAP (FRS 102/105) for filing with Companies House, and preparing the accounts needed for the Corporation Tax return (CT600) for HMRC." },
     { title: "Who needs it?", content: "Every UK Limited Company, regardless of size or activity, is legally required to prepare and file statutory accounts each year to maintain compliance." },
     { title: "Cost range?", content: "An annual package for preparing and filing statutory accounts and a tax return typically costs £600 to £2,000 for a standard small business. This excludes monthly bookkeeping." },
-    { title: "DIY vs outsourcing?", content: "DIY is not feasible. Preparing statutory accounts requires a qualified accountant who understands UK accounting standards. Outsourcing is standard practice." },
+    { title: "DIY vs outsourcing?", content: "DIY is not feasible. Preparing statutory accounts requires a qualified accountant who understands UK accounting standards. Outsourcing accounting services in the UK is standard practice." },
     { title: "Final decision summary", content: "To meet mandatory Companies House and HMRC filing obligations, and to avoid director liability for incorrect accounts, outsourcing your UK accounting is an essential requirement." }
   ];
 
@@ -56,10 +56,10 @@ export default function AccountingServicePage() {
                 Back to UK Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services in the {countryName}
+              {serviceName} Services in the UK
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Professional accounting to keep your UK business compliant with Companies House and HMRC, ensuring your statutory accounts are accurate and filed on time.
+              Professional accounting services in the UK  to keep your UK business compliant with Companies House and HMRC, ensuring your statutory accounts are accurate and filed on time.
             </p>
           </div>
         </section>
@@ -94,7 +94,7 @@ export default function AccountingServicePage() {
 
              <ContentSection title="Why Outsourcing Works Better">
                 <p>Outsourcing your UK accounting is the standard for virtually all small and medium-sized businesses. The rules of UK GAAP are complex, and the preparation of statutory accounts requires a qualified accountant. Attempting to do this yourself is not feasible and carries enormous risk.</p>
-                <p className="mt-4">YourLegal provides a seamless and cost-effective accounting service. Our qualified UK accountants work directly from the data in your <Link href="/uk/bookkeeping" className="text-blue-600 hover:underline">bookkeeping</Link> software to prepare your annual accounts and tax return. We ensure everything is fully compliant, optimized for tax efficiency, and filed on time, every time. This protects you from penalties and legal risk, allowing you to run your business with confidence.</p>
+                <p className="mt-4">YourLegal provides a seamless and cost-effective accounting services in the UK. Our qualified UK accountants work directly from the data in your <Link href="/uk/bookkeeping" className="text-blue-600 hover:underline">bookkeeping</Link> software to prepare your annual accounts and tax return. We ensure everything is fully compliant, optimized for tax efficiency, and filed on time, every time. This protects you from penalties and legal risk, allowing you to run your business with confidence.</p>
             </ContentSection>
 
             <AiAnswerBlock blocks={aiBlocks} />

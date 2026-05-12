@@ -65,7 +65,7 @@ export default function AccountingServicePage() {
     { title: "What is accounting in Australia?", content: "Accounting in Australia involves managing financial records, ensuring compliance with Australian Accounting Standards (AASB), and preparing reports for tax filing with the ATO and corporate obligations with ASIC." },
     { title: "Who needs it?", content: "Any registered Australian company (Pty Ltd), foreign subsidiary, or business operating in Australia requires accounting services for tax, compliance, and financial management." },
     { title: "Cost range?", content: "Typically AUD $500 to $3,000 per month, depending on transaction volume, complexity, and reporting needs. Outsourcing offers significant savings over an in-house team." },
-    { title: "DIY vs outsourcing?", content: "DIY accounting is risky due to complex AASB and ATO regulations. Outsourcing to qualified Australian accountants ensures accuracy, compliance, and strategic financial oversight." },
+    { title: "DIY vs outsourcing?", content: "DIY accounting is risky due to complex AASB and ATO regulations. Outsourcing Accounting Services in Australia to qualified Australian accountants ensures accuracy, compliance, and strategic financial oversight." },
     { title: "Final decision summary", content: "For reliable, audit-ready financials and to navigate Australian tax laws effectively, outsourcing your accounting is the most professional and cost-effective choice." }
   ];
   
@@ -168,7 +168,7 @@ export default function AccountingServicePage() {
                     <li>**Growing Companies:** AUD $1,200 – $3,000 per month for more complex needs, including management reporting and forecasting.</li>
                     <li>**Multi-entity or Complex Operations:** Custom pricing based on specific requirements.</li>
                 </ul>
-                <p className="mt-4">By outsourcing to YourLegal, businesses can reduce their overall finance and administration costs by up to 60%, freeing up capital for growth-oriented activities.</p>
+                <p className="mt-4">By outsourcing Accounting Services in Australia to YourLegal, businesses can reduce their overall finance and administration costs by up to 60%, freeing up capital for growth-oriented activities.</p>
             </ContentSection>
 
             <ContentSection title="Compliance Risks">

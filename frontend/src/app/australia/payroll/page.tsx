@@ -105,7 +105,7 @@ export default function PayrollServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              ATO-compliant payroll services to manage wages, PAYG tax, and superannuation for your Australian team.
+              ATO-compliant Payroll Services in Australia to manage wages, PAYG tax, and superannuation for your Australian team.
             </p>
           </div>
         </section>
@@ -113,7 +113,7 @@ export default function PayrollServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>Our payroll services are for any Australian company with employees. It's crucial for businesses that need to navigate the complexities of modern awards, Pay As You Go (PAYG) tax withholding, and the mandatory Superannuation Guarantee contributions required under Australian law.</p>
+                <p>Our Payroll Services in Australia are for any Australian company with employees. It's crucial for businesses that need to navigate the complexities of modern awards, Pay As You Go (PAYG) tax withholding, and the mandatory Superannuation Guarantee contributions required under Australian law.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">
@@ -121,7 +121,7 @@ export default function PayrollServicePage() {
             </ContentSection>
 
             <ContentSection title="Cost Ranges">
-                <p>Outsourced payroll in Australia is typically priced on a per-employee basis:</p>
+                <p>Outsourced Payroll Services in Australia are typically priced on a per-employee basis:</p>
                 <ul className="list-disc pl-6 space-y-2">
                     <li>**Base Fee:** A$20 – A$50 per month.</li>
                     <li>**Per-Employee Fee:** A$5 – A$15 per employee, per month.</li>
@@ -139,7 +139,7 @@ export default function PayrollServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>Australian payroll is notoriously complex due to the interplay of tax law, superannuation regulations, and industrial awards. Outsourcing to YourLegal ensures that PAYG is calculated correctly, mandatory superannuation is paid on time, and all STP reporting to the ATO is handled automatically. This mitigates significant financial and legal risks for your business.</p>
+                <p>Australian payroll is notoriously complex due to the interplay of tax law, superannuation regulations, and industrial awards. Outsourcing Payroll Services in Australia to YourLegal ensures that PAYG is calculated correctly, mandatory superannuation is paid on time, and all STP reporting to the ATO is handled automatically. This mitigates significant financial and legal risks for your business.</p>
             </ContentSection>
 
             <AiAnswerBlock blocks={aiBlocks} />

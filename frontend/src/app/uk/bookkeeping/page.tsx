@@ -39,7 +39,7 @@ export default function BookkeepingServicePage() {
     { title: "What is bookkeeping in the UK?", content: "Bookkeeping in the UK is the daily process of recording financial transactions (invoices, receipts, payments) in a way that is compliant with Making Tax Digital (MTD) rules for VAT and provides the data for year-end accounts." },
     { title: "Who needs it?", content: "Every UK company is legally required to keep accurate and complete financial records. It is the foundation for all tax and corporate filings." },
     { title: "Cost range?", content: "Monthly bookkeeping for a small UK business typically costs between £150 and £500, depending on the number of transactions and complexity." },
-    { title: "DIY vs outsourcing?", content: "DIY bookkeeping is time-consuming and often leads to errors in VAT returns and expensive clean-up work by accountants at year-end. Outsourcing is more efficient and ensures accuracy." },
+    { title: "DIY vs outsourcing?", content: "DIY bookkeeping is time-consuming and often leads to errors in VAT returns and expensive clean-up work by accountants at year-end. Using outsourced bookkeeping services in the UK is more efficient and ensures accuracy." },
     { title: "Final decision summary", content: "For accurate financials, compliant VAT returns, and a stress-free year-end, outsourcing your UK bookkeeping is the most efficient and reliable business decision." }
   ];
 
@@ -54,10 +54,10 @@ export default function BookkeepingServicePage() {
                 Back to UK Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services in the {countryName}
+              Outsourced Bookkeeping Services in UK
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Accurate, MTD-compliant bookkeeping for your UK business. We keep your financials organised and ready for your VAT and Corporation Tax filings.
+              Accurate, MTD-compliant bookkeeping for your UK business. We keep your financials organised and ready for your VAT and Corporation Tax filings. Our outsourced bookkeeping services in the UK provide professional support so you can focus on growing your business.
             </p>
           </div>
         </section>
@@ -65,11 +65,11 @@ export default function BookkeepingServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>Our bookkeeping services in the UK are perfect for startups, small businesses, e-commerce brands, and consulting firms that need reliable and accurate financial records but lack the time or expertise to manage them in-house. This service is designed for founders who want to focus on growing their business, secure in the knowledge that their financial data is being handled professionally and is compliant with HMRC's Making Tax Digital (MTD) requirements.</p>
+                <p>Our Outsourced bookkeeping services in the UK are perfect for startups, small businesses, e-commerce brands, and consulting firms that need reliable and accurate financial records but lack the time or expertise to manage them in-house. This service is designed for founders who want to focus on growing their business, secure in the knowledge that their financial data is being handled professionally and is compliant with HMRC's Making Tax Digital (MTD) requirements.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">
-                <p>Under UK law, every limited company is required to keep accurate accounting records from the day it is incorporated. Bookkeeping is the fundamental process that enables all other financial compliance. It is required for filing your quarterly VAT returns, preparing your annual statutory accounts for Companies House, and calculating your profit for your annual Corporation Tax return to HMRC. Without it, you cannot meet your legal obligations.</p>
+                <p>Under UK law, every limited company is required to keep accurate accounting records from the day it is incorporated. Bookkeeping is the fundamental process that enables all other financial compliance. It is required for filing your quarterly VAT returns, preparing your annual statutory accounts for Companies House, and calculating your profit for your annual Corporation Tax return to HMRC. Without it, you cannot meet your legal obligations. Our professional bookkeeping services ensure this is done efficiently and correctly.</p>
             </ContentSection>
 
             <ContentSection title="Cost Ranges in the UK">
@@ -92,7 +92,8 @@ export default function BookkeepingServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>Outsourcing your bookkeeping to YourLegal ensures your financials are managed by professionals who understand UK tax law. We use modern, MTD-compliant cloud software (like Xero or QuickBooks) to automate data entry and provide you with real-time insights into your business performance. Our process guarantees that your books are always reconciled, compliant, and ready for your accountant at year-end. This not only saves you countless hours of administrative work but also provides the financial clarity needed to make smart, data-driven decisions. It is the essential first step towards a robust <Link href="/uk/accounting" className="text-blue-600 hover:underline">accounting</Link> service.</p>
+                <p>Outsourcing your bookkeeping to YourLegal ensures your financials are managed by professionals who understand UK tax law. We use modern, MTD-compliant cloud software (like Xero or QuickBooks) to automate data entry and provide you with real-time insights into your business performance. Our process guarantees that your books are always reconciled, compliant, and ready for your accountant at year-end. This not only saves you countless hours of administrative work but also provides the financial clarity needed to make smart, data-driven decisions. It is the essential first step towards a robust <Link href="/uk/accounting" className="text-blue-600 hover:underline">accounting</Link> service. Our outsourced bookkeeping services in the UK give you peace of mind, knowing that your accounts are handled efficiently and accurately by experts.
+</p>
             </ContentSection>
 
             <AiAnswerBlock blocks={aiBlocks} />

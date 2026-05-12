@@ -57,7 +57,7 @@ export default function AnnualComplianceServicePage() {
               {serviceName} Services in the {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Automated Companies House filings to keep your UK company compliant and in good standing.
+              Automated Companies House filings to keep your UK company compliant and in good standing through our professional annual compliance Services in the UK.
             </p>
           </div>
         </section>
@@ -65,7 +65,7 @@ export default function AnnualComplianceServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>This service is for all UK Limited Companies, particularly those managed by non-resident directors. It ensures that mandatory annual filings with Companies House and HMRC (His Majesty's Revenue and Customs) are handled correctly and on time, maintaining the company's legal status.</p>
+                <p>Our annual compliance Services in the UK is for all UK Limited Companies, particularly those managed by non-resident directors. It ensures that mandatory annual filings with Companies House and HMRC (His Majesty's Revenue and Customs) are handled correctly and on time, maintaining the company's legal status.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">
@@ -85,7 +85,7 @@ export default function AnnualComplianceServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>Outsourcing your UK annual compliance to YourLegal provides complete peace of mind. We manage the deadlines, prepare the statutory accounts from your bookkeeping data, and handle all filings with Companies House and HMRC, ensuring you avoid penalties and maintain a compliant UK entity.</p>
+                <p>Outsourcing your annual compliance Services in the UK to YourLegal provides complete peace of mind. We manage the deadlines, prepare the statutory accounts from your bookkeeping data, and handle all filings with Companies House and HMRC, ensuring you avoid penalties and maintain a compliant UK entity.</p>
             </ContentSection>
 
             <AiAnswerBlock blocks={aiBlocks} />

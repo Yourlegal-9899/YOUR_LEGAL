@@ -38,7 +38,7 @@ export default function CrossBorderAccountingServicePage() {
     { title: "What is Cross-Border Accounting?", content: "Cross-border accounting manages financial operations for businesses with transactions in multiple currencies and jurisdictions. It involves handling foreign exchange (FX), transfer pricing, and consolidating accounts from international subsidiaries according to AASB and IFRS standards." },
     { title: "Who needs it?", content: "Australian companies with overseas operations, foreign parent companies with an Australian subsidiary, and businesses that buy or sell goods and services internationally." },
     { title: "Cost range?", content: "Custom pricing is standard. It typically starts from AUD $1,500+ per month due to the complexity of multi-currency reconciliation, transfer pricing documentation, and global compliance." },
-    { title: "DIY vs outsourcing?", content: "DIY is not feasible. The complexities of international tax treaties and accounting standards require specialised expertise. Outsourcing is essential to mitigate risks of non-compliance and double taxation." },
+    { title: "DIY vs outsourcing?", content: "DIY is not feasible. The complexities of international tax treaties and accounting standards require specialised expertise. Outsourcing cross-border accounting services in Australia is essential to mitigate risks of non-compliance and double taxation." },
     { title: "Final decision summary", content: "For any business operating internationally from Australia, outsourcing cross-border accounting is a mandatory strategic decision to ensure global compliance, manage financial risks, and optimise your tax position." }
   ];
 
@@ -102,10 +102,10 @@ export default function CrossBorderAccountingServicePage() {
                 Back to Australia Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services for {countryName}
+              {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Expert financial management for Australian businesses with global operations, ensuring compliance and tax efficiency across borders.
+              Expert financial management for Australian businesses with global operations, ensuring compliance and tax efficiency across borders through our Cross-Border Accounting Services in Australia.
             </p>
           </div>
         </section>
@@ -113,7 +113,7 @@ export default function CrossBorderAccountingServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>Our cross-border accounting services are tailored for Australian businesses that operate on a global scale. This includes companies that export goods or services, e-commerce brands selling to international customers, businesses with overseas subsidiaries or parent companies, and startups with remote teams and expenses in multiple currencies. It is for any business facing the complexities of international financial management.</p>
+                <p>Our cross-border accounting services in Australia are tailored for Australian businesses that operate on a global scale. This includes companies that export goods or services, e-commerce brands selling to international customers, businesses with overseas subsidiaries or parent companies, and startups with remote teams and expenses in multiple currencies. It is for any business facing the complexities of international financial management.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">

@@ -40,7 +40,7 @@ export default function PayrollServicePage() {
     { title: "Who needs it?", content: "Any UK company that hires employees must operate a PAYE payroll scheme. This is a mandatory legal and tax requirement." },
     { title: "Cost range?", content: "Typically £20-£50 per month as a base fee, plus an additional £4-£10 per employee per month, depending on the provider." },
     { title: "DIY vs outsourcing?", content: "DIY payroll is extremely complex due to constant changes in tax codes and regulations. Outsourcing to a payroll provider is the standard, risk-free approach for almost all businesses." },
-    { title: "Final decision summary", content: "To avoid significant penalties from HMRC and ensure compliance with UK employment law, outsourcing payroll is an essential business decision." }
+    { title: "Final decision summary", content: "To avoid significant penalties from HMRC and ensure compliance with UK employment law, outsourcing payroll services in UK is an essential business decision." }
   ];
 
   return (
@@ -54,10 +54,10 @@ export default function PayrollServicePage() {
                 Back to UK Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services in the {countryName}
+              {serviceName} Services in the UK
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              HMRC-compliant payroll services to pay your UK team correctly and on time.
+              HMRC-compliant payroll services in UK to pay your UK team correctly and on time.
             </p>
           </div>
         </section>
@@ -65,7 +65,7 @@ export default function PayrollServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>Our payroll services are for any UK Limited Company that hires one or more employees. This includes UK-based startups, established businesses, and foreign companies hiring staff in the United Kingdom. We ensure full compliance with UK employment and tax laws.</p>
+                <p>Our payroll services in UK are for any UK Limited Company that hires one or more employees. This includes UK-based startups, established businesses, and foreign companies hiring staff in the United Kingdom. We ensure full compliance with UK employment and tax laws.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">
@@ -91,7 +91,7 @@ export default function PayrollServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>The UK's PAYE system is complex and subject to frequent changes. Outsourcing payroll to a professional provider automates all tax and National Insurance calculations, handles mandatory submissions to HMRC in real-time, and ensures compliance with auto-enrolment pension duties. For any business, it is the most reliable and risk-averse approach.</p>
+                <p>The UK's PAYE system is complex and subject to frequent changes. Outsourcing payroll services in UK to a professional provider automates all tax and National Insurance calculations, handles mandatory submissions to HMRC in real-time, and ensures compliance with auto-enrolment pension duties. For any business, it is the most reliable and risk-averse approach.</p>
             </ContentSection>
 
             <AiAnswerBlock blocks={aiBlocks} />

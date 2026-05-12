@@ -48,7 +48,7 @@ const ProcessStep = ({ number, title, description }) => (
 );
 
 const faqs = [
-    { q: "Can non-residents incorporate a UK company?", a: "Yes, absolutely. You do not need to be a UK resident to be a director or shareholder of a UK limited company. Our service is designed for overseas founders." },
+    { q: "Can non-residents incorporate a UK company?", a: "Yes, absolutely. UK company formation for non-residents is fully permitted. You do not need to be a UK resident to be a director or shareholder of a UK limited company. Our service is designed for overseas founders." },
     { q: "Is a UK director mandatory?", a: "No, a UK company can have directors of any nationality and residency. However, you must have a registered office address in the UK, which we provide." },
     { q: "When do I need to register for VAT in the UK?", a: "VAT registration is mandatory if your UK taxable turnover exceeds £85,000 in a rolling 12-month period. You can also register voluntarily to reclaim VAT on your business expenses." },
     { q: "Is bookkeeping mandatory in the UK?", a: "Yes, all UK companies are legally required to keep accurate and up-to-date accounting records. These records are necessary for filing your annual accounts and Corporation Tax return." },
@@ -200,9 +200,9 @@ export default function UkPage() {
             <section className="bg-gradient-to-r from-blue-100 via-gray-50 to-red-100 py-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight">
-                       <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-800">UK Company Formation, Accounting & Tax</span>
+                       <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-800">UK Company Formation for Non Resident and Resident, Accounting & Tax</span>
                     </h1>
-                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">End-to-end support for setting up and running your UK company, designed for both resident and overseas founders.</p>
+                    <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">End-to-end support for UK company formation for non resident and resident founders, helping global entrepreneurs set up, manage, and scale their UK business smoothly. We provide complete incorporation, accounting, and tax support for both UK and overseas founders.</p>
                     <div className="mt-10">
                          <a href="https://outlook.office365.com/book/YOURLEGAL1@yourlegal.in/?ismsaljsauthenabled=true" target="_blank" rel="noopener noreferrer">
                             <Button size="lg" className="bg-blue-800 hover:bg-blue-900 text-white">Get a Free UK Consultation</Button>
@@ -218,7 +218,7 @@ export default function UkPage() {
                     <section className="animate-fade-in-up">
                         <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Why Incorporate a Company in the UK?</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                            <FeatureCard icon={Globe} title="Global Credibility" description="A UK company registration is respected worldwide, enhancing your business's reputation." />
+                            <FeatureCard icon={Globe} title="Global Credibility" description="UK company formation for non-resident and resident is respected worldwide, enhancing your business's global reputation." />
                             <FeatureCard icon={ShieldCheck} title="Stable Legal System" description="Benefit from a transparent and predictable legal and financial framework." />
                             <FeatureCard icon={Banknote} title="Competitive Tax Regime" description="A competitive Corporation Tax rate and extensive double taxation treaties." />
                             <FeatureCard icon={Users} title="Access to Talent & Markets" description="Tap into a diverse talent pool and gain easy access to UK and European markets." />

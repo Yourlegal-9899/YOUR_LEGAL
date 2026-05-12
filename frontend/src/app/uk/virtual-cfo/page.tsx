@@ -40,7 +40,7 @@ export default function VirtualCfoServicePage() {
     { title: "Who needs it?", content: "Growth-stage companies, funded startups, and businesses with complex operations in the UK that need executive-level financial strategy without the £100k+ cost of a full-time CFO." },
     { title: "Cost range?", content: "Typically £1,500 to £5,000+ per month, depending on the required level of strategic involvement, reporting complexity, and fundraising support." },
     { title: "DIY vs outsourcing?", content: "This is not a DIY role. Outsourcing provides access to seasoned CFOs with a track record of scaling businesses in the UK and navigating its venture capital ecosystem." },
-    { title: "Final decision summary", content: "To navigate the financial complexities of scaling a business in the UK and to successfully raise capital from investors, a Virtual CFO service is an essential strategic investment." }
+    { title: "Final decision summary", content: "To navigate the financial complexities of scaling a business in the UK and to successfully raise capital from investors,virtual CFO services in the UK are an essential strategic investment." }
   ];
 
   return (
@@ -54,10 +54,10 @@ export default function VirtualCfoServicePage() {
                 Back to UK Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services in the {countryName}
+              {serviceName} Services in the UK
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Strategic financial guidance for your UK business to drive growth, manage cash flow, and achieve long-term profitability.
+              Strategic financial guidance for your UK business to drive growth, manage cash flow, and achieve long-term profitability. Our Virtual CFO services in the UK provide expert support tailored to your business needs.
             </p>
           </div>
         </section>
@@ -69,7 +69,7 @@ export default function VirtualCfoServicePage() {
             </ContentSection>
             
              <ContentSection title="When It Is Required">
-                <p>A Virtual CFO is critical when your business faces complex financial decisions. This includes building a financial model for investors, forecasting cash flow to manage a high-growth phase, analyzing unit economics to improve profitability, preparing board reports, and developing a financial strategy for expansion into Europe. It's required when you need to answer not just "what happened?" but "what's next?"</p>
+                <p>A Virtual CFO Services in the UK is critical when your business faces complex financial decisions. This includes building a financial model for investors, forecasting cash flow to manage a high-growth phase, analyzing unit economics to improve profitability, preparing board reports, and developing a financial strategy for expansion into Europe. It's required when you need to answer not just "what happened?" but "what's next?"</p>
             </ContentSection>
 
             <ContentSection title="Cost Ranges in the UK">

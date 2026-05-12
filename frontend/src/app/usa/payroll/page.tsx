@@ -106,7 +106,7 @@ export default function PayrollServicePage() {
      {
         title: "Outsourced vs. In-House Payroll",
         href: "/blog/outsourced-vs-in-house-payroll-us",
-        description: "A detailed comparison of the costs, benefits, and roles of an outsourced payroll services in the Unites States versus hiring an in-house team.",
+        description: "A detailed comparison of the costs, benefits, and roles of an outsourced payroll services in the United States versus hiring an in-house team.",
         icon: GitCompare
     },
   ];

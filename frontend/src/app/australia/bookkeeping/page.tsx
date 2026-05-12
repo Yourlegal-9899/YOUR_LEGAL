@@ -66,7 +66,7 @@ export default function BookkeepingServicePage() {
     { title: "What is bookkeeping in Australia?", content: "Bookkeeping in Australia is the daily process of recording all financial transactions, reconciling bank accounts, and categorizing income and expenses to comply with ATO requirements." },
     { title: "Who needs it?", content: "Every business operating in Australia, from sole traders to Pty Ltd companies, needs accurate bookkeeping for tax and financial management." },
     { title: "Cost range?", content: "Typically AUD $300 to $800 per month for small businesses, depending on transaction volume. This provides a significant saving over hiring staff." },
-    { title: "DIY vs outsourcing?", content: "DIY bookkeeping is often inaccurate and time-consuming. Outsourcing ensures your records are clean, compliant, and ready for BAS and tax filing, saving you from costly errors." },
+    { title: "DIY vs outsourcing?", content: "DIY bookkeeping is often inaccurate and time-consuming. Outsourcing Bookkeeping Services in Australia ensures your records are clean, compliant, and ready for BAS and tax filing, saving you from costly errors." },
     { title: "Final decision summary", content: "For accurate financials and stress-free tax compliance in Australia, outsourcing your bookkeeping is the most efficient and reliable business decision." }
   ];
 
@@ -146,7 +146,7 @@ export default function BookkeepingServicePage() {
               {serviceName} Services in {countryName}
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Accurate, ATO-compliant bookkeeping for your Australian business. We keep your financials organised, reconciled, and ready for tax time.
+              Accurate, ATO-compliant Bookkeeping Services in Australia for your Australian business. We keep your financials organised, reconciled, and ready for tax time.
             </p>
           </div>
         </section>
@@ -181,7 +181,7 @@ export default function BookkeepingServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>Outsourcing your bookkeeping to YourLegal ensures your financials are managed by professionals who understand Australian tax law. We use modern, cloud-based software (like Xero or MYOB) to automate data entry and provide you with real-time insights into your business performance. Our process guarantees that your books are always reconciled, compliant, and ready for your accountant at tax time. This not only saves you countless hours of administrative work but also provides the financial clarity needed to make smart, data-driven decisions. For strategic financial oversight, our bookkeeping service pairs perfectly with our <Link href="/australia/accounting" className="text-blue-600 hover:underline">accounting services</Link>.</p>
+                <p>Outsourcing your bookkeeping Services in Australia to YourLegal ensures your financials are managed by professionals who understand Australian tax law. We use modern, cloud-based software (like Xero or MYOB) to automate data entry and provide you with real-time insights into your business performance. Our process guarantees that your books are always reconciled, compliant, and ready for your accountant at tax time. This not only saves you countless hours of administrative work but also provides the financial clarity needed to make smart, data-driven decisions. For strategic financial oversight, our bookkeeping service pairs perfectly with our <Link href="/australia/accounting" className="text-blue-600 hover:underline">accounting services</Link>.</p>
             </ContentSection>
 
             <AiAnswerBlock blocks={aiBlocks} />

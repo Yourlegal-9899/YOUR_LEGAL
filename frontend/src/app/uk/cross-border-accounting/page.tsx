@@ -39,7 +39,7 @@ export default function CrossBorderAccountingServicePage() {
     { title: "What is Cross-Border Accounting?", content: "For a UK company, this involves managing transactions in multiple currencies (e.g., EUR, USD), navigating post-Brexit VAT rules for EU trade, applying tax treaties to prevent double taxation, and handling transfer pricing with international related entities." },
     { title: "Who needs it?", content: "UK companies with EU customers or suppliers, businesses with overseas subsidiaries, and international companies using the UK as a holding or regional headquarters." },
     { title: "Cost range?", content: "This is a specialized service with custom pricing, typically starting at £1,200+ per month, reflecting the expertise needed for international tax planning and compliance." },
-    { title: "DIY vs outsourcing?", content: "DIY is impossible and highly risky. The complexities of transfer pricing, tax treaties, and post-Brexit customs/VAT rules require expert guidance. Outsourcing is the only professional approach." },
+    { title: "DIY vs outsourcing?", content: "DIY is impossible and highly risky. The complexities of transfer pricing, tax treaties, and post-Brexit customs/VAT rules require expert guidance. Outsourcing cross-border accounting services in the UK is the only professional approach." },
     { title: "Final decision summary", content: "To navigate the complex post-Brexit trading environment and optimize your global tax position, outsourcing cross-border accounting for your UK company is a fundamental requirement." }
   ];
 
@@ -54,10 +54,10 @@ export default function CrossBorderAccountingServicePage() {
                 Back to UK Overview
             </Link>
             <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-              {serviceName} Services for the {countryName}
+              {serviceName} Services in the UK
             </h1>
             <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              Expert financial strategy for your UK business, focusing on post-Brexit VAT, tax treaty benefits, transfer pricing, and multi-currency management.
+              Expert financial strategy for your UK business, focusing on post-Brexit VAT, tax treaty benefits, transfer pricing, and multi-currency management. Our cross border accounting services in the UK are designed to help businesses operate efficiently across multiple jurisdictions without compliance risks.
             </p>
           </div>
         </section>
@@ -65,11 +65,11 @@ export default function CrossBorderAccountingServicePage() {
         <section className="py-16 sm:py-24">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <ContentSection title="Who This Service Is For">
-                <p>Cross-border accounting is crucial for UK companies operating in the global marketplace. This service is specifically designed for businesses facing the complexities of international trade post-Brexit. This includes UK e-commerce brands selling to EU customers, companies with European or US subsidiaries, international holding companies based in the UK, and any business that regularly invoices or pays suppliers in currencies other than GBP.</p>
+                <p>Cross-border accounting services in the UK are crucial for UK companies operating in the global marketplace. This service is specifically designed for businesses facing the complexities of international trade post-Brexit. This includes UK e-commerce brands selling to EU customers, companies with European or US subsidiaries, international holding companies based in the UK, and any business that regularly invoices or pays suppliers in currencies other than GBP.</p>
             </ContentSection>
             
              <ContentSection title="When It Is Required">
-                <p>This service becomes essential as soon as your business engages in financial transactions outside the UK. It is mission-critical when you start selling goods to the EU (triggering complex new VAT and customs rules), establish an overseas subsidiary, or have significant inter-company transactions (e.g., a UK parent company charging a management fee to a US subsidiary). Proactive management is key to avoiding costly tax and compliance mistakes in a multi-jurisdictional environment.</p>
+                <p>Cross-border accounting services become essential as soon as your business engages in financial transactions outside the UK. It is mission-critical when you start selling goods to the EU (triggering complex new VAT and customs rules), establish an overseas subsidiary, or have significant inter-company transactions (e.g., a UK parent company charging a management fee to a US subsidiary). Proactive management is key to avoiding costly tax and compliance mistakes in a multi-jurisdictional environment.</p>
             </ContentSection>
 
             <ContentSection title="Cost Ranges in the UK">
@@ -92,7 +92,7 @@ export default function CrossBorderAccountingServicePage() {
             </ContentSection>
 
              <ContentSection title="Why Outsourcing Works Better">
-                <p>The UK's position outside the EU has created a new layer of complexity for international trade. Outsourcing your cross-border accounting to YourLegal provides you with a team that specializes in navigating this new environment. We have the expertise to manage your international VAT obligations, ensure your transfer pricing is defensible, and help you structure your operations to benefit from the UK's tax treaties.</p>
+                <p>The UK's position outside the EU has created a new layer of complexity for international trade. Outsourcing your cross-border accounting services to YourLegal provides you with a team that specializes in navigating this new environment. We have the expertise to manage your international VAT obligations, ensure your transfer pricing is defensible, and help you structure your operations to benefit from the UK's tax treaties.</p>
                 <p className="mt-4">This level of strategic guidance is a core part of our <Link href="/uk/virtual-cfo" className="text-blue-600 hover:underline">Virtual CFO service</Link>, turning your UK company into a powerful and compliant hub for your global ambitions.</p>
             </ContentSection>
 
