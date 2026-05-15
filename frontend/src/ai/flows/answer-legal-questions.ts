@@ -223,7 +223,20 @@ const clampPriority = (value: number) => {
 };
 
 const parseTrainingRules = (raw: any): AiTrainingRule[] => {
-  const list = Array.isArray(raw?.rules) ? raw.rules : Array.isArray(raw) ? raw : [];
+  let normalizedRaw = raw;
+  if (typeof normalizedRaw === 'string') {
+    try {
+      normalizedRaw = JSON.parse(normalizedRaw);
+    } catch {
+      normalizedRaw = {};
+    }
+  }
+
+  const list = Array.isArray(normalizedRaw?.rules)
+    ? normalizedRaw.rules
+    : Array.isArray(normalizedRaw)
+      ? normalizedRaw
+      : [];
 
   return list
     .map((item: any, index: number) => {

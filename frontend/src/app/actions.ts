@@ -146,6 +146,9 @@ const buildLiveData = async (question: string) => {
   const parts: string[] = [];
   const nowStamp = new Date().toISOString();
   const requestedEmail = extractEmail(question);
+  const getApiErrorMessage = (payload: any) =>
+    String(payload?.message || payload?.error?.message || payload?.error_description || '')
+      .trim();
 
   let cachedMe: any | null = null;
   let meLoaded = false;
@@ -578,15 +581,29 @@ const buildLiveData = async (question: string) => {
 
   if (intents.wantsQuickBooks) {
     let qbConnected = false;
+    let qbStatusChecked = false;
+    let qbStatusUnavailable = false;
+    const meData = await getMe();
+    const qbConnectedFromProfile = Boolean(meData?.user?.quickBooksConnected);
+
     try {
       const statusRes = await fetchWithAuth(`${API_BASE_URL}/quickbooks/status`);
       const statusData = await statusRes.json().catch(() => null);
+      qbStatusChecked = statusRes.ok;
       qbConnected = Boolean(statusRes.ok && statusData?.connected);
-      if (!qbConnected) {
-        parts.push(`QuickBooks status as of ${nowStamp}: not connected.`);
-      }
     } catch {
-      parts.push(`QuickBooks status as of ${nowStamp}: unavailable.`);
+      qbStatusUnavailable = true;
+    }
+
+    if (!qbConnected && qbConnectedFromProfile) {
+      qbConnected = true;
+      if (qbStatusUnavailable || !qbStatusChecked) {
+        parts.push(`QuickBooks status as of ${nowStamp}: linked in profile; live status check temporarily unavailable.`);
+      }
+    }
+
+    if (!qbConnected) {
+      parts.push(`QuickBooks status as of ${nowStamp}: not connected.`);
     }
 
     if (qbConnected) {
@@ -597,6 +614,12 @@ const buildLiveData = async (question: string) => {
             body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Account' }),
           });
           const data = await res.json().catch(() => null);
+          if (res.status === 401) {
+            parts.push(`QuickBooks bank balances as of ${nowStamp}: authorization expired. Please reconnect QuickBooks from Settings.`);
+          } else if (!res.ok) {
+            const reason = getApiErrorMessage(data) || `HTTP ${res.status}`;
+            parts.push(`QuickBooks bank balances as of ${nowStamp}: unavailable (${reason}).`);
+          } else {
           const accounts = data?.QueryResponse?.Account || [];
           const bankAccounts = accounts.filter((account: any) => account?.AccountType === 'Bank');
           const totalCash = bankAccounts.reduce((sum: number, account: any) => {
@@ -612,6 +635,7 @@ const buildLiveData = async (question: string) => {
             `Total cash across bank accounts: ${totalCash.toFixed(2)}\n` +
             (topAccounts.length ? topAccounts.join('\n') : '- No bank accounts found.')
           );
+          }
         } catch {
           parts.push(`QuickBooks bank balances as of ${nowStamp}: unavailable.`);
         }
@@ -621,24 +645,31 @@ const buildLiveData = async (question: string) => {
         try {
           const res = await fetchWithAuth(`${API_BASE_URL}/quickbooks/invoices`);
           const data = await res.json().catch(() => null);
-          const invoices = data?.invoices || [];
-          const now = new Date();
-          const safeAmount = (value: any) => {
-            const n = Number(value);
-            return Number.isFinite(n) ? n : 0;
-          };
-          const openInvoices = invoices.filter((inv: any) => safeAmount(inv?.Balance) > 0);
-          const overdue = openInvoices.filter((inv: any) => inv?.DueDate && new Date(inv.DueDate) < now);
-          const totalOpen = openInvoices.reduce((sum: number, inv: any) => sum + safeAmount(inv?.Balance), 0);
-          const topInvoices = openInvoices.slice(0, 5).map((inv: any) => {
-            const balance = safeAmount(inv?.Balance);
-            return `- ${inv?.DocNumber || inv?.Id}: ${balance.toFixed(2)} due ${formatDate(inv?.DueDate)}`;
-          });
-          parts.push(
-            `QuickBooks invoices as of ${nowStamp}:\n` +
-            `Open invoices: ${openInvoices.length}, overdue: ${overdue.length}, total open balance: ${totalOpen.toFixed(2)}\n` +
-            (topInvoices.length ? topInvoices.join('\n') : '- No open invoices found.')
-          );
+          if (res.status === 401) {
+            parts.push(`QuickBooks invoices as of ${nowStamp}: authorization expired. Please reconnect QuickBooks from Settings.`);
+          } else if (!res.ok) {
+            const reason = getApiErrorMessage(data) || `HTTP ${res.status}`;
+            parts.push(`QuickBooks invoices as of ${nowStamp}: unavailable (${reason}).`);
+          } else {
+            const invoices = data?.invoices || [];
+            const now = new Date();
+            const safeAmount = (value: any) => {
+              const n = Number(value);
+              return Number.isFinite(n) ? n : 0;
+            };
+            const openInvoices = invoices.filter((inv: any) => safeAmount(inv?.Balance) > 0);
+            const overdue = openInvoices.filter((inv: any) => inv?.DueDate && new Date(inv.DueDate) < now);
+            const totalOpen = openInvoices.reduce((sum: number, inv: any) => sum + safeAmount(inv?.Balance), 0);
+            const topInvoices = openInvoices.slice(0, 5).map((inv: any) => {
+              const balance = safeAmount(inv?.Balance);
+              return `- ${inv?.DocNumber || inv?.Id}: ${balance.toFixed(2)} due ${formatDate(inv?.DueDate)}`;
+            });
+            parts.push(
+              `QuickBooks invoices as of ${nowStamp}:\n` +
+              `Open invoices: ${openInvoices.length}, overdue: ${overdue.length}, total open balance: ${totalOpen.toFixed(2)}\n` +
+              (topInvoices.length ? topInvoices.join('\n') : '- No open invoices found.')
+            );
+          }
         } catch {
           parts.push(`QuickBooks invoices as of ${nowStamp}: unavailable.`);
         }
@@ -651,22 +682,29 @@ const buildLiveData = async (question: string) => {
             body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Bill' }),
           });
           const data = await res.json().catch(() => null);
-          const bills = data?.QueryResponse?.Bill || [];
-          const safeAmount = (value: any) => {
-            const n = Number(value);
-            return Number.isFinite(n) ? n : 0;
-          };
-          const openBills = bills.filter((bill: any) => safeAmount(bill?.Balance) > 0);
-          const totalOpen = openBills.reduce((sum: number, bill: any) => sum + safeAmount(bill?.Balance), 0);
-          const topBills = openBills.slice(0, 5).map((bill: any) => {
-            const balance = safeAmount(bill?.Balance);
-            return `- ${bill?.DocNumber || bill?.Id}: ${balance.toFixed(2)} due ${formatDate(bill?.DueDate)}`;
-          });
-          parts.push(
-            `QuickBooks bills as of ${nowStamp}:\n` +
-            `Open bills: ${openBills.length}, total open balance: ${totalOpen.toFixed(2)}\n` +
-            (topBills.length ? topBills.join('\n') : '- No open bills found.')
-          );
+          if (res.status === 401) {
+            parts.push(`QuickBooks bills as of ${nowStamp}: authorization expired. Please reconnect QuickBooks from Settings.`);
+          } else if (!res.ok) {
+            const reason = getApiErrorMessage(data) || `HTTP ${res.status}`;
+            parts.push(`QuickBooks bills as of ${nowStamp}: unavailable (${reason}).`);
+          } else {
+            const bills = data?.QueryResponse?.Bill || [];
+            const safeAmount = (value: any) => {
+              const n = Number(value);
+              return Number.isFinite(n) ? n : 0;
+            };
+            const openBills = bills.filter((bill: any) => safeAmount(bill?.Balance) > 0);
+            const totalOpen = openBills.reduce((sum: number, bill: any) => sum + safeAmount(bill?.Balance), 0);
+            const topBills = openBills.slice(0, 5).map((bill: any) => {
+              const balance = safeAmount(bill?.Balance);
+              return `- ${bill?.DocNumber || bill?.Id}: ${balance.toFixed(2)} due ${formatDate(bill?.DueDate)}`;
+            });
+            parts.push(
+              `QuickBooks bills as of ${nowStamp}:\n` +
+              `Open bills: ${openBills.length}, total open balance: ${totalOpen.toFixed(2)}\n` +
+              (topBills.length ? topBills.join('\n') : '- No open bills found.')
+            );
+          }
         } catch {
           parts.push(`QuickBooks bills as of ${nowStamp}: unavailable.`);
         }
@@ -691,22 +729,32 @@ const buildLiveData = async (question: string) => {
           const pnlData = await pnlRes.json().catch(() => null);
           const balanceData = await balanceRes.json().catch(() => null);
           const cashData = await cashRes.json().catch(() => null);
+          if (pnlRes.status === 401 || balanceRes.status === 401 || cashRes.status === 401) {
+            parts.push(`QuickBooks report highlights as of ${nowStamp}: authorization expired. Please reconnect QuickBooks from Settings.`);
+          } else if (!pnlRes.ok || !balanceRes.ok || !cashRes.ok) {
+            const reason =
+              getApiErrorMessage(pnlData) ||
+              getApiErrorMessage(balanceData) ||
+              getApiErrorMessage(cashData) ||
+              `HTTP ${pnlRes.status}/${balanceRes.status}/${cashRes.status}`;
+            parts.push(`QuickBooks report highlights as of ${nowStamp}: unavailable (${reason}).`);
+          } else {
+            const pnlHighlights = extractReportValue(pnlData, ['net income', 'total income', 'total expenses']);
+            const balanceHighlights = extractReportValue(balanceData, ['total assets', 'total liabilities', 'total equity']);
+            const cashHighlights = extractReportValue(cashData, ['net cash', 'cash']);
 
-          const pnlHighlights = extractReportValue(pnlData, ['net income', 'total income', 'total expenses']);
-          const balanceHighlights = extractReportValue(balanceData, ['total assets', 'total liabilities', 'total equity']);
-          const cashHighlights = extractReportValue(cashData, ['net cash', 'cash']);
+            const formatHighlights = (title: string, highlights: any[] | null) => {
+              if (!highlights || !highlights.length) return `${title}: unavailable.`;
+              return `${title}:\n` + highlights.slice(0, 5).map((row) => `- ${row.label}: ${row.amount}`).join('\n');
+            };
 
-          const formatHighlights = (title: string, highlights: any[] | null) => {
-            if (!highlights || !highlights.length) return `${title}: unavailable.`;
-            return `${title}:\n` + highlights.slice(0, 5).map((row) => `- ${row.label}: ${row.amount}`).join('\n');
-          };
-
-          parts.push(
-            `QuickBooks report highlights as of ${nowStamp}:\n` +
-            `${formatHighlights('Profit & Loss', pnlHighlights)}\n` +
-            `${formatHighlights('Balance Sheet', balanceHighlights)}\n` +
-            `${formatHighlights('Cash Flow', cashHighlights)}`
-          );
+            parts.push(
+              `QuickBooks report highlights as of ${nowStamp}:\n` +
+              `${formatHighlights('Profit & Loss', pnlHighlights)}\n` +
+              `${formatHighlights('Balance Sheet', balanceHighlights)}\n` +
+              `${formatHighlights('Cash Flow', cashHighlights)}`
+            );
+          }
         } catch {
           parts.push(`QuickBooks reports as of ${nowStamp}: unavailable.`);
         }
@@ -719,19 +767,26 @@ const buildLiveData = async (question: string) => {
             body: JSON.stringify({ method: 'GET', url: 'reports/TransactionList' }),
           });
           const data = await res.json().catch(() => null);
-          const rows = data?.Rows?.Row || [];
-          const samples = rows.slice(0, 5).map((row: any) => {
-            const cols = row?.ColData || [];
-            const date = cols[0]?.value || '';
-            const type = cols[1]?.value || '';
-            const name = cols[2]?.value || '';
-            const amount = cols[4]?.value || '';
-            return `- ${date} ${type} ${name} ${amount}`.trim();
-          });
-          parts.push(
-            `QuickBooks transactions (sample) as of ${nowStamp}:\n` +
-            (samples.length ? samples.join('\n') : '- No transactions found.')
-          );
+          if (res.status === 401) {
+            parts.push(`QuickBooks transactions as of ${nowStamp}: authorization expired. Please reconnect QuickBooks from Settings.`);
+          } else if (!res.ok) {
+            const reason = getApiErrorMessage(data) || `HTTP ${res.status}`;
+            parts.push(`QuickBooks transactions as of ${nowStamp}: unavailable (${reason}).`);
+          } else {
+            const rows = data?.Rows?.Row || [];
+            const samples = rows.slice(0, 5).map((row: any) => {
+              const cols = row?.ColData || [];
+              const date = cols[0]?.value || '';
+              const type = cols[1]?.value || '';
+              const name = cols[2]?.value || '';
+              const amount = cols[4]?.value || '';
+              return `- ${date} ${type} ${name} ${amount}`.trim();
+            });
+            parts.push(
+              `QuickBooks transactions (sample) as of ${nowStamp}:\n` +
+              (samples.length ? samples.join('\n') : '- No transactions found.')
+            );
+          }
         } catch {
           parts.push(`QuickBooks transactions as of ${nowStamp}: unavailable.`);
         }
