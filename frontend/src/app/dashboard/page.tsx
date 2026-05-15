@@ -393,6 +393,7 @@ const EnhancedChatbot = () => {
         loading: false,
     };
     const [state, formAction] = useActionState(askQuestion, initialState);
+    const [authTokenForChat, setAuthTokenForChat] = useState('');
     const messagesEndRef = useRef(null);
     const formRef = useRef<HTMLFormElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -403,6 +404,27 @@ const EnhancedChatbot = () => {
     };
 
     useEffect(scrollToBottom, [state.messages]);
+
+    useEffect(() => {
+        let active = true;
+
+        const loadChatToken = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
+                const data = await response.json().catch(() => null);
+                if (!active) return;
+                setAuthTokenForChat(typeof data?.token === 'string' ? data.token : '');
+            } catch {
+                if (!active) return;
+                setAuthTokenForChat('');
+            }
+        };
+
+        loadChatToken();
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const handleSend = (formData: FormData) => {
         formAction(formData);
@@ -444,6 +466,7 @@ const EnhancedChatbot = () => {
             </div>
 
             <form ref={formRef} action={handleSend} className="relative">
+                <input type="hidden" name="authToken" value={authTokenForChat} />
                 <Input 
                     ref={inputRef}
                     name="question"

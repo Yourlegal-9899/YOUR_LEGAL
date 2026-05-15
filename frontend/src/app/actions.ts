@@ -9,6 +9,7 @@ import { z } from 'zod';
 
 const AnswerSchema = z.object({
   question: z.string().min(1, { message: 'Question cannot be empty.' }),
+  authToken: z.string().optional(),
 });
 
 export type ChatState = {
@@ -39,9 +40,14 @@ const getFrontendAuthToken = async () => {
   }
 };
 
-const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+const baseFetchWithAuth = async (
+  url: string,
+  options: RequestInit = {},
+  authTokenOverride?: string
+) => {
   const cookieHeader = await buildCookieHeader();
-  const authToken = await getFrontendAuthToken();
+  const cookieToken = await getFrontendAuthToken();
+  const authToken = String(authTokenOverride || cookieToken || '').trim();
   const headers = new Headers(options.headers || {});
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -141,7 +147,9 @@ const extractReportValue = (report: any, keywords: string[]) => {
   return matches;
 };
 
-const buildLiveData = async (question: string) => {
+const buildLiveData = async (question: string, authTokenOverride?: string) => {
+  const fetchWithAuth = (url: string, options: RequestInit = {}) =>
+    baseFetchWithAuth(url, options, authTokenOverride);
   const intents = detectIntents(question);
   const parts: string[] = [];
   const nowStamp = new Date().toISOString();
@@ -748,6 +756,7 @@ export async function askQuestion(
 ): Promise<ChatState> {
   const validatedFields = AnswerSchema.safeParse({
     question: formData.get('question'),
+    authToken: formData.get('authToken'),
   });
 
   if (!validatedFields.success) {
@@ -767,7 +776,10 @@ export async function askQuestion(
   };
 
   try {
-    const liveData = await buildLiveData(validatedFields.data.question);
+    const liveData = await buildLiveData(
+      validatedFields.data.question,
+      validatedFields.data.authToken
+    );
     const response = await answerLegalQuestions({ question: validatedFields.data.question, liveData });
     const assistantMessage = { role: 'assistant' as const, content: response.answer, id: crypto.randomUUID() };
     return {
