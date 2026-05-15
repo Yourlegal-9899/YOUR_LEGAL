@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormState, useFormStatus } from "react-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Bot, Send, User, Loader2 } from "lucide-react";
 import { askQuestion, type ChatState } from "@/app/actions";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { API_BASE_URL } from "@/lib/api-base";
 
 const initialMessages = [
     {
@@ -37,7 +36,6 @@ function SubmitButton() {
 
 export function ChatAssistant() {
   const [state, formAction] = useFormState(askQuestion, initialState);
-  const [authTokenForChat, setAuthTokenForChat] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -49,28 +47,6 @@ export function ChatAssistant() {
       });
     }
   }, [state.messages]);
-
-  useEffect(() => {
-    let active = true;
-    const loadChatToken = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-          credentials: 'include',
-        });
-        const data = await response.json().catch(() => null);
-        if (!active) return;
-        setAuthTokenForChat(typeof data?.token === 'string' ? data.token : '');
-      } catch {
-        if (!active) return;
-        setAuthTokenForChat('');
-      }
-    };
-
-    loadChatToken();
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const handleFormAction = (formData: FormData) => {
     formAction(formData);
@@ -135,7 +111,6 @@ export function ChatAssistant() {
           action={handleFormAction}
           className="flex w-full items-center space-x-2"
         >
-          <input type="hidden" name="authToken" value={authTokenForChat} />
           <Input
             id="question"
             name="question"
