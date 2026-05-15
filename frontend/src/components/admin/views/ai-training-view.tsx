@@ -72,7 +72,20 @@ const normalizeRule = (raw: any, index: number): TrainingRule | null => {
 };
 
 const parseRulesFromSetting = (value: any): TrainingRule[] => {
-  const list = Array.isArray(value?.rules) ? value.rules : Array.isArray(value) ? value : [];
+  let normalizedValue = value;
+  if (typeof normalizedValue === "string") {
+    try {
+      normalizedValue = JSON.parse(normalizedValue);
+    } catch {
+      normalizedValue = {};
+    }
+  }
+
+  const list = Array.isArray(normalizedValue?.rules)
+    ? normalizedValue.rules
+    : Array.isArray(normalizedValue)
+      ? normalizedValue
+      : [];
   return list
     .map((item: any, index: number) => normalizeRule(item, index))
     .filter((item): item is TrainingRule => Boolean(item));
