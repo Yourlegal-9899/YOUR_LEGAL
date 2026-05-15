@@ -149,50 +149,17 @@ const buildLiveData = async (question: string) => {
 
   let cachedMe: any | null = null;
   let meLoaded = false;
-  let meStatusCode: number | null = null;
-  let meErrorMessage = '';
   const getMe = async () => {
     if (meLoaded) return cachedMe;
     meLoaded = true;
     try {
       const res = await fetchWithAuth(`${API_BASE_URL}/auth/me`);
-      meStatusCode = res.status;
       cachedMe = await res.json().catch(() => null);
-      if (!res.ok) {
-        meErrorMessage = String(cachedMe?.message || '').trim();
-      }
     } catch {
       cachedMe = null;
-      meStatusCode = null;
-      meErrorMessage = 'request_failed';
     }
     return cachedMe;
   };
-
-  const needsAccountContext =
-    intents.wantsCompliance ||
-    intents.wantsTax ||
-    intents.wantsOverview ||
-    intents.wantsPlan ||
-    intents.wantsFormationProgress ||
-    intents.wantsQuickBooks ||
-    intents.wantsAccountStatus ||
-    intents.wantsOrders ||
-    intents.wantsDocuments ||
-    intents.wantsTickets ||
-    intents.wantsPayments ||
-    Boolean(requestedEmail);
-
-  if (needsAccountContext) {
-    const meData = await getMe();
-    if (!meData?.user && meStatusCode === 401) {
-      parts.push(
-        `Account access status as of ${nowStamp}: session expired or unavailable. Ask the user to log out and log back in, then retry.`
-      );
-    } else if (!meData?.user && meErrorMessage && meErrorMessage !== 'request_failed') {
-      parts.push(`Account access status as of ${nowStamp}: ${meErrorMessage}.`);
-    }
-  }
 
   const resolveCurrentStep = (progress: any, order: string[]) =>
     order.find((key) => progress?.[key]?.status !== 'completed') || order[order.length - 1];
@@ -539,55 +506,7 @@ const buildLiveData = async (question: string) => {
             formationLines.join('\n')
           );
         } else {
-          const fallbackLines: string[] = [];
-
-          try {
-            const onboardingRes = await fetchWithAuth(`${API_BASE_URL}/onboarding/me`);
-            const onboardingData = await onboardingRes.json().catch(() => null);
-            const submission = onboardingData?.submission;
-            if (onboardingRes.ok && submission) {
-              fallbackLines.push(
-                `- Latest onboarding submission: ${submission?.status || 'pending'}`
-              );
-              if (submission?.entityType || submission?.planEntityType) {
-                fallbackLines.push(
-                  `- Entity type: ${submission?.entityType || submission?.planEntityType}`
-                );
-              }
-              if (submission?.createdAt) {
-                fallbackLines.push(`- Submitted on: ${formatDate(submission?.createdAt)}`);
-              }
-            }
-          } catch {
-            // Best-effort fallback only.
-          }
-
-          try {
-            const ordersRes = await fetchWithAuth(`${API_BASE_URL}/orders/me`);
-            const ordersData = await ordersRes.json().catch(() => null);
-            const orders = Array.isArray(ordersData?.orders) ? ordersData.orders : [];
-            const formationOrder = orders.find((order: any) =>
-              /formation|incorporation|ein|company/i.test(
-                String(order?.serviceType || order?.plan || order?.metadata?.serviceId || '')
-              )
-            );
-            if (ordersRes.ok && formationOrder) {
-              fallbackLines.push(
-                `- Latest formation order status: ${formationOrder?.status || 'in_progress'}`
-              );
-            }
-          } catch {
-            // Best-effort fallback only.
-          }
-
-          if (fallbackLines.length) {
-            parts.push(
-              `Formation & compliance progress as of ${nowStamp}: no formal company tracker is available yet.\n` +
-              fallbackLines.join('\n')
-            );
-          } else {
-            parts.push(`Formation & compliance progress as of ${nowStamp}: no formations found yet.`);
-          }
+          parts.push(`Formation & compliance progress as of ${nowStamp}: no formations found.`);
         }
       } else {
         parts.push(`Formation & compliance progress as of ${nowStamp}: unavailable.`);

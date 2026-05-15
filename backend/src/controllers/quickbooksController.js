@@ -556,41 +556,9 @@ exports.disconnect = async (req, res) => {
 exports.checkConnection = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({ success: false, connected: false, message: 'User not found' });
-    }
-
-    const tokens = getQuickBooksTokens(user);
-    const hasTokenFootprint = Boolean(tokens?.realmId && (tokens?.refreshToken || tokens?.accessToken));
-    const shouldAttemptRefresh = hasTokenFootprint;
-
-    if (shouldAttemptRefresh) {
-      try {
-        const refreshed = await refreshTokenIfNeeded(user);
-        if (!refreshed.quickBooksConnected) {
-          refreshed.quickBooksConnected = true;
-          await refreshed.save();
-        }
-      } catch (error) {
-        if (error?.status === 401 || error?.code === 'QB_REFRESH_INVALID') {
-          await User.findByIdAndUpdate(req.user._id, {
-            quickBooksConnected: false,
-            quickBooksTokens: {},
-          });
-          return res.json({ success: true, connected: false, reason: 'authorization_expired' });
-        }
-        throw error;
-      }
-    } else if (user.quickBooksConnected) {
-      await User.findByIdAndUpdate(req.user._id, {
-        quickBooksConnected: false,
-        quickBooksTokens: {},
-      });
-    }
-
     res.json({ 
       success: true, 
-      connected: shouldAttemptRefresh 
+      connected: user.quickBooksConnected || false 
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -600,14 +568,8 @@ exports.checkConnection = async (req, res) => {
 exports.getCompanyInfo = async (req, res) => {
   try {
     let user = await User.findById(req.user._id);
-    const tokens = getQuickBooksTokens(user);
-    const hasQbTokens = Boolean(tokens?.realmId && (tokens?.refreshToken || tokens?.accessToken));
-    if (!user.quickBooksConnected && !hasQbTokens) {
+    if (!user.quickBooksConnected) {
       return res.status(400).json({ message: 'QuickBooks not connected' });
-    }
-    if (!user.quickBooksConnected && hasQbTokens) {
-      user.quickBooksConnected = true;
-      await user.save();
     }
 
     const { result } = await callQuickBooks(user, {
@@ -629,14 +591,8 @@ exports.getCompanyInfo = async (req, res) => {
 exports.getInvoices = async (req, res) => {
   try {
     let user = await User.findById(req.user._id);
-    const tokens = getQuickBooksTokens(user);
-    const hasQbTokens = Boolean(tokens?.realmId && (tokens?.refreshToken || tokens?.accessToken));
-    if (!user.quickBooksConnected && !hasQbTokens) {
+    if (!user.quickBooksConnected) {
       return res.status(400).json({ message: 'QuickBooks not connected' });
-    }
-    if (!user.quickBooksConnected && hasQbTokens) {
-      user.quickBooksConnected = true;
-      await user.save();
     }
 
     const { result } = await callQuickBooks(user, {
@@ -658,14 +614,8 @@ exports.getInvoices = async (req, res) => {
 exports.proxyRequest = async (req, res) => {
   try {
     let user = await User.findById(req.user._id);
-    const tokens = getQuickBooksTokens(user);
-    const hasQbTokens = Boolean(tokens?.realmId && (tokens?.refreshToken || tokens?.accessToken));
-    if (!user.quickBooksConnected && !hasQbTokens) {
+    if (!user.quickBooksConnected) {
       return res.status(400).json({ message: 'QuickBooks not connected' });
-    }
-    if (!user.quickBooksConnected && hasQbTokens) {
-      user.quickBooksConnected = true;
-      await user.save();
     }
 
     const { method, url, data } = req.body;

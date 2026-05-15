@@ -1,5 +1,4 @@
 const Settings = require('../models/Settings');
-const PUBLIC_FORCE_INCLUDE_KEYS = ['ai_chat_training_rules'];
 
 exports.getAllSettings = async (req, res) => {
   try {
@@ -18,12 +17,7 @@ exports.getAllSettings = async (req, res) => {
 
 exports.getPublicSettings = async (req, res) => {
   try {
-    const settings = await Settings.find({
-      $or: [
-        { isPublic: true },
-        { key: { $in: PUBLIC_FORCE_INCLUDE_KEYS } },
-      ],
-    }).select('key value category');
+    const settings = await Settings.find({ isPublic: true }).select('key value category');
 
     res.json({ success: true, settings });
   } catch (error) {

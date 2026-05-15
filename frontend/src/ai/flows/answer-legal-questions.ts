@@ -389,7 +389,7 @@ const callGroqChat = async (input: AnswerLegalQuestionsInput): Promise<string> =
       return ensureRuleAnswer(topMatch.rule.answer);
     }
 
-    if (topMatch.score >= 0.64) {
+    if (topMatch.score >= 0.74) {
       return ensureRuleAnswer(topMatch.rule.answer);
     }
   }
