@@ -9,6 +9,7 @@ import { z } from 'zod';
 
 const AnswerSchema = z.object({
   question: z.string().min(1, { message: 'Question cannot be empty.' }),
+  authToken: z.string().optional(),
 });
 
 export type ChatState = {
@@ -39,9 +40,14 @@ const getFrontendAuthToken = async () => {
   }
 };
 
-const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+const fetchWithAuth = async (
+  url: string,
+  options: RequestInit = {},
+  authTokenOverride?: string
+) => {
   const cookieHeader = await buildCookieHeader();
-  const authToken = await getFrontendAuthToken();
+  const cookieToken = await getFrontendAuthToken();
+  const authToken = String(authTokenOverride || cookieToken || '').trim();
   const headers = new Headers(options.headers || {});
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -141,7 +147,7 @@ const extractReportValue = (report: any, keywords: string[]) => {
   return matches;
 };
 
-const buildLiveData = async (question: string) => {
+const buildLiveData = async (question: string, authTokenOverride?: string) => {
   const intents = detectIntents(question);
   const parts: string[] = [];
   const nowStamp = new Date().toISOString();
@@ -158,7 +164,7 @@ const buildLiveData = async (question: string) => {
     if (meLoaded) return cachedMe;
     meLoaded = true;
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/auth/me`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/auth/me`, {}, authTokenOverride);
       meStatusCode = res.status;
       cachedMe = await res.json().catch(() => null);
       if (!res.ok) {
@@ -270,7 +276,7 @@ const buildLiveData = async (question: string) => {
 
   if (intents.wantsOnboarding) {
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/onboarding/me`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/onboarding/me`, {}, authTokenOverride);
       const data = await res.json().catch(() => null);
       const submission = data?.submission;
       if (res.ok && submission) {
@@ -294,7 +300,7 @@ const buildLiveData = async (question: string) => {
 
   if (intents.wantsOrders) {
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/orders/me`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/orders/me`, {}, authTokenOverride);
       const data = await res.json().catch(() => null);
       const orders = data?.orders || [];
       if (res.ok && orders.length) {
@@ -326,7 +332,7 @@ const buildLiveData = async (question: string) => {
 
   if (intents.wantsDocuments) {
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/documents/me`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/documents/me`, {}, authTokenOverride);
       const data = await res.json().catch(() => null);
       const documents = data?.documents || [];
       if (res.ok && documents.length) {
@@ -357,7 +363,7 @@ const buildLiveData = async (question: string) => {
 
   if (intents.wantsTickets) {
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/tickets/me`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/tickets/me`, {}, authTokenOverride);
       const data = await res.json().catch(() => null);
       const tickets = data?.tickets || [];
       if (res.ok && tickets.length) {
@@ -389,7 +395,7 @@ const buildLiveData = async (question: string) => {
 
   if (intents.wantsPayments) {
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/payment/my-payments`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/payment/my-payments`, {}, authTokenOverride);
       const data = await res.json().catch(() => null);
       const payments = data?.payments || [];
       if (res.ok && payments.length) {
@@ -427,7 +433,7 @@ const buildLiveData = async (question: string) => {
       if (role !== 'admin') {
         parts.push(`Platform growth stats as of ${nowStamp}: admin access required.`);
       } else {
-        const res = await fetchWithAuth(`${API_BASE_URL}/admin/stats`);
+        const res = await fetchWithAuth(`${API_BASE_URL}/admin/stats`, {}, authTokenOverride);
         const data = await res.json().catch(() => null);
         const stats = data?.stats;
         if (res.ok && stats) {
@@ -457,7 +463,7 @@ const buildLiveData = async (question: string) => {
       if (role !== 'admin') {
         parts.push(`User lookup for ${requestedEmail} as of ${nowStamp}: admin access required.`);
       } else {
-        const res = await fetchWithAuth(`${API_BASE_URL}/admin/users`);
+        const res = await fetchWithAuth(`${API_BASE_URL}/admin/users`, {}, authTokenOverride);
         const data = await res.json().catch(() => null);
         const users = data?.users || [];
         const match = users.find((user: any) => String(user?.email || '').toLowerCase() === requestedEmail.toLowerCase());
@@ -484,7 +490,7 @@ const buildLiveData = async (question: string) => {
 
   if (intents.wantsFormationProgress) {
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/formations/me`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/formations/me`, {}, authTokenOverride);
       const data = await res.json().catch(() => null);
       if (res.ok && data?.formations) {
         const formations = (data.formations as any[]).slice(0, 5);
@@ -545,7 +551,7 @@ const buildLiveData = async (question: string) => {
           const fallbackLines: string[] = [];
 
           try {
-            const onboardingRes = await fetchWithAuth(`${API_BASE_URL}/onboarding/me`);
+            const onboardingRes = await fetchWithAuth(`${API_BASE_URL}/onboarding/me`, {}, authTokenOverride);
             const onboardingData = await onboardingRes.json().catch(() => null);
             const submission = onboardingData?.submission;
             if (onboardingRes.ok && submission) {
@@ -566,7 +572,7 @@ const buildLiveData = async (question: string) => {
           }
 
           try {
-            const ordersRes = await fetchWithAuth(`${API_BASE_URL}/orders/me`);
+            const ordersRes = await fetchWithAuth(`${API_BASE_URL}/orders/me`, {}, authTokenOverride);
             const ordersData = await ordersRes.json().catch(() => null);
             const orders = Array.isArray(ordersData?.orders) ? ordersData.orders : [];
             const formationOrder = orders.find((order: any) =>
@@ -602,7 +608,7 @@ const buildLiveData = async (question: string) => {
 
   if (intents.wantsCompliance) {
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/compliance/events/me`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/compliance/events/me`, {}, authTokenOverride);
       const data = await res.json().catch(() => null);
       if (res.ok && data?.events) {
         const events = (data.events as any[])
@@ -631,7 +637,7 @@ const buildLiveData = async (question: string) => {
 
   if (intents.wantsTax) {
     try {
-      const res = await fetchWithAuth(`${API_BASE_URL}/tax-filings/me`);
+      const res = await fetchWithAuth(`${API_BASE_URL}/tax-filings/me`, {}, authTokenOverride);
       const data = await res.json().catch(() => null);
       if (res.ok && data?.filings) {
         const filings = (data.filings as any[])
@@ -668,7 +674,7 @@ const buildLiveData = async (question: string) => {
     const qbConnectedFromProfile = Boolean(meData?.user?.quickBooksConnected);
 
     try {
-      const statusRes = await fetchWithAuth(`${API_BASE_URL}/quickbooks/status`);
+      const statusRes = await fetchWithAuth(`${API_BASE_URL}/quickbooks/status`, {}, authTokenOverride);
       const statusData = await statusRes.json().catch(() => null);
       qbStatusChecked = statusRes.ok;
       qbConnected = Boolean(statusRes.ok && statusData?.connected);
@@ -693,7 +699,7 @@ const buildLiveData = async (question: string) => {
           const res = await fetchWithAuth(`${API_BASE_URL}/quickbooks/proxy`, {
             method: 'POST',
             body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Account' }),
-          });
+          }, authTokenOverride);
           const data = await res.json().catch(() => null);
           if (res.status === 401) {
             parts.push(`QuickBooks bank balances as of ${nowStamp}: authorization expired. Please reconnect QuickBooks from Settings.`);
@@ -724,7 +730,7 @@ const buildLiveData = async (question: string) => {
 
       if (intents.wantsInvoices) {
         try {
-          const res = await fetchWithAuth(`${API_BASE_URL}/quickbooks/invoices`);
+          const res = await fetchWithAuth(`${API_BASE_URL}/quickbooks/invoices`, {}, authTokenOverride);
           const data = await res.json().catch(() => null);
           if (res.status === 401) {
             parts.push(`QuickBooks invoices as of ${nowStamp}: authorization expired. Please reconnect QuickBooks from Settings.`);
@@ -761,7 +767,7 @@ const buildLiveData = async (question: string) => {
           const res = await fetchWithAuth(`${API_BASE_URL}/quickbooks/proxy`, {
             method: 'POST',
             body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Bill' }),
-          });
+          }, authTokenOverride);
           const data = await res.json().catch(() => null);
           if (res.status === 401) {
             parts.push(`QuickBooks bills as of ${nowStamp}: authorization expired. Please reconnect QuickBooks from Settings.`);
@@ -797,15 +803,15 @@ const buildLiveData = async (question: string) => {
             fetchWithAuth(`${API_BASE_URL}/quickbooks/proxy`, {
               method: 'POST',
               body: JSON.stringify({ method: 'GET', url: 'reports/ProfitAndLoss' }),
-            }),
+            }, authTokenOverride),
             fetchWithAuth(`${API_BASE_URL}/quickbooks/proxy`, {
               method: 'POST',
               body: JSON.stringify({ method: 'GET', url: 'reports/BalanceSheet' }),
-            }),
+            }, authTokenOverride),
             fetchWithAuth(`${API_BASE_URL}/quickbooks/proxy`, {
               method: 'POST',
               body: JSON.stringify({ method: 'GET', url: 'reports/CashFlow' }),
-            }),
+            }, authTokenOverride),
           ]);
           const pnlData = await pnlRes.json().catch(() => null);
           const balanceData = await balanceRes.json().catch(() => null);
@@ -846,7 +852,7 @@ const buildLiveData = async (question: string) => {
           const res = await fetchWithAuth(`${API_BASE_URL}/quickbooks/proxy`, {
             method: 'POST',
             body: JSON.stringify({ method: 'GET', url: 'reports/TransactionList' }),
-          });
+          }, authTokenOverride);
           const data = await res.json().catch(() => null);
           if (res.status === 401) {
             parts.push(`QuickBooks transactions as of ${nowStamp}: authorization expired. Please reconnect QuickBooks from Settings.`);
@@ -884,6 +890,7 @@ export async function askQuestion(
 ): Promise<ChatState> {
   const validatedFields = AnswerSchema.safeParse({
     question: formData.get('question'),
+    authToken: formData.get('authToken'),
   });
 
   if (!validatedFields.success) {
@@ -903,7 +910,10 @@ export async function askQuestion(
   };
 
   try {
-    const liveData = await buildLiveData(validatedFields.data.question);
+    const liveData = await buildLiveData(
+      validatedFields.data.question,
+      validatedFields.data.authToken
+    );
     const response = await answerLegalQuestions({ question: validatedFields.data.question, liveData });
     const assistantMessage = { role: 'assistant' as const, content: response.answer, id: crypto.randomUUID() };
     return {
