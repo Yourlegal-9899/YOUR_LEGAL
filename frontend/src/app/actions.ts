@@ -586,26 +586,55 @@ const buildLiveData = async (question: string, authTokenOverride?: string) => {
 
   if (intents.wantsQuickBooks) {
     let qbConnected = false;
+    let qbStatusChecked = false;
+    let prefetchedAccounts: any[] | null = null;
     try {
       const statusRes = await fetchWithAuth(`${API_BASE_URL}/quickbooks/status`);
       const statusData = await statusRes.json().catch(() => null);
+      qbStatusChecked = statusRes.ok;
       qbConnected = Boolean(statusRes.ok && statusData?.connected);
-      if (!qbConnected) {
-        parts.push(`QuickBooks status as of ${nowStamp}: not connected.`);
-      }
     } catch {
-      parts.push(`QuickBooks status as of ${nowStamp}: unavailable.`);
+      qbStatusChecked = false;
+    }
+
+    // Fallback probe: if status endpoint says disconnected/unavailable but tokens are valid,
+    // querying accounts can still succeed. This keeps live-data answers reliable.
+    if (!qbConnected) {
+      try {
+        const probeRes = await fetchWithAuth(`${API_BASE_URL}/quickbooks/proxy`, {
+          method: 'POST',
+          body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Account' }),
+        });
+        const probeData = await probeRes.json().catch(() => null);
+        const probeAccounts = probeData?.QueryResponse?.Account;
+        if (probeRes.ok && Array.isArray(probeAccounts)) {
+          qbConnected = true;
+          prefetchedAccounts = probeAccounts;
+        }
+      } catch {
+        // Ignore probe failures and fall back to status message below.
+      }
+    }
+
+    if (!qbConnected) {
+      parts.push(
+        `QuickBooks status as of ${nowStamp}: ${qbStatusChecked ? 'not connected' : 'unavailable'}.`
+      );
     }
 
     if (qbConnected) {
       if (intents.wantsBankBalance) {
         try {
-          const res = await fetchWithAuth(`${API_BASE_URL}/quickbooks/proxy`, {
-            method: 'POST',
-            body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Account' }),
-          });
-          const data = await res.json().catch(() => null);
-          const accounts = data?.QueryResponse?.Account || [];
+          const accounts =
+            prefetchedAccounts ||
+            (await (async () => {
+              const res = await fetchWithAuth(`${API_BASE_URL}/quickbooks/proxy`, {
+                method: 'POST',
+                body: JSON.stringify({ method: 'GET', url: 'query?query=select * from Account' }),
+              });
+              const data = await res.json().catch(() => null);
+              return data?.QueryResponse?.Account || [];
+            })());
           const bankAccounts = accounts.filter((account: any) => account?.AccountType === 'Bank');
           const totalCash = bankAccounts.reduce((sum: number, account: any) => {
             const value = Number(account?.CurrentBalance ?? account?.Balance ?? 0);
