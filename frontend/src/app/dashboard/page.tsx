@@ -917,7 +917,7 @@ const FormationProgressTimeline = ({ steps }) => <Timeline title="Formation Prog
 const EinProgressTimeline = ({ steps }) => <Timeline title="EIN Application & Allotment" steps={steps} />;
 const ComplianceSetupTimeline = ({ steps }) => <Timeline title="Initial Compliance Setup" steps={steps} />;
 
-const CompanySection = ({ userId, formations, documents, isLoading, authToken }) => {
+const CompanySection = ({ userId, formations, documents, isLoading }) => {
     const [progressData, setProgressData] = useState<any | null>(null);
     const [progressLoading, setProgressLoading] = useState(false);
     const [progressError, setProgressError] = useState("");
@@ -933,15 +933,7 @@ const CompanySection = ({ userId, formations, documents, isLoading, authToken })
         const formationId = company?._id || company?.id;
         setProgressLoading(true);
         setProgressError("");
-        const headers: Record<string, string> = {};
-        if (authToken) {
-            headers.Authorization = `Bearer ${authToken}`;
-        }
-
-        fetch(`${API_BASE_URL}/company/${formationId}/progress`, {
-            credentials: 'include',
-            headers,
-        })
+        fetch(`${API_BASE_URL}/company/${formationId}/progress`, { credentials: 'include' })
             .then((res) => res.json().catch(() => null))
             .then((data) => {
                 if (!data?.success) {
@@ -954,7 +946,7 @@ const CompanySection = ({ userId, formations, documents, isLoading, authToken })
                 setProgressData(null);
             })
             .finally(() => setProgressLoading(false));
-    }, [company?._id, company?.id, authToken]);
+    }, [company?._id, company?.id]);
 
     const formatTimelineDate = (value?: string | Date | null) => {
         if (!value) return 'Pending';
@@ -1106,11 +1098,7 @@ const CompanySection = ({ userId, formations, documents, isLoading, authToken })
         const url = resolveDocumentUrl(docId, mode === 'download');
 
         try {
-            const headers: Record<string, string> = {};
-            if (authToken) {
-                headers.Authorization = `Bearer ${authToken}`;
-            }
-            const response = await fetch(url, { credentials: 'include', headers });
+            const response = await fetch(url, { credentials: 'include' });
             if (!response.ok) {
                 const message = await response.json().then((data) => data?.message).catch(() => '');
                 throw new Error(message || 'Unable to fetch document.');
@@ -4874,7 +4862,6 @@ export default function PortalPage({ onLogout }) {
     const [activePath, setActivePath] = useState('dashboard');
     const { toast } = useToast();
     const resolvedUserId = user?.id || user?._id;
-    const [dashboardAuthToken, setDashboardAuthToken] = useState('');
     
     const [isQuickBooksLinked, setIsQuickBooksLinked] = useState(false);
     const [qbBills, setQbBills] = useState([]);
@@ -4895,51 +4882,12 @@ export default function PortalPage({ onLogout }) {
     const [myTaxFilings, setMyTaxFilings] = useState([]);
     const [userDataLoading, setUserDataLoading] = useState(false);
 
-    const fetchWithDashboardAuth = useCallback(
-        (url: string, options: RequestInit = {}) => {
-            const headers = new Headers(options.headers || {});
-            if (dashboardAuthToken && !headers.has('Authorization')) {
-                headers.set('Authorization', `Bearer ${dashboardAuthToken}`);
-            }
-            return fetch(url, {
-                ...options,
-                credentials: 'include',
-                headers,
-            });
-        },
-        [dashboardAuthToken]
-    );
-
-    useEffect(() => {
-        if (!user) {
-            setDashboardAuthToken('');
-            return;
-        }
-
-        let active = true;
-        const loadDashboardToken = async () => {
-            try {
-                const response = await fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' });
-                const data = await response.json().catch(() => null);
-                if (!active) return;
-                const token = typeof data?.token === 'string' ? data.token : '';
-                setDashboardAuthToken(token);
-            } catch {
-                if (!active) return;
-                setDashboardAuthToken('');
-            }
-        };
-
-        loadDashboardToken();
-        return () => {
-            active = false;
-        };
-    }, [user?.id, user?._id]);
-
     useEffect(() => {
         const checkConnection = async () => {
             try {
-                const response = await fetchWithDashboardAuth(`${QUICKBOOKS_API_BASE}/status`);
+                const response = await fetch(`${QUICKBOOKS_API_BASE}/status`, {
+                    credentials: 'include',
+                });
                 const data = await response.json();
                 setIsQuickBooksLinked(data.connected || false);
             } catch (error) {
@@ -4949,7 +4897,7 @@ export default function PortalPage({ onLogout }) {
         if (user) {
             checkConnection();
         }
-    }, [user, fetchWithDashboardAuth]);
+    }, [user]);
 
     const extractReportRows = (rows: any[] = [], acc: any[] = []) => {
         rows.forEach((row) => {
@@ -5134,11 +5082,11 @@ export default function PortalPage({ onLogout }) {
             setUserDataLoading(true);
             try {
                 const [docsRes, formationsRes, ordersRes, complianceRes, taxFilingsRes] = await Promise.all([
-                    fetchWithDashboardAuth(`${API_BASE_URL}/documents/me`),
-                    fetchWithDashboardAuth(`${API_BASE_URL}/formations/me`),
-                    fetchWithDashboardAuth(`${API_BASE_URL}/orders/me`),
-                    fetchWithDashboardAuth(`${API_BASE_URL}/compliance/events/me`),
-                    fetchWithDashboardAuth(`${API_BASE_URL}/tax-filings/me`)
+                    fetch(`${API_BASE_URL}/documents/me`, { credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/formations/me`, { credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/orders/me`, { credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/compliance/events/me`, { credentials: 'include' }),
+                    fetch(`${API_BASE_URL}/tax-filings/me`, { credentials: 'include' })
                 ]);
 
                 const docsData = await docsRes.json();
@@ -5160,12 +5108,14 @@ export default function PortalPage({ onLogout }) {
         };
 
         loadUserData();
-    }, [user, fetchWithDashboardAuth]);
+    }, [user]);
 
     const handleQuickBooksConnect = async () => {
         if (user) {
             try {
-                const response = await fetchWithDashboardAuth(`${QUICKBOOKS_API_BASE}/auth-url`);
+                const response = await fetch(`${QUICKBOOKS_API_BASE}/auth-url`, {
+                    credentials: 'include',
+                });
                 const data = await response.json();
                 if (!response.ok) {
                     throw new Error(data?.message || 'Unable to connect to QuickBooks.');
@@ -5187,8 +5137,9 @@ export default function PortalPage({ onLogout }) {
 
     const handleQuickBooksDisconnect = async () => {
         try {
-            await fetchWithDashboardAuth(`${QUICKBOOKS_API_BASE}/disconnect`, {
+            await fetch(`${QUICKBOOKS_API_BASE}/disconnect`, {
                 method: 'POST',
+                credentials: 'include',
             });
             setIsQuickBooksLinked(false);
             toast({
@@ -5632,16 +5583,7 @@ export default function PortalPage({ onLogout }) {
 
         switch (activePath) {
             case 'dashboard': return <DashboardContent user={user} navigate={handleNavigation} isQuickBooksLinked={isQuickBooksLinked} financialSnapshot={financialSnapshotLast4} isQuickBooksLoading={qbLoading} lastSyncAt={qbLastSyncAt} metrics={dashboardMetrics} tasks={dashboardTasks} isUserDataLoading={userDataLoading} />;
-            case 'company':
-                return (
-                    <CompanySection
-                        userId={resolvedUserId}
-                        formations={myFormations}
-                        documents={myDocuments}
-                        isLoading={userDataLoading}
-                        authToken={dashboardAuthToken}
-                    />
-                );
+            case 'company': return <CompanySection userId={resolvedUserId} formations={myFormations} documents={myDocuments} isLoading={userDataLoading} />;
             case 'services': return <ServicesSection orders={myOrders} userRegion={user?.region} />;
             case 'banking':
                 return (
